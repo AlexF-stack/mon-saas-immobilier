@@ -1,26 +1,96 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Semantic tokens (RGB triplets without rgb() for Tailwind CSS variable usage) */
+  /* Light mode: Premium slate + blue */
+  --background: 248 250 252;
+  --surface: 241 245 249;
+  --card: 255 255 255;
+  --border: 226 232 240;
+  --text-primary: 15 23 42;
+  --text-secondary: 100 116 139;
+  --primary: 37 99 235;
+  --primary-foreground: 255 255 255;
+  --accent: 29 78 216;
+  --success: 34 197 94;
+  --warning: 245 158 11;
+  --danger: 239 68 68;
+
+  /* Radii */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-2xl: 1rem;
+
+  /* Shadows (fallback used by CSS; Tailwind uses config) */
+  --shadow-soft: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-card: 0 4px 12px rgba(0,0,0,0.06);
+  --shadow-lift: 0 10px 30px rgba(0,0,0,0.08);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+.dark {
+  /* Dark mode: premium slate */
+  --background: 2 6 23;
+  --surface: 15 23 42;
+  --card: 15 23 42;
+  --border: 30 41 59;
+  --text-primary: 241 245 249;
+  --text-secondary: 148 163 184;
+  --primary: 59 130 246;
+  --primary-foreground: 255 255 255;
+  --accent: 37 99 235;
+  --success: 34 197 94;
+  --warning: 245 158 11;
+  --danger: 239 68 68;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Utility classes for semantic tokens (keeps class names simple in markup) */
+@layer base {
+  * { box-sizing: border-box; }
+  html, body, #__next { height: 100%; }
+  body {
+    background-color: rgb(var(--background));
+    color: rgb(var(--text-primary));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
+  /* Smooth but subtle interactions across the app. */
+  button, a, [role="button"], input, select, textarea { transition: color 200ms var(--tw-ease-in-out), background-color 200ms var(--tw-ease-in-out); }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Tailwind utilities expect these semantic classes (bg-card, bg-background, text-primary, border-border) */
+.bg-background { background-color: rgb(var(--background)); }
+.bg-surface { background-color: rgb(var(--surface)); }
+.bg-card { background-color: rgb(var(--card)); }
+.bg-primary { background-color: rgb(var(--primary)); }
+.bg-accent { background-color: rgb(var(--accent)); }
+.text-primary { color: rgb(var(--text-primary)); }
+.text-secondary { color: rgb(var(--text-secondary)); }
+.text-primary-foreground { color: rgb(var(--primary-foreground)); }
+.text-accent-foreground { color: rgb(var(--text-primary)); }
+.border-border { border-color: rgb(var(--border)); }
+.ring-primary { box-shadow: 0 0 0 3px rgb(var(--primary) / 0.12); }
+
+/* CTA Premium hover states with smooth transitions */
+.cta:hover:not(:disabled) {
+  background-color: rgb(var(--accent));
+  box-shadow: var(--shadow-lift);
+  transform: scale(1.02);
 }
+
+.cta:active:not(:disabled) {
+  transform: scale(0.98);
+  box-shadow: var(--shadow-card);
+}
+
+/* Shadows fallback utilities */
+.shadow-soft { box-shadow: var(--shadow-soft); }
+.shadow-card { box-shadow: var(--shadow-card); }
+.shadow-lift { box-shadow: var(--shadow-lift); }
+
+/* Container helper */
+.container-app { width: 100%; max-width: 1400px; margin-left: auto; margin-right: auto; padding-left: 1rem; padding-right: 1rem; }
+@media (min-width: 640px) { .container-app { padding-left: 1.5rem; padding-right: 1.5rem; } }
+@media (min-width: 1024px) { .container-app { padding-left: 2rem; padding-right: 2rem; } }
