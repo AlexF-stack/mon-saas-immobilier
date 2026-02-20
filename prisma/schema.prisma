@@ -1,0 +1,158 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      String   @default("TENANT") // ADMIN, MANAGER, TENANT
+  isSuspended Boolean @default(false)
+  suspendedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  managedProperties Property[] @relation("PropertyManager")
+  contracts         Contract[]
+}
+
+model SystemLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actorEmail String?
+  actorRole  String?
+  action     String
+  targetType String
+  targetId   String?
+  details    String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorId])
+  @@index([targetType, targetId])
+}
+
+model Property {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  city        String?
+  address     String
+  price       Float
+  propertyType String  @default("APARTMENT") // APARTMENT, HOUSE, STUDIO, COMMERCIAL
+  status      String   @default("AVAILABLE") // AVAILABLE, RENTED, MAINTENANCE
+  isPublished Boolean  @default(false)
+  isPremium   Boolean  @default(false)
+  viewsCount  Int      @default(0)
+  impressionsCount Int @default(0)
+  inquiriesCount Int   @default(0)
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  managerId   String?
+  manager     User?    @relation("PropertyManager", fields: [managerId], references: [id])
+
+  contracts   Contract[]
+  images      PropertyImage[]
+  inquiries   MarketplaceInquiry[]
+
+  @@index([isPublished])
+  @@index([isPublished, status])
+  @@index([isPremium])
+  @@index([viewsCount])
+  @@index([inquiriesCount])
+  @@index([status])
+  @@index([propertyType])
+  @@index([city])
+  @@index([address])
+}
+
+model PropertyImage {
+  id         String   @id @default(cuid())
+  url        String
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+}
+
+model Contract {
+  id            String   @id @default(cuid())
+  startDate     DateTime
+  endDate       DateTime
+  rentAmount    Float
+  depositAmount Float
+  status        String   @default("ACTIVE") // ACTIVE, TERMINATED, EXPIRED
+  fileUrl       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id])
+
+  tenantId String
+  tenant   User   @relation(fields: [tenantId], references: [id])
+
+  payments Payment[]
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  amount        Float
+  status        String   @default("PENDING") // PENDING, COMPLETED, FAILED
+  type          String   @default("RENT") // RENT, DEPOSIT, OTHER
+  method        String // MOMO_MTN, MOOV, CASH
+  transactionId String?  @unique
+  tenantId      String?
+  propertyId    String?
+  initiatedById String?
+  initiatedByRole String?
+  receiptNumber String?  @unique
+  receiptIssuedAt DateTime?
+  ownerNotifiedAt DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  contractId String
+  contract   Contract @relation(fields: [contractId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   @default("INFO")
+  title     String
+  message   String
+  paymentId String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([paymentId])
+}
+
+model MarketplaceInquiry {
+  id                 String   @id @default(cuid())
+  propertyId         String
+  requesterUserId    String?
+  requesterIp        String?
+  requesterName      String
+  requesterEmail     String
+  requesterPhone     String?
+  message            String?
+  preferredVisitDate DateTime?
+  status             String   @default("NEW") // NEW, CONTACTED, CLOSED
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  property           Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, createdAt])
+  @@index([requesterEmail])
+  @@index([requesterIp, createdAt])
+}
