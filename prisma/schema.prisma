@@ -108,6 +108,7 @@ model Payment {
   type          String   @default("RENT") // RENT, DEPOSIT, OTHER
   method        String // MOMO_MTN, MOOV, CASH
   transactionId String?  @unique
+  idempotencyKey String? @unique
   tenantId      String?
   propertyId    String?
   initiatedById String?
