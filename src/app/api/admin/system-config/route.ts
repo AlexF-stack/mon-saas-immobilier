@@ -5,6 +5,9 @@ import { getTokenFromRequest, verifyAuth } from '@/lib/auth'
 import { enforceCsrf } from '@/lib/csrf'
 import { createSystemLog } from '@/lib/audit'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 const configKeySchema = z
     .string()
     .trim()

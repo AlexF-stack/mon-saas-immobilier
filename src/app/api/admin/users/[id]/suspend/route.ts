@@ -5,6 +5,9 @@ import { verifyAuth, getTokenFromRequest, isUserRole } from '@/lib/auth'
 import { createSystemLog } from '@/lib/audit'
 import { enforceCsrf } from '@/lib/csrf'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 const updateSuspensionSchema = z.object({
     suspended: z.boolean(),
 })
