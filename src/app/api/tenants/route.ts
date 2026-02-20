@@ -6,6 +6,10 @@ import { verifyAuth, getTokenFromRequest, hashPassword } from '@/lib/auth'
 import { createSystemLog } from '@/lib/audit'
 import { enforceCsrf } from '@/lib/csrf'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+
 const createTenantSchema = z.object({
     email: z.string().trim().email(),
     name: z.string().trim().min(2).max(120),

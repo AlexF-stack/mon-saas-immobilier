@@ -3,6 +3,10 @@ import type { Prisma } from '@prisma/client'
 import { rankPropertiesByRecommendedScore, MAX_RECOMMENDED_RERANK_CANDIDATES } from '@/lib/marketplace-ranking'
 import { prisma } from '@/lib/prisma'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+
 const VALID_STATUSES = new Set(['AVAILABLE', 'RENTED', 'MAINTENANCE'])
 const VALID_TYPES = new Set(['APARTMENT', 'HOUSE', 'STUDIO', 'COMMERCIAL'])
 

@@ -6,6 +6,10 @@ import { validatePasswordComplexity } from '@/lib/auth-policy'
 import { createSystemLog } from '@/lib/audit'
 import { enforceCsrf } from '@/lib/csrf'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+
 const passwordUpdateSchema = z
     .object({
         currentPassword: z.string().min(1),

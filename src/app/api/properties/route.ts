@@ -5,6 +5,10 @@ import { verifyAuth, getTokenFromRequest } from '@/lib/auth'
 import { createSystemLog } from '@/lib/audit'
 import { enforceCsrf } from '@/lib/csrf'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+
 const createPropertySchema = z.object({
     title: z.string().trim().min(2).max(150),
     city: z.preprocess(

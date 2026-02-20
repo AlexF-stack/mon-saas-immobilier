@@ -6,6 +6,10 @@ import { canManageProperty } from '@/lib/rbac'
 import { createSystemLog } from '@/lib/audit'
 import { enforceCsrf } from '@/lib/csrf'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+
 const patchPropertySchema = z.object({
     title: z.string().trim().min(2).max(150).optional(),
     city: z.preprocess(

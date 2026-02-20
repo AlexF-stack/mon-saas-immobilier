@@ -4,6 +4,10 @@ import { generateContractPdf } from '@/lib/pdf'
 import { verifyAuth, getTokenFromRequest } from '@/lib/auth'
 import { canAccessContractScope } from '@/lib/rbac'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+
 export async function GET(
     request: Request,
     { params }: { params: Promise<{ id: string }> }

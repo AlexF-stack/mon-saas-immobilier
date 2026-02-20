@@ -5,6 +5,10 @@ import { getTokenFromRequest, verifyAuth } from '@/lib/auth'
 import { createSystemLog } from '@/lib/audit'
 import { enforceCsrf } from '@/lib/csrf'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+
 const profileUpdateSchema = z
     .object({
         name: z.string().trim().min(2).max(120).nullable().optional(),

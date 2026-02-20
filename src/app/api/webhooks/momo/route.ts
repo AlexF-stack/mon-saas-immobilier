@@ -3,6 +3,10 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { verifyWebhookSignature } from '@/lib/payment'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+
 function buildReceiptNumber(paymentId: string, date: Date) {
     const suffix = paymentId.slice(-6).toUpperCase()
     const stamp = date.toISOString().slice(0, 10).replace(/-/g, '')

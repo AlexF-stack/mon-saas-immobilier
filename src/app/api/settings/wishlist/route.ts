@@ -5,6 +5,10 @@ import { getTokenFromRequest, verifyAuth } from '@/lib/auth'
 import { enforceCsrf } from '@/lib/csrf'
 import { createSystemLog } from '@/lib/audit'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+
 const wishlistMutationSchema = z
     .object({
         propertyId: z.string().trim().cuid(),

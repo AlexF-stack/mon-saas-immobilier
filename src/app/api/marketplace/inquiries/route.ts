@@ -5,6 +5,10 @@ import { createSystemLog } from '@/lib/audit'
 import { enforceCsrf } from '@/lib/csrf'
 import { getTokenFromRequest, verifyAuth } from '@/lib/auth'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+
 const RATE_LIMIT_WINDOW_MINUTES = 15
 const RATE_LIMIT_MAX_REQUESTS = 5
 

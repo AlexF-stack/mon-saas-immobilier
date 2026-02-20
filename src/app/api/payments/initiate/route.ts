@@ -7,6 +7,10 @@ import { verifyAuth, getTokenFromRequest } from '@/lib/auth'
 import { createSystemLog } from '@/lib/audit'
 import { enforceCsrf } from '@/lib/csrf'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+
 const initiatePaymentSchema = z.object({
     contractId: z.string().trim().min(1),
     amount: z.coerce.number().positive(),

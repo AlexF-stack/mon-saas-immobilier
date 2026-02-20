@@ -5,6 +5,10 @@ import { generatePaymentReceiptPdf } from '@/lib/pdf'
 import { canAccessContractScope } from '@/lib/rbac'
 import { createSystemLog } from '@/lib/audit'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+
 function buildReceiptNumber(paymentId: string, date: Date) {
     const suffix = paymentId.slice(-6).toUpperCase()
     const stamp = date.toISOString().slice(0, 10).replace(/-/g, '')
