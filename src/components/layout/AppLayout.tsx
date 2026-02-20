@@ -16,7 +16,7 @@ export function AppLayout({ children, navItems, role, userProfile }: AppLayoutPr
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
+    <div className="flex min-h-screen bg-background text-primary">
       <AppSidebar
         navItems={navItems}
         role={role}

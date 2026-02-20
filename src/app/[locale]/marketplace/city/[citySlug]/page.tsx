@@ -172,7 +172,7 @@ export default async function MarketplaceCityPage(props: {
             : `/${locale}/marketplace/city/${citySlug}`
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+        <div className="min-h-screen bg-background text-primary">
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -181,10 +181,10 @@ export default async function MarketplaceCityPage(props: {
 
             <main className="container-app space-y-8 py-8">
                 <section className="space-y-3">
-                    <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+                    <h1 className="text-3xl font-semibold tracking-tight text-primary">
                         Locations disponibles a {city}
                     </h1>
-                    <p className="max-w-3xl text-sm text-slate-600 dark:text-slate-300">
+                    <p className="max-w-3xl text-sm text-secondary">
                         Parcourez les annonces publiees a {city}, comparez les loyers et contactez les proprietaires.
                     </p>
                     <Button asChild size="sm" variant="outline">
@@ -217,7 +217,7 @@ export default async function MarketplaceCityPage(props: {
                                     <Link href={pageHref(clampedPage - 1)}>Precedent</Link>
                                 </Button>
                             )}
-                            <span className="px-2 text-sm text-slate-500 dark:text-slate-400">
+                            <span className="px-2 text-sm text-secondary">
                                 Page {clampedPage} / {totalPages}
                             </span>
                             {clampedPage >= totalPages ? (

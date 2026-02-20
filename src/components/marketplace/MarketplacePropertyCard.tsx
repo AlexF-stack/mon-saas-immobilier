@@ -33,7 +33,7 @@ export function MarketplacePropertyCard({ locale, property }: MarketplacePropert
 
     return (
         <Card className="overflow-hidden">
-            <div className="h-44 w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
+            <div className="h-44 w-full overflow-hidden bg-surface">
                 {cover ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -42,7 +42,7 @@ export function MarketplacePropertyCard({ locale, property }: MarketplacePropert
                         className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
                     />
                 ) : (
-                    <div className="flex h-full items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 text-slate-500 dark:from-slate-800 dark:to-slate-900 dark:text-slate-400">
+                    <div className="flex h-full items-center justify-center bg-gradient-to-br from-surface to-[rgb(var(--card)/0.9)] text-secondary">
                         Image indisponible
                     </div>
                 )}
@@ -57,7 +57,7 @@ export function MarketplacePropertyCard({ locale, property }: MarketplacePropert
                         </Badge>
                     </div>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                <div className="flex items-center gap-2 text-sm text-secondary">
                     <MapPin className="h-4 w-4 shrink-0" />
                     <span className="line-clamp-1">
                         {[property.city, property.address].filter(Boolean).join(', ')}
@@ -65,11 +65,11 @@ export function MarketplacePropertyCard({ locale, property }: MarketplacePropert
                 </div>
             </CardHeader>
             <CardContent className="space-y-3">
-                <p className="text-2xl font-semibold tracking-tight text-slate-900 tabular-nums dark:text-slate-100">
+                <p className="text-2xl font-semibold tracking-tight text-primary tabular-nums">
                     {property.price.toLocaleString('fr-FR')} FCFA
                 </p>
                 <Badge variant="outline">{propertyTypeLabel(property.propertyType)}</Badge>
-                <p className="line-clamp-2 text-sm text-slate-600 dark:text-slate-300">
+                <p className="line-clamp-2 text-sm text-secondary">
                     {property.description || 'Aucune description disponible.'}
                 </p>
             </CardContent>

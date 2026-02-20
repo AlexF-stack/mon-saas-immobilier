@@ -12,6 +12,17 @@ model User {
   email     String   @unique
   password  String
   name      String?
+  phone     String?
+  avatarUrl String?
+  preferredLanguage String @default("fr")
+  notifyEmail Boolean @default(true)
+  notifySms Boolean @default(false)
+  notifyPush Boolean @default(false)
+  twoFactorEnabled Boolean @default(false)
+  dashboardCompact Boolean @default(false)
+  companyName String?
+  companyLogoUrl String?
+  lastLoginAt DateTime?
   role      String   @default("TENANT") // ADMIN, MANAGER, TENANT
   isSuspended Boolean @default(false)
   suspendedAt DateTime?
@@ -20,6 +31,9 @@ model User {
 
   managedProperties Property[] @relation("PropertyManager")
   contracts         Contract[]
+  wishlistItems     WishlistItem[]
+  loginHistory      LoginHistory[]
+  updatedSystemConfigs SystemConfig[] @relation("SystemConfigUpdatedBy")
 }
 
 model SystemLog {
@@ -62,6 +76,7 @@ model Property {
   contracts   Contract[]
   images      PropertyImage[]
   inquiries   MarketplaceInquiry[]
+  wishlistedBy WishlistItem[]
 
   @@index([isPublished])
   @@index([isPublished, status])
@@ -156,4 +171,45 @@ model MarketplaceInquiry {
   @@index([propertyId, createdAt])
   @@index([requesterEmail])
   @@index([requesterIp, createdAt])
+}
+
+model WishlistItem {
+  id         String   @id @default(cuid())
+  userId     String
+  propertyId String
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, propertyId])
+  @@index([userId, createdAt])
+  @@index([propertyId, createdAt])
+}
+
+model LoginHistory {
+  id         String   @id @default(cuid())
+  userId     String
+  ipAddress  String?
+  userAgent  String?
+  success    Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model SystemConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  updatedBy   User?    @relation("SystemConfigUpdatedBy", fields: [updatedById], references: [id])
+
+  @@index([updatedAt])
 }

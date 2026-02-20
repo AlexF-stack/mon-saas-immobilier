@@ -10,11 +10,11 @@ type MarketplaceHeaderProps = {
 
 export function MarketplaceHeader({ locale, isAuthenticated }: MarketplaceHeaderProps) {
     return (
-        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/85 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/80">
+        <header className="sticky top-0 z-20 border-b border-border bg-[rgb(var(--card)/0.86)] backdrop-blur-md">
             <div className="container-app flex items-center gap-4 py-4">
                 <Link
                     href={`/${locale}`}
-                    className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-slate-100"
+                    className="flex items-center gap-2 text-base font-semibold text-primary"
                 >
                     <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-sm font-bold text-white">
                         I
@@ -25,13 +25,13 @@ export function MarketplaceHeader({ locale, isAuthenticated }: MarketplaceHeader
                 <nav className="hidden items-center gap-6 md:flex">
                     <Link
                         href={`/${locale}/marketplace`}
-                        className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100"
+                        className="text-sm font-medium text-secondary transition-colors hover:text-primary"
                     >
                         Marketplace
                     </Link>
                     <Link
                         href={`/${locale}#features`}
-                        className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100"
+                        className="text-sm font-medium text-secondary transition-colors hover:text-primary"
                     >
                         Features
                     </Link>

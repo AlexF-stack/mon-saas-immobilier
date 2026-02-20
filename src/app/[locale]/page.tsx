@@ -8,7 +8,17 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { StatCard } from '@/components/ui/stat-card'
 import ThemeToggle from '@/components/ui/theme-toggle'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
-import { Building2 } from 'lucide-react'
+import { getLandingPricingPlans, type LandingPricingPlan } from '@/lib/landing-pricing'
+import {
+    BarChart3,
+    Building2,
+    CreditCard,
+    FileText,
+    Home,
+    Sparkles,
+    Star,
+    type LucideIcon,
+} from 'lucide-react'
 
 function propertyTypeLabel(propertyType: string, locale: string) {
     if (locale === 'fr') {
@@ -26,33 +36,45 @@ function propertyTypeLabel(propertyType: string, locale: string) {
     return propertyType
 }
 
+const pricingFeatureIcons: Record<LandingPricingPlan['key'], LucideIcon[]> = {
+    basic: [Home, FileText, Sparkles],
+    pro: [Building2, FileText, CreditCard],
+    premium: [Sparkles, BarChart3, CreditCard],
+}
+
 export default async function LandingPage(props: {
     params: Promise<{ locale: string }>
 }) {
     const { locale } = await props.params
     const t = await getTranslations({ locale })
 
-    const featuredProperties = await prisma.property.findMany({
-        where: {
-            isPublished: true,
-            status: 'AVAILABLE',
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 6,
-        select: {
-            id: true,
-            title: true,
-            city: true,
-            address: true,
-            price: true,
-            propertyType: true,
-            images: {
-                select: { id: true, url: true },
-                take: 1,
-                orderBy: { id: 'asc' },
+    const pricingSectionId = 'pricing'
+    const pricingSectionHref = `/${locale}#${pricingSectionId}`
+
+    const [featuredProperties, pricingPlans] = await Promise.all([
+        prisma.property.findMany({
+            where: {
+                isPublished: true,
+                status: 'AVAILABLE',
             },
-        },
-    })
+            orderBy: { createdAt: 'desc' },
+            take: 6,
+            select: {
+                id: true,
+                title: true,
+                city: true,
+                address: true,
+                price: true,
+                propertyType: true,
+                images: {
+                    select: { id: true, url: true },
+                    take: 1,
+                    orderBy: { id: 'asc' },
+                },
+            },
+        }),
+        getLandingPricingPlans(locale),
+    ])
 
     if (featuredProperties.length > 0) {
         await prisma.$transaction(
@@ -77,6 +99,15 @@ export default async function LandingPage(props: {
         locale === 'fr'
             ? 'La marketplace sera mise a jour avec de nouvelles annonces tres bientot.'
             : 'New marketplace listings will be available soon.'
+    const pricingTitle = locale === 'fr' ? 'Choisissez votre plan' : 'Choose your plan'
+    const pricingSubtitle =
+        locale === 'fr'
+            ? 'Des options adaptees aux proprietaires, locataires et gestionnaires.'
+            : 'Plans built for tenants, owners and managers.'
+    const pricingPopularLabel = locale === 'fr' ? 'Populaire' : 'Popular'
+    const pricingCustomQuestion =
+        locale === 'fr' ? 'Besoin dun plan sur mesure ?' : 'Need a custom enterprise setup?'
+    const pricingCustomLink = locale === 'fr' ? 'Demander une demo' : 'Request a demo'
 
     return (
         <div className="flex min-h-screen flex-col bg-background text-primary">
@@ -89,7 +120,7 @@ export default async function LandingPage(props: {
                         <Link href={`/${locale}#features`} className="text-secondary hover:underline">
                             {t('nav.features')}
                         </Link>
-                        <Link href={`/${locale}#pricing`} className="text-secondary hover:underline">
+                        <Link href={pricingSectionHref} className="text-secondary hover:underline">
                             {t('nav.pricing')}
                         </Link>
                         <Link href={`/${locale}/marketplace`} className="text-secondary hover:underline">
@@ -178,7 +209,7 @@ export default async function LandingPage(props: {
                                                     className="h-full w-full object-cover"
                                                 />
                                             ) : (
-                                                <div className="flex h-full items-center justify-center text-sm text-slate-500 dark:text-slate-400">
+                                                <div className="flex h-full items-center justify-center text-sm text-secondary">
                                                     {locale === 'fr' ? 'Image indisponible' : 'Image unavailable'}
                                                 </div>
                                             )}
@@ -190,12 +221,12 @@ export default async function LandingPage(props: {
                                                     {locale === 'fr' ? 'Disponible' : 'Available'}
                                                 </Badge>
                                             </div>
-                                            <p className="line-clamp-1 text-sm text-slate-500 dark:text-slate-400">
+                                            <p className="line-clamp-1 text-sm text-secondary">
                                                 {[property.city, property.address].filter(Boolean).join(', ')}
                                             </p>
                                         </CardHeader>
                                         <CardContent className="space-y-2">
-                                            <p className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+                                            <p className="text-2xl font-semibold tracking-tight text-primary">
                                                 {property.price.toLocaleString('fr-FR')} FCFA
                                             </p>
                                             <Badge variant="outline">
@@ -254,6 +285,97 @@ export default async function LandingPage(props: {
                                 </div>
                             </article>
                         </div>
+                    </div>
+                </section>
+
+                <section id={pricingSectionId} className="scroll-mt-24 py-12">
+                    <div className="container-app space-y-8">
+                        <div className="mx-auto max-w-2xl space-y-2 text-center">
+                            <h2 className="text-2xl font-bold sm:text-3xl">{pricingTitle}</h2>
+                            <p className="text-secondary">{pricingSubtitle}</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                            {pricingPlans.map((plan) => (
+                                <Card
+                                    key={plan.key}
+                                    className={[
+                                        'relative h-full border-border bg-card transition-all duration-200 hover:-translate-y-1',
+                                        plan.popular
+                                            ? 'ring-1 ring-primary/30 shadow-lift'
+                                            : 'shadow-soft hover:shadow-card',
+                                    ].join(' ')}
+                                >
+                                    {plan.popular ? (
+                                        <div className="absolute right-4 top-4">
+                                            <Badge variant="default">{pricingPopularLabel}</Badge>
+                                        </div>
+                                    ) : null}
+
+                                    <CardHeader className="space-y-3">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <CardTitle className="text-xl">{plan.name}</CardTitle>
+                                            {plan.popular ? (
+                                                <Star className="h-4 w-4 text-primary" aria-hidden />
+                                            ) : null}
+                                        </div>
+                                        <p className="text-sm text-secondary">{plan.description}</p>
+                                        <div className="space-y-1">
+                                            <p className="text-3xl font-semibold tracking-tight text-primary">
+                                                {plan.price}
+                                            </p>
+                                            <p className="text-sm text-secondary">{plan.cadence}</p>
+                                        </div>
+                                    </CardHeader>
+
+                                    <CardContent className="space-y-4">
+                                        <ul className="space-y-3">
+                                            {plan.features.map((featureLabel, featureIndex) => {
+                                                const Icon =
+                                                    pricingFeatureIcons[plan.key][featureIndex] ??
+                                                    Sparkles
+                                                return (
+                                                    <li
+                                                        key={`${plan.key}-${featureLabel}`}
+                                                        className="flex items-center gap-3"
+                                                    >
+                                                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[rgb(var(--primary)/0.12)] text-primary">
+                                                            <Icon className="h-4 w-4" aria-hidden />
+                                                        </span>
+                                                        <span className="text-sm text-primary">
+                                                            {featureLabel}
+                                                        </span>
+                                                    </li>
+                                                )
+                                            })}
+                                        </ul>
+                                        <p className="rounded-xl bg-surface px-3 py-2 text-xs text-secondary">
+                                            {plan.note}
+                                        </p>
+                                    </CardContent>
+
+                                    <CardFooter className="mt-auto">
+                                        <Button
+                                            asChild
+                                            className="w-full"
+                                            variant={plan.popular ? 'cta' : 'outline'}
+                                        >
+                                            <Link href={plan.ctaHref}>{plan.ctaLabel}</Link>
+                                        </Button>
+                                    </CardFooter>
+                                </Card>
+                            ))}
+                        </div>
+
+                        <p className="text-center text-sm text-secondary">
+                            {pricingCustomQuestion}{' '}
+                            <Link
+                                href={`/${locale}/login`}
+                                className="font-medium text-primary hover:underline"
+                            >
+                                {pricingCustomLink}
+                            </Link>
+                        </p>
                     </div>
                 </section>
 

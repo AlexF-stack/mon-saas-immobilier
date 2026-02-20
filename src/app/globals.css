@@ -70,6 +70,8 @@
 .text-secondary { color: rgb(var(--text-secondary)); }
 .text-primary-foreground { color: rgb(var(--primary-foreground)); }
 .text-accent-foreground { color: rgb(var(--text-primary)); }
+.text-on-background { color: rgb(var(--text-primary)); }
+.text-on-card { color: rgb(var(--text-primary)); }
 .border-border { border-color: rgb(var(--border)); }
 .ring-primary { box-shadow: 0 0 0 3px rgb(var(--primary) / 0.12); }
 

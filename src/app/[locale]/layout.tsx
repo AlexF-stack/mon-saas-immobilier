@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import ThemeRegistry from "@/components/ThemeRegistry";
 import LanguageProvider from "@/components/LanguageProvider";
 import "../globals.css";
 import enMessages from "@/messages/en.json";
@@ -34,11 +33,9 @@ export default async function LocaleLayout({
 
   return (
     <>
-      <ThemeRegistry>
-        <LanguageProvider locale={locale} messages={messages}>
-          {children}
-        </LanguageProvider>
-      </ThemeRegistry>
+      <LanguageProvider locale={locale} messages={messages}>
+        {children}
+      </LanguageProvider>
     </>
   )
 }

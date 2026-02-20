@@ -161,7 +161,7 @@ export default async function MarketplacePropertyDetailPage(props: {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+        <div className="min-h-screen bg-background text-primary">
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -181,7 +181,7 @@ export default async function MarketplacePropertyDetailPage(props: {
 
                 <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                     <div className="space-y-4 lg:col-span-2">
-                        <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+                        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
                             {property.images.length > 0 ? (
                                 <div className="grid grid-cols-1 gap-2 p-2 md:grid-cols-2">
                                     {property.images.map((image) => (
@@ -195,7 +195,7 @@ export default async function MarketplacePropertyDetailPage(props: {
                                     ))}
                                 </div>
                             ) : (
-                                <div className="flex h-72 items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 text-slate-500 dark:from-slate-800 dark:to-slate-900 dark:text-slate-400">
+                                <div className="flex h-72 items-center justify-center bg-gradient-to-br from-surface to-[rgb(var(--card)/0.9)] text-secondary">
                                     Aucune image disponible
                                 </div>
                             )}
@@ -213,34 +213,34 @@ export default async function MarketplacePropertyDetailPage(props: {
                                 </div>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                <p className="text-3xl font-semibold tracking-tight text-slate-900 tabular-nums dark:text-slate-100">
+                                <p className="text-3xl font-semibold tracking-tight text-primary tabular-nums">
                                     {property.price.toLocaleString('fr-FR')} FCFA
                                 </p>
-                                <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                                <p className="text-sm leading-relaxed text-secondary">
                                     {property.description || 'Ce bien ne contient pas encore de description detaillee.'}
                                 </p>
                                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                    <div className="rounded-xl border border-slate-200/70 bg-slate-50/70 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-900/70">
-                                        <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                    <div className="rounded-xl border border-border bg-surface px-3 py-2 text-sm">
+                                        <p className="text-xs uppercase tracking-wide text-secondary">
                                             Type de bien
                                         </p>
-                                        <p className="font-medium text-slate-900 dark:text-slate-100">
+                                        <p className="font-medium text-primary">
                                             {propertyTypeLabel(property.propertyType)}
                                         </p>
                                     </div>
-                                    <div className="rounded-xl border border-slate-200/70 bg-slate-50/70 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-900/70">
-                                        <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                    <div className="rounded-xl border border-border bg-surface px-3 py-2 text-sm">
+                                        <p className="text-xs uppercase tracking-wide text-secondary">
                                             Disponibilite
                                         </p>
-                                        <p className="font-medium text-slate-900 dark:text-slate-100">
+                                        <p className="font-medium text-primary">
                                             Immediate
                                         </p>
                                     </div>
-                                    <div className="rounded-xl border border-slate-200/70 bg-slate-50/70 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-900/70">
-                                        <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                    <div className="rounded-xl border border-border bg-surface px-3 py-2 text-sm">
+                                        <p className="text-xs uppercase tracking-wide text-secondary">
                                             Interet recu
                                         </p>
-                                        <p className="font-medium text-slate-900 dark:text-slate-100">
+                                        <p className="font-medium text-primary">
                                             {property.inquiriesCount} demandes
                                         </p>
                                     </div>
@@ -267,13 +267,13 @@ export default async function MarketplacePropertyDetailPage(props: {
                             <CardHeader>
                                 <CardTitle className="text-base">Informations publiques</CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
+                            <CardContent className="space-y-3 text-sm text-secondary">
                                 <div className="flex items-center gap-2">
-                                    <Home className="h-4 w-4 text-slate-400" />
+                                    <Home className="h-4 w-4 text-secondary" />
                                     <span>{propertyTypeLabel(property.propertyType)}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <CalendarClock className="h-4 w-4 text-slate-400" />
+                                    <CalendarClock className="h-4 w-4 text-secondary" />
                                     <span>
                                         Publie le{' '}
                                         {property.publishedAt
@@ -282,7 +282,7 @@ export default async function MarketplacePropertyDetailPage(props: {
                                     </span>
                                 </div>
                                 {property.manager?.name && (
-                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                    <p className="text-xs text-secondary">
                                         Contact proprietaire: {property.manager.name}
                                     </p>
                                 )}

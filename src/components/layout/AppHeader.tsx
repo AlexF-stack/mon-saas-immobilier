@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { Bell, ChevronDown, LogOut, Search, User } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import ThemeToggle from '@/components/ui/theme-toggle'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,8 +64,7 @@ export function AppHeader({ onMenuClick, userProfile, role }: AppHeaderProps) {
   return (
     <header
       className={cn(
-        'sticky top-0 z-20 flex shrink-0 items-center gap-4 border-b border-slate-200 bg-white/80 px-6 py-4 backdrop-blur-md supports-[backdrop-filter]:bg-white/70',
-        'dark:border-slate-800 dark:bg-slate-900/80 dark:supports-[backdrop-filter]:bg-slate-900/70 md:px-8'
+        'sticky top-0 z-20 flex shrink-0 items-center gap-4 border-b border-border bg-[rgb(var(--card)/0.82)] px-6 py-4 backdrop-blur-md supports-[backdrop-filter]:bg-[rgb(var(--card)/0.72)] md:px-8'
       )}
     >
       <Button
@@ -80,29 +80,30 @@ export function AppHeader({ onMenuClick, userProfile, role }: AppHeaderProps) {
       </Button>
 
       <div className="min-w-0 flex-1">
-        <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+        <p className="text-xs uppercase tracking-wide text-secondary">
           {breadcrumb.join(' / ')}
         </p>
-        <p className="truncate text-lg font-semibold text-slate-900 dark:text-slate-100">{pageTitle}</p>
+        <p className="truncate text-lg font-semibold text-primary">{pageTitle}</p>
       </div>
 
       <div className="hidden items-center gap-2 sm:flex md:w-64 lg:w-80">
         <div className="relative w-full">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary" />
           <Input
             type="search"
             placeholder="Rechercher..."
-            className="h-9 border-slate-200 bg-white/70 pl-9 text-slate-700 placeholder:text-slate-400 focus-visible:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200"
+            className="h-9 pl-9"
             aria-label="Recherche"
           />
         </div>
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
+        <ThemeToggle />
         <Button
           variant="ghost"
           size="icon"
-          className="relative h-9 w-9 text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100"
+          className="relative h-9 w-9 text-secondary hover:text-primary"
           aria-label="Notifications"
         >
           <Bell className="h-[18px] w-[18px]" />
@@ -113,7 +114,7 @@ export function AppHeader({ onMenuClick, userProfile, role }: AppHeaderProps) {
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              className="flex h-9 items-center gap-2 rounded-full pl-2 pr-2 hover:bg-slate-100 dark:hover:bg-slate-800/70"
+              className="flex h-9 items-center gap-2 rounded-full pl-2 pr-2 hover:bg-surface"
               aria-label="Profil"
             >
               <Avatar className="h-8 w-8 shrink-0 border border-slate-200 dark:border-slate-700">
@@ -124,18 +125,18 @@ export function AppHeader({ onMenuClick, userProfile, role }: AppHeaderProps) {
               <span className="hidden max-w-[120px] truncate text-sm font-medium sm:inline">
                 {userProfile?.name || userProfile?.email || 'Compte'}
               </span>
-              <ChevronDown className="hidden h-4 w-4 shrink-0 text-muted-foreground sm:block" />
+              <ChevronDown className="hidden h-4 w-4 shrink-0 text-secondary sm:block" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="end"
-            className="w-56 border-slate-200 bg-white/95 backdrop-blur-md dark:border-slate-700 dark:bg-slate-900/95"
+            className="w-56 border-border bg-card backdrop-blur-md"
           >
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col gap-1">
                 <p className="text-sm font-medium">{userProfile?.name || 'Utilisateur'}</p>
-                <p className="text-xs text-muted-foreground">{userProfile?.email}</p>
-                {role && <p className="mt-1 text-xs text-muted-foreground">Role : {role}</p>}
+                <p className="text-xs text-secondary">{userProfile?.email}</p>
+                {role && <p className="mt-1 text-xs text-secondary">Role : {role}</p>}
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />

@@ -91,7 +91,7 @@ export default function RegisterPage() {
     }
 
     return (
-        <div className="flex h-screen items-center justify-center bg-surface">
+        <div className="flex h-screen items-center justify-center bg-surface text-primary">
             <Card className="w-full max-w-md">
                 <CardHeader>
                     <CardTitle>{t('auth.register')}</CardTitle>
@@ -111,7 +111,7 @@ export default function RegisterPage() {
                         <div className="space-y-2">
                             <Label htmlFor="password">{t('auth.password')}</Label>
                             <Input id="password" name="password" type="password" required />
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs text-secondary">
                                 8+ chars, upper/lower case, number, special char.
                             </p>
                         </div>

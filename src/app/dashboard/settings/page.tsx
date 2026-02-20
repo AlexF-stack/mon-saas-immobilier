@@ -1,29 +1,29 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import { verifyAuth } from '@/lib/auth'
+import { getSettingsPageSnapshot } from '@/lib/settings'
+import { SettingsWorkspace } from '@/components/dashboard/settings/SettingsWorkspace'
 
-export default function SettingsPage() {
-    return (
-        <div className="space-y-6">
-            <h1 className="text-3xl font-bold tracking-tight">Paramètres</h1>
+export default async function SettingsPage() {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('token')?.value
+  const user = token ? await verifyAuth(token) : null
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Profil Utilisateur</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="grid w-full max-w-sm items-center gap-1.5">
-                        <Label htmlFor="email">Email</Label>
-                        <Input type="email" id="email" placeholder="Email" disabled />
-                    </div>
-                    <div className="grid w-full max-w-sm items-center gap-1.5">
-                        <Label htmlFor="name">Nom Complet</Label>
-                        <Input type="text" id="name" placeholder="Nom" />
-                    </div>
-                    <Button>Sauvegarder</Button>
-                </CardContent>
-            </Card>
-        </div>
-    )
+  if (!user) {
+    redirect('/login')
+  }
+
+  const snapshot = await getSettingsPageSnapshot(user.id, user.role)
+  if (!snapshot) {
+    redirect('/login')
+  }
+
+  return (
+    <SettingsWorkspace
+      profile={snapshot.profile}
+      loginHistory={snapshot.loginHistory}
+      wishlist={snapshot.wishlist}
+      systemConfig={snapshot.systemConfig}
+    />
+  )
 }

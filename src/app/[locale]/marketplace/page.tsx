@@ -330,7 +330,7 @@ export default async function MarketplacePage(props: {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+        <div className="min-h-screen bg-background text-primary">
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -339,20 +339,20 @@ export default async function MarketplacePage(props: {
 
             <main className="container-app space-y-8 py-8">
                 <section className="space-y-3">
-                    <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+                    <h1 className="text-3xl font-semibold tracking-tight text-primary">
                         Marketplace immobilier
                     </h1>
-                    <p className="max-w-3xl text-sm text-slate-600 dark:text-slate-300">
+                    <p className="max-w-3xl text-sm text-secondary">
                         Trouvez des biens disponibles, comparez les offres et envoyez une demande de visite en quelques clics.
                     </p>
                 </section>
 
-                <section className="rounded-2xl border border-slate-200/70 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+                <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
                     <form className="grid grid-cols-1 gap-4 lg:grid-cols-12" method="GET">
                         <div className="space-y-2 lg:col-span-4">
                             <Label htmlFor="q">Recherche</Label>
                             <div className="relative">
-                                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary" />
                                 <Input
                                     id="q"
                                     name="q"
@@ -452,9 +452,9 @@ export default async function MarketplacePage(props: {
                 </section>
 
                 {cityLinks.length > 0 ? (
-                    <section className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+                    <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
                         <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
                                 Explorer par ville
                             </span>
                             {cityLinks.map((item) => (
@@ -492,7 +492,7 @@ export default async function MarketplacePage(props: {
                                     <Link href={buildPageHref(Math.max(1, clampedPage - 1))}>Precedent</Link>
                                 </Button>
                             )}
-                            <span className="px-2 text-sm text-slate-500 dark:text-slate-400">
+                            <span className="px-2 text-sm text-secondary">
                                 Page {clampedPage} / {totalPages}
                             </span>
                             {clampedPage >= totalPages ? (

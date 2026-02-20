@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import ThemeRegistry from "@/components/ThemeRegistry";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -8,9 +9,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body suppressHydrationWarning className="antialiased">
-        {children}
+    <html lang="en" suppressHydrationWarning>
+      <body className="antialiased">
+        <ThemeRegistry>{children}</ThemeRegistry>
       </body>
     </html>
   );
