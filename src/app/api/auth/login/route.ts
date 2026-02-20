@@ -7,6 +7,9 @@ import { createSystemLog } from '@/lib/audit'
 import { getClientIpFromHeaders } from '@/lib/request-metadata'
 import { z } from 'zod'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 const loginSchema = z.object({
     email: z.string().trim().email(),
     password: z.string(),

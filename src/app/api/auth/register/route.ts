@@ -10,6 +10,9 @@ import { enforceCsrf } from '@/lib/csrf'
 import { createSystemLog } from '@/lib/audit'
 import { z } from 'zod'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 const registerSchema = z.object({
     email: z.string().trim().email(),
     password: z.string().min(8),

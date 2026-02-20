@@ -1,15 +1,26 @@
 import jwt, { type JwtPayload } from 'jsonwebtoken'
 
-const SECRET_KEY = process.env.JWT_SECRET ?? 'supersecretkey'
+const DEV_FALLBACK_JWT_SECRET = 'supersecretkey'
 const MIN_JWT_SECRET_LENGTH = 32
 const USER_ROLES = ['ADMIN', 'MANAGER', 'TENANT'] as const
 
-if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
-    throw new Error('JWT_SECRET must be set in production')
-}
+function getJwtSecret(): string {
+    const configuredSecret = process.env.JWT_SECRET
+    const secret = configuredSecret ?? DEV_FALLBACK_JWT_SECRET
 
-if (process.env.NODE_ENV === 'production' && process.env.JWT_SECRET && process.env.JWT_SECRET.length < MIN_JWT_SECRET_LENGTH) {
-    throw new Error(`JWT_SECRET must be at least ${MIN_JWT_SECRET_LENGTH} characters in production`)
+    if (process.env.NODE_ENV === 'production') {
+        if (!configuredSecret) {
+            throw new Error('JWT_SECRET must be set in production')
+        }
+
+        if (configuredSecret.length < MIN_JWT_SECRET_LENGTH) {
+            throw new Error(
+                `JWT_SECRET must be at least ${MIN_JWT_SECRET_LENGTH} characters in production`
+            )
+        }
+    }
+
+    return secret
 }
 
 type EdgeAuthPayload = JwtPayload & {
@@ -33,7 +44,7 @@ function isEdgeAuthPayload(payload: JwtPayload): payload is EdgeAuthPayload {
 
 export async function verifyAuthEdge(token: string): Promise<EdgeAuthPayload | null> {
     try {
-        const decoded = jwt.verify(token, SECRET_KEY)
+        const decoded = jwt.verify(token, getJwtSecret())
         if (typeof decoded === 'string' || !isEdgeAuthPayload(decoded)) {
             return null
         }
