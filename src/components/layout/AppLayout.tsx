@@ -14,12 +14,15 @@ export interface AppLayoutProps {
 
 export function AppLayout({ children, navItems, role, userProfile }: AppLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   return (
-    <div className="flex min-h-screen bg-background text-primary">
+    <div className="bg-grid noise-overlay flex min-h-screen overflow-x-clip bg-background text-primary">
       <AppSidebar
         navItems={navItems}
         role={role}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
         mobileOpen={mobileMenuOpen}
         onMobileClose={() => setMobileMenuOpen(false)}
       />
@@ -29,7 +32,9 @@ export function AppLayout({ children, navItems, role, userProfile }: AppLayoutPr
           userProfile={userProfile}
           role={role}
         />
-        <main className="flex-1 overflow-y-auto p-6 md:p-8">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          <div className="animate-route-enter mx-auto w-full max-w-[1480px]">{children}</div>
+        </main>
       </div>
     </div>
   )

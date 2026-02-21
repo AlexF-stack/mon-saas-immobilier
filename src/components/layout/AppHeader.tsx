@@ -51,6 +51,12 @@ export function AppHeader({ onMenuClick, userProfile, role }: AppHeaderProps) {
     (segment) => pageLabels[segment] ?? segment.charAt(0).toUpperCase() + segment.slice(1)
   )
   const pageTitle = breadcrumb[breadcrumb.length - 1] ?? 'Tableau de bord'
+  const roleLabelMap: Record<string, string> = {
+    ADMIN: 'Admin',
+    MANAGER: 'Manager',
+    TENANT: 'Locataire',
+  }
+  const roleLabel = role ? roleLabelMap[role] ?? role : null
   const initials = userProfile?.name
     ? userProfile.name
         .trim()
@@ -64,9 +70,14 @@ export function AppHeader({ onMenuClick, userProfile, role }: AppHeaderProps) {
   return (
     <header
       className={cn(
-        'sticky top-0 z-20 flex shrink-0 items-center gap-4 border-b border-border bg-[rgb(var(--card)/0.82)] px-6 py-4 backdrop-blur-md supports-[backdrop-filter]:bg-[rgb(var(--card)/0.72)] md:px-8'
+        'animate-fade-in relative sticky top-0 z-20 flex shrink-0 items-center gap-3 border-b border-border/70 bg-[rgb(var(--card)/0.9)] px-4 py-3 backdrop-blur-xl supports-[backdrop-filter]:bg-[rgb(var(--card)/0.82)] sm:px-6 lg:px-8'
       )}
     >
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/35 to-transparent"
+      />
+
       <Button
         variant="ghost"
         size="icon"
@@ -80,30 +91,37 @@ export function AppHeader({ onMenuClick, userProfile, role }: AppHeaderProps) {
       </Button>
 
       <div className="min-w-0 flex-1">
-        <p className="text-xs uppercase tracking-wide text-secondary">
+        <p className="hidden text-xs uppercase tracking-wide text-secondary sm:block">
           {breadcrumb.join(' / ')}
         </p>
-        <p className="truncate text-lg font-semibold text-primary">{pageTitle}</p>
+        <div className="flex min-w-0 items-center gap-2">
+          <p className="truncate text-lg font-semibold text-primary">{pageTitle}</p>
+          {roleLabel ? (
+            <span className="hidden rounded-full border border-border/70 bg-surface/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary sm:inline-flex">
+              {roleLabel}
+            </span>
+          ) : null}
+        </div>
       </div>
 
-      <div className="hidden items-center gap-2 sm:flex md:w-64 lg:w-80">
+      <div className="hidden items-center gap-2 md:flex md:w-64 lg:w-80">
         <div className="relative w-full">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary" />
           <Input
             type="search"
             placeholder="Rechercher..."
-            className="h-9 pl-9"
+            className="h-9 rounded-full border-border/70 bg-card/85 pl-9 text-primary placeholder:text-secondary/80 backdrop-blur-sm"
             aria-label="Recherche"
           />
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1">
+      <div className="elevation-2 flex shrink-0 items-center gap-1 rounded-full border border-border/70 bg-card/85 p-1 backdrop-blur-sm">
         <ThemeToggle />
         <Button
           variant="ghost"
           size="icon"
-          className="relative h-9 w-9 text-secondary hover:text-primary"
+          className="relative h-9 w-9 rounded-full text-secondary hover:bg-surface hover:text-primary"
           aria-label="Notifications"
         >
           <Bell className="h-[18px] w-[18px]" />
@@ -114,7 +132,7 @@ export function AppHeader({ onMenuClick, userProfile, role }: AppHeaderProps) {
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              className="flex h-9 items-center gap-2 rounded-full pl-2 pr-2 hover:bg-surface"
+              className="flex h-9 items-center gap-2 rounded-full border border-transparent pl-2 pr-2 hover:border-border/70 hover:bg-surface"
               aria-label="Profil"
             >
               <Avatar className="h-8 w-8 shrink-0 border border-slate-200 dark:border-slate-700">
@@ -122,10 +140,10 @@ export function AppHeader({ onMenuClick, userProfile, role }: AppHeaderProps) {
                   {initials}
                 </AvatarFallback>
               </Avatar>
-              <span className="hidden max-w-[120px] truncate text-sm font-medium sm:inline">
+              <span className="hidden max-w-[120px] truncate text-sm font-medium md:inline">
                 {userProfile?.name || userProfile?.email || 'Compte'}
               </span>
-              <ChevronDown className="hidden h-4 w-4 shrink-0 text-secondary sm:block" />
+              <ChevronDown className="hidden h-4 w-4 shrink-0 text-secondary md:block" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
