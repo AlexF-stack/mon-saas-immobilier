@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 
 const DEV_FALLBACK_JWT_SECRET = 'supersecretkey'
+const DEV_FALLBACK_PASSWORD_RESET_SECRET = 'supersecretkey-reset'
 const MIN_JWT_SECRET_LENGTH = 32
 
 function getJwtSecret(): string {
@@ -24,11 +25,47 @@ function getJwtSecret(): string {
     return secret
 }
 
+function getPasswordResetSecret(): string {
+    const configuredSecret = process.env.PASSWORD_RESET_JWT_SECRET
+    const secret = configuredSecret ?? DEV_FALLBACK_PASSWORD_RESET_SECRET
+
+    if (process.env.NODE_ENV === 'production') {
+        if (!configuredSecret) {
+            throw new Error('PASSWORD_RESET_JWT_SECRET must be set in production')
+        }
+
+        if (configuredSecret.length < MIN_JWT_SECRET_LENGTH) {
+            throw new Error(
+                `PASSWORD_RESET_JWT_SECRET must be at least ${MIN_JWT_SECRET_LENGTH} characters in production`
+            )
+        }
+    }
+
+    return secret
+}
+
 export const USER_ROLES = ['ADMIN', 'MANAGER', 'TENANT'] as const
 export type UserRole = (typeof USER_ROLES)[number]
 
+const USER_ROLE_ALIASES: Record<string, UserRole> = {
+    ADMIN: 'ADMIN',
+    MANAGER: 'MANAGER',
+    OWNER: 'MANAGER',
+    PROPRIETAIRE: 'MANAGER',
+    TENANT: 'TENANT',
+    LOCATAIRE: 'TENANT',
+    RENTER: 'TENANT',
+    ADMINISTRATOR: 'ADMIN',
+    SUPER_ADMIN: 'ADMIN',
+}
+
 export function isUserRole(value: string): value is UserRole {
     return USER_ROLES.includes(value as UserRole)
+}
+
+export function normalizeUserRole(value: string | null | undefined): UserRole | null {
+    if (!value) return null
+    return USER_ROLE_ALIASES[value.trim().toUpperCase()] ?? null
 }
 
 export type AuthTokenPayload = JwtPayload & {
@@ -37,6 +74,13 @@ export type AuthTokenPayload = JwtPayload & {
     role: UserRole
     name?: string | null
     isSuspended?: boolean
+}
+
+type PasswordResetTokenPayload = JwtPayload & {
+    purpose: 'PASSWORD_RESET'
+    id: string
+    email: string
+    jti: string
 }
 
 type AuthUserRecord = {
@@ -48,26 +92,43 @@ type AuthUserRecord = {
 }
 
 function buildAuthPayload(user: AuthUserRecord): AuthTokenPayload | null {
-    if (!isUserRole(user.role)) {
+    const normalizedRole = normalizeUserRole(user.role)
+    if (!normalizedRole) {
         return null
     }
 
     return {
         id: user.id,
         email: user.email,
-        role: user.role,
+        role: normalizedRole,
         name: user.name,
         isSuspended: user.isSuspended,
     }
 }
 
-function isAuthTokenPayload(payload: JwtPayload): payload is AuthTokenPayload {
-    return (
-        typeof payload.id === 'string' &&
-        typeof payload.email === 'string' &&
-        typeof payload.role === 'string' &&
-        isUserRole(payload.role)
-    )
+function normalizeTokenPayload(payload: JwtPayload): AuthTokenPayload | null {
+    if (
+        typeof payload.id !== 'string' ||
+        typeof payload.email !== 'string' ||
+        typeof payload.role !== 'string'
+    ) {
+        return null
+    }
+
+    const normalizedRole = normalizeUserRole(payload.role)
+    if (!normalizedRole) {
+        return null
+    }
+
+    return {
+        ...payload,
+        id: payload.id,
+        email: payload.email,
+        role: normalizedRole,
+        name: typeof payload.name === 'string' || payload.name === null ? payload.name : null,
+        isSuspended:
+            typeof payload.isSuspended === 'boolean' ? payload.isSuspended : undefined,
+    }
 }
 
 export const hashPassword = async (password: string) => {
@@ -89,13 +150,60 @@ export const generateToken = (payload: AuthTokenPayload) => {
     return jwt.sign(tokenPayload, getJwtSecret(), { expiresIn: '1d' })
 }
 
+export const generatePasswordResetToken = (payload: {
+    id: string
+    email: string
+    jti: string
+}) => {
+    const resetPayload: PasswordResetTokenPayload = {
+        purpose: 'PASSWORD_RESET',
+        id: payload.id,
+        email: payload.email,
+        jti: payload.jti,
+    }
+
+    return jwt.sign(resetPayload, getPasswordResetSecret(), {
+        expiresIn: '15m',
+    })
+}
+
+export const verifyPasswordResetToken = (
+    token: string
+): PasswordResetTokenPayload | null => {
+    try {
+        const decoded = jwt.verify(token, getPasswordResetSecret())
+        if (typeof decoded === 'string') {
+            return null
+        }
+
+        if (
+            decoded.purpose !== 'PASSWORD_RESET' ||
+            typeof decoded.id !== 'string' ||
+            typeof decoded.email !== 'string' ||
+            typeof decoded.jti !== 'string'
+        ) {
+            return null
+        }
+
+        return {
+            ...decoded,
+            purpose: 'PASSWORD_RESET',
+            id: decoded.id,
+            email: decoded.email,
+            jti: decoded.jti,
+        }
+    } catch {
+        return null
+    }
+}
+
 export const verifyToken = (token: string): AuthTokenPayload | null => {
     try {
         const decoded = jwt.verify(token, getJwtSecret())
-        if (typeof decoded === 'string' || !isAuthTokenPayload(decoded)) {
+        if (typeof decoded === 'string') {
             return null
         }
-        return decoded
+        return normalizeTokenPayload(decoded)
     } catch {
         return null
     }

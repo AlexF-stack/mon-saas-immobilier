@@ -11,6 +11,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { MarketplaceHeader } from '@/components/marketplace/MarketplaceHeader'
 import { MarketplaceInquiryForm } from '@/components/marketplace/MarketplaceInquiryForm'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 function propertyTypeLabel(propertyType: string) {
     if (propertyType === 'APARTMENT') return 'Appartement'
     if (propertyType === 'HOUSE') return 'Maison'
@@ -169,7 +172,7 @@ export default async function MarketplacePropertyDetailPage(props: {
             <MarketplaceHeader locale={locale} isAuthenticated={Boolean(user)} />
 
             <main className="container-app space-y-8 py-8">
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
                     <Button asChild variant="outline" size="sm">
                         <Link href={`/${locale}/marketplace`}>Retour a la marketplace</Link>
                     </Button>

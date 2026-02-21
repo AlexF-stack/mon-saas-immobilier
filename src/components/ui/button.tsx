@@ -5,21 +5,21 @@ import { Slot } from "@radix-ui/react-slot"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-all duration-200 ease-out disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive active:scale-[0.98]",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-[transform,box-shadow,background-color,color,border-color,opacity] [transition-duration:var(--motion-standard)] [transition-timing-function:var(--ease-standard)] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive active:scale-[0.98]",
   {
     variants: {
       variant: {
-        default: "bg-blue-600 text-white shadow-sm hover:bg-blue-700 hover:-translate-y-px hover:shadow-md",
+        default: "bg-blue-600 text-white elevation-1 hover:bg-blue-700 hover:-translate-y-px hover:elevation-2",
         destructive:
-          "bg-destructive text-primary-foreground shadow-sm hover:bg-destructive/90 hover:-translate-y-px focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
+          "bg-destructive text-primary-foreground elevation-1 hover:bg-destructive/90 hover:-translate-y-px hover:elevation-2 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:
-          "border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200 dark:hover:bg-slate-800",
+          "border border-slate-300 bg-white text-slate-700 elevation-1 hover:bg-slate-100 hover:elevation-2 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200 dark:hover:bg-slate-800",
         secondary:
-          "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800/70 dark:text-slate-200 dark:hover:bg-slate-700/80",
+          "bg-slate-100 text-slate-700 elevation-1 hover:bg-slate-200 hover:elevation-2 dark:bg-slate-800/70 dark:text-slate-200 dark:hover:bg-slate-700/80",
         ghost:
           "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100",
         link: "text-primary underline-offset-4 hover:underline",
-        cta: "bg-blue-600 text-white shadow-sm rounded-xl font-semibold hover:bg-blue-700 hover:-translate-y-px hover:shadow-md focus-visible:ring-blue-500/40",
+        cta: "cta-modern relative isolate overflow-hidden bg-blue-600 text-white elevation-2 rounded-xl font-semibold hover:bg-blue-700 hover:-translate-y-px hover:elevation-3 focus-visible:ring-blue-500/40",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",
@@ -44,21 +44,63 @@ function Button({
   variant = "default",
   size = "default",
   asChild = false,
+  loading = false,
+  loadingText,
+  children,
+  disabled,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
+    loading?: boolean
+    loadingText?: string
   }) {
   const Comp = asChild ? Slot : "button"
+  const isLoading = Boolean(loading)
+
+  const content =
+    isLoading && !asChild ? (
+      <>
+        <svg
+          className="size-4 animate-spin"
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="9"
+            stroke="currentColor"
+            strokeOpacity="0.28"
+            strokeWidth="3"
+          />
+          <path
+            d="M21 12a9 9 0 0 0-9-9"
+            stroke="currentColor"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+        </svg>
+        <span>{loadingText ?? "Loading..."}</span>
+      </>
+    ) : (
+      children
+    )
 
   return (
     <Comp
       data-slot="button"
       data-variant={variant}
       data-size={size}
+      data-loading={isLoading ? "true" : undefined}
+      aria-busy={isLoading || undefined}
+      disabled={asChild ? disabled : disabled || isLoading}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
-    />
+    >
+      {content}
+    </Comp>
   )
 }
 

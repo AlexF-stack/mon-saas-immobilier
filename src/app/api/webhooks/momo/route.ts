@@ -2,10 +2,16 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { verifyWebhookSignature } from '@/lib/payment'
+import { enforceRateLimit } from '@/lib/security-rate-limit'
+import { captureServerError } from '@/lib/monitoring'
+import { createFinancialAuditLog } from '@/lib/financial-audit'
+import { getLogContextFromRequest, logServerEvent } from '@/lib/logger'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+const WEBHOOK_RATE_LIMIT = 120
+const WEBHOOK_WINDOW_MS = 10 * 60 * 1000
 
 function buildReceiptNumber(paymentId: string, date: Date) {
     const suffix = paymentId.slice(-6).toUpperCase()
@@ -35,12 +41,33 @@ function getWebhookSecret() {
 
 export async function POST(request: Request) {
     try {
+        const { correlationId, route } = getLogContextFromRequest(request)
+        const rateLimitError = await enforceRateLimit({
+            request,
+            bucket: 'MOMO_WEBHOOK',
+            limit: WEBHOOK_RATE_LIMIT,
+            windowMs: WEBHOOK_WINDOW_MS,
+            message: 'Too many webhook requests',
+        })
+        if (rateLimitError) {
+            return rateLimitError
+        }
+
         const signature = request.headers.get('X-Callback-Signature')
         const bodyText = await request.text()
         const webhookSecret = getWebhookSecret()
 
         if (!webhookSecret) {
-            console.error('MOMO_WEBHOOK_SECRET is missing in production environment')
+            await captureServerError(
+                new Error('MOMO_WEBHOOK_SECRET is missing in production environment'),
+                {
+                    scope: 'momo_webhook_config',
+                    targetType: 'WEBHOOK',
+                    correlationId,
+                    route,
+                    event: 'momo.webhook.config.missing',
+                }
+            )
             return NextResponse.json(
                 { error: 'Webhook secret is not configured' },
                 { status: 500 }
@@ -59,6 +86,8 @@ export async function POST(request: Request) {
         const payload = parsedPayload.data
 
         const processed = await prisma.$transaction(async (tx) => {
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`momo:${payload.transactionId}`}))`
+
             const payment = await tx.payment.findUnique({
                 where: { transactionId: payload.transactionId },
                 include: {
@@ -142,6 +171,19 @@ export async function POST(request: Request) {
                 },
             })
 
+            await createFinancialAuditLog(tx, {
+                type: 'PAYMENT',
+                entityId: payment.id,
+                fromStatus: payment.status,
+                toStatus: updatedPayment.status,
+                actorId: payment.initiatedById ?? null,
+                correlationId,
+                metadata: {
+                    transactionId: payload.transactionId,
+                    providerStatus: payload.status,
+                },
+            })
+
             const mismatchReason =
                 providerSuccessful && !secureMatch
                     ? `amountMatches=${amountMatchesProvider};contractMatches=${contractMatchesProvider};payloadAmount=${payload.amount ?? 'none'};payloadContractId=${payload.contractId ?? 'none'}`
@@ -152,7 +194,7 @@ export async function POST(request: Request) {
                     action: mismatchReason ? 'PAYMENT_WEBHOOK_VALIDATION_FAILED' : isSuccessful ? 'PAYMENT_COMPLETED' : 'PAYMENT_FAILED',
                     targetType: 'PAYMENT',
                     targetId: payment.id,
-                    details: `transactionId=${payload.transactionId};providerStatus=${payload.status}${mismatchReason ? `;${mismatchReason}` : ''}`,
+                    details: `correlationId=${correlationId};transactionId=${payload.transactionId};providerStatus=${payload.status}${mismatchReason ? `;${mismatchReason}` : ''}`,
                 },
             })
 
@@ -173,7 +215,7 @@ export async function POST(request: Request) {
                         action: 'OWNER_NOTIFIED',
                         targetType: 'USER',
                         targetId: payment.contract.property.managerId,
-                        details: `paymentId=${payment.id}`,
+                        details: `correlationId=${correlationId};paymentId=${payment.id}`,
                     },
                 })
             }
@@ -191,6 +233,15 @@ export async function POST(request: Request) {
         }
 
         if (processed.type === 'already_processed') {
+            logServerEvent({
+                event: 'momo.webhook.already_processed',
+                correlationId,
+                route,
+                details: {
+                    paymentId: processed.paymentId,
+                    status: processed.paymentStatus,
+                },
+            })
             return NextResponse.json({
                 status: 'already_processed',
                 paymentId: processed.paymentId,
@@ -199,6 +250,16 @@ export async function POST(request: Request) {
             })
         }
 
+        logServerEvent({
+            event: 'momo.webhook.processed',
+            correlationId,
+            route,
+            details: {
+                paymentId: processed.paymentId,
+                status: processed.paymentStatus,
+            },
+        })
+
         return NextResponse.json({
             status: 'received',
             paymentId: processed.paymentId,
@@ -206,7 +267,14 @@ export async function POST(request: Request) {
             receiptNumber: processed.receiptNumber,
         })
     } catch (error) {
-        console.error('Webhook error:', error)
+        const { correlationId, route } = getLogContextFromRequest(request)
+        await captureServerError(error, {
+            scope: 'momo_webhook',
+            targetType: 'WEBHOOK',
+            correlationId,
+            route,
+            event: 'momo.webhook.failed',
+        })
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
 }

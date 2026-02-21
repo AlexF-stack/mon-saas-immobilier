@@ -91,7 +91,7 @@ export default function RegisterPage() {
     }
 
     return (
-        <div className="flex h-screen items-center justify-center bg-surface text-primary">
+        <div className="flex min-h-screen items-center justify-center bg-surface px-4 py-8 text-primary">
             <Card className="w-full max-w-md">
                 <CardHeader>
                     <CardTitle>{t('auth.register')}</CardTitle>
@@ -129,8 +129,13 @@ export default function RegisterPage() {
                         </div>
                     </CardContent>
                     <CardFooter className="flex flex-col space-y-2">
-                        <Button type="submit" className="w-full" disabled={loading}>
-                            {loading ? `${t('common.loading')}...` : t('auth.register')}
+                        <Button
+                            type="submit"
+                            className="w-full"
+                            loading={loading}
+                            loadingText={`${t('common.loading')}...`}
+                        >
+                            {t('auth.register')}
                         </Button>
                         <div className="text-sm text-center text-secondary">
                             {t('auth.haveAccount')}{' '}

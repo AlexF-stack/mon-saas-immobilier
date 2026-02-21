@@ -1,10 +1,18 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { comparePassword, generateToken, isUserRole } from '@/lib/auth'
+import { comparePassword, generateToken, normalizeUserRole } from '@/lib/auth'
 import { getDashboardPathForRole } from '@/lib/auth-policy'
 import { enforceCsrf } from '@/lib/csrf'
 import { createSystemLog } from '@/lib/audit'
 import { getClientIpFromHeaders } from '@/lib/request-metadata'
+import {
+    buildRateLimitFingerprint,
+    countRateLimitEvents,
+    enforceRateLimit,
+    recordRateLimitEvent,
+} from '@/lib/security-rate-limit'
+import { ensureBootstrapAdmin } from '@/lib/admin-bootstrap'
+import { captureServerError } from '@/lib/monitoring'
 import { z } from 'zod'
 
 export const runtime = 'nodejs'
@@ -14,6 +22,13 @@ const loginSchema = z.object({
     email: z.string().trim().email(),
     password: z.string(),
 })
+
+const LOGIN_GLOBAL_BUCKET = 'AUTH_LOGIN_GLOBAL'
+const LOGIN_BRUTE_FORCE_BUCKET = 'AUTH_LOGIN_FAILED'
+const LOGIN_GLOBAL_LIMIT = 30
+const LOGIN_GLOBAL_WINDOW_MS = 10 * 60 * 1000
+const LOGIN_BRUTE_FORCE_LIMIT = 6
+const LOGIN_BRUTE_FORCE_WINDOW_MS = 15 * 60 * 1000
 
 export async function POST(request: Request) {
     try {
@@ -27,11 +42,58 @@ export async function POST(request: Request) {
         const ipAddress = getClientIpFromHeaders(request.headers)
         const userAgent = request.headers.get('user-agent')?.slice(0, 512) ?? null
 
-        const user = await prisma.user.findUnique({
-            where: { email },
+        const globalLimitError = await enforceRateLimit({
+            request,
+            bucket: LOGIN_GLOBAL_BUCKET,
+            limit: LOGIN_GLOBAL_LIMIT,
+            windowMs: LOGIN_GLOBAL_WINDOW_MS,
+            extraKey: `login:${ipAddress ?? 'unknown'}`,
+            message: 'Too many login attempts. Please retry in a few minutes.',
+        })
+        if (globalLimitError) {
+            return globalLimitError
+        }
+
+        const bruteForceFingerprint = buildRateLimitFingerprint(
+            request,
+            LOGIN_BRUTE_FORCE_BUCKET,
+            email
+        )
+        const failedAttempts = await countRateLimitEvents(
+            LOGIN_BRUTE_FORCE_BUCKET,
+            bruteForceFingerprint,
+            LOGIN_BRUTE_FORCE_WINDOW_MS
+        )
+        if (failedAttempts >= LOGIN_BRUTE_FORCE_LIMIT) {
+            await createSystemLog({
+                action: 'LOGIN_BRUTE_FORCE_BLOCKED',
+                targetType: 'AUTH',
+                details: `email=${email};ip=${ipAddress ?? 'none'}`,
+            })
+            return NextResponse.json(
+                {
+                    error: 'Account temporarily locked due to repeated failed attempts. Retry later.',
+                },
+                { status: 429 }
+            )
+        }
+
+        await ensureBootstrapAdmin(email)
+
+        const user = await prisma.user.findFirst({
+            where: {
+                email: {
+                    equals: email,
+                    mode: 'insensitive',
+                },
+            },
         })
 
         if (!user) {
+            await recordRateLimitEvent(
+                LOGIN_BRUTE_FORCE_BUCKET,
+                bruteForceFingerprint
+            )
             await createSystemLog({
                 action: 'LOGIN_FAILED_UNKNOWN_EMAIL',
                 targetType: 'AUTH',
@@ -46,6 +108,10 @@ export async function POST(request: Request) {
         const isValidPassword = await comparePassword(password, user.password)
 
         if (!isValidPassword) {
+            await recordRateLimitEvent(
+                LOGIN_BRUTE_FORCE_BUCKET,
+                bruteForceFingerprint
+            )
             await prisma.loginHistory.create({
                 data: {
                     userId: user.id,
@@ -58,7 +124,7 @@ export async function POST(request: Request) {
                 actor: {
                     id: user.id,
                     email: user.email,
-                    role: isUserRole(user.role) ? user.role : 'TENANT',
+                    role: normalizeUserRole(user.role) ?? 'TENANT',
                 },
                 action: 'LOGIN_FAILED_BAD_PASSWORD',
                 targetType: 'USER',
@@ -93,7 +159,8 @@ export async function POST(request: Request) {
             )
         }
 
-        if (!isUserRole(user.role)) {
+        const normalizedRole = normalizeUserRole(user.role)
+        if (!normalizedRole) {
             return NextResponse.json(
                 { error: 'Invalid role in database' },
                 { status: 500 }
@@ -103,16 +170,20 @@ export async function POST(request: Request) {
         const token = generateToken({
             id: user.id,
             email: user.email,
-            role: user.role,
+            role: normalizedRole,
             name: user.name,
         })
 
-        const { password: removedPassword, ...userWithoutPassword } = user
+        const { password: removedPassword, ...userWithoutPasswordRaw } = user
         void removedPassword
+        const userWithoutPassword = {
+            ...userWithoutPasswordRaw,
+            role: normalizedRole,
+        }
 
         const response = NextResponse.json({
             user: userWithoutPassword,
-            redirectTo: getDashboardPathForRole(user.role),
+            redirectTo: getDashboardPathForRole(normalizedRole),
         })
 
         response.cookies.set('token', token, {
@@ -123,10 +194,21 @@ export async function POST(request: Request) {
             path: '/',
         })
 
+        const userUpdateData: {
+            lastLoginAt: Date
+            role?: string
+        } = {
+            lastLoginAt: new Date(),
+        }
+
+        if (user.role !== normalizedRole) {
+            userUpdateData.role = normalizedRole
+        }
+
         await prisma.$transaction([
             prisma.user.update({
                 where: { id: user.id },
-                data: { lastLoginAt: new Date() },
+                data: userUpdateData,
             }),
             prisma.loginHistory.create({
                 data: {
@@ -142,7 +224,7 @@ export async function POST(request: Request) {
             actor: {
                 id: user.id,
                 email: user.email,
-                role: user.role,
+                role: normalizedRole,
             },
             action: 'LOGIN_SUCCESS',
             targetType: 'USER',
@@ -155,6 +237,10 @@ export async function POST(request: Request) {
         if (error instanceof z.ZodError) {
             return NextResponse.json({ error: error.issues }, { status: 400 })
         }
+        await captureServerError(error, {
+            scope: 'auth_login',
+            targetType: 'AUTH',
+        })
         return NextResponse.json(
             { error: 'Internal Server Error' },
             { status: 500 }

@@ -59,7 +59,7 @@ export function CustomTable<T>({
   return (
     <div className={cn('space-y-4', className)}>
       {onSearchChange != null && (
-        <div className="relative max-w-sm">
+        <div className="relative w-full max-w-sm">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
           <Input
             type="search"

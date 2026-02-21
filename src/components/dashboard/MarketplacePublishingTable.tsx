@@ -250,7 +250,7 @@ export function MarketplacePublishingTable({
                         key: 'id',
                         header: 'Actions',
                         render: (row) => (
-                            <div className="flex items-center gap-2 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                            <div className="flex flex-wrap items-center gap-2 opacity-100 transition-opacity duration-150 sm:flex-nowrap sm:opacity-0 sm:group-hover:opacity-100">
                                 <Button
                                     type="button"
                                     size="sm"

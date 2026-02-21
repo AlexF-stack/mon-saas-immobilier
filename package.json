@@ -7,6 +7,7 @@
     "postinstall": "prisma generate",
     "build": "prisma generate && next build",
     "start": "next start",
+    "db:seed": "prisma db seed",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "check": "npm run lint && npm run typecheck",
@@ -14,10 +15,14 @@
     "test:integration:run": "node --test tests/integration/security-rbac.integration.test.mjs",
     "jwt:generate": "node -e \"console.log(require('crypto').randomBytes(64).toString('base64'))\""
   },
+  "prisma": {
+    "seed": "node prisma/seed.mjs"
+  },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@prisma/client": "^5.10.2",
     "@radix-ui/react-slot": "^1.2.4",
+    "@swc/helpers": "0.5.18",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

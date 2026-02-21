@@ -32,8 +32,8 @@ export function StatCard({
     <div
       data-slot="stat-card"
       className={cn(
-        'group relative flex flex-col gap-4 rounded-2xl border border-slate-200/70 bg-white p-6 shadow-sm',
-        'transition-shadow duration-200 hover:shadow-md dark:border-slate-800 dark:bg-slate-900/60',
+        'group relative flex flex-col gap-4 rounded-2xl border border-slate-200/70 bg-white p-6 elevation-1',
+        'animate-fade-up hover-lift-soft hover-depth-3d transition-[box-shadow,transform] [transition-duration:var(--motion-standard)] [transition-timing-function:var(--ease-standard)] dark:border-slate-800 dark:bg-slate-900/60',
         className
       )}
       {...props}

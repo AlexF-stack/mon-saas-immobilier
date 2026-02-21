@@ -11,6 +11,9 @@ import { MarketplacePropertyCard } from '@/components/marketplace/MarketplacePro
 import { EmptyState } from '@/components/ui/empty-state'
 import { Button } from '@/components/ui/button'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 type CityPageSearchParams = {
     page?: string | string[]
 }
@@ -207,7 +210,7 @@ export default async function MarketplaceCityPage(props: {
                                 <MarketplacePropertyCard key={property.id} locale={locale} property={property} />
                             ))}
                         </section>
-                        <nav className="flex items-center justify-end gap-2">
+                        <nav className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
                             {clampedPage <= 1 ? (
                                 <Button variant="outline" size="sm" disabled>
                                     Precedent
