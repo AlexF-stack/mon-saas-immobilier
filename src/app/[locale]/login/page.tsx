@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
-import { Home, Mail, Lock, AlertCircle } from 'lucide-react'
+import { Home, Mail, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 
 function getLocalizedRedirectPath(locale: string, redirectTo: string): string {
@@ -29,6 +29,7 @@ export default function LoginPage() {
     const t = useTranslations()
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
+    const [showPassword, setShowPassword] = useState(false)
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault()
@@ -146,11 +147,23 @@ export default function LoginPage() {
                                 <Input 
                                     id="password" 
                                     name="password" 
-                                    type="password" 
+                                    type={showPassword ? 'text' : 'password'}
                                     required 
-                                    className="border-border bg-card pl-10 text-primary placeholder:text-[rgb(var(--text-secondary))] focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20"
+                                    className="border-border bg-card pl-10 pr-11 text-primary placeholder:text-[rgb(var(--text-secondary))] focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20"
                                 />
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary" />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword((current) => !current)}
+                                    className="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-secondary transition-colors hover:bg-surface hover:text-primary"
+                                    aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                                >
+                                    {showPassword ? (
+                                        <EyeOff className="h-4 w-4" />
+                                    ) : (
+                                        <Eye className="h-4 w-4" />
+                                    )}
+                                </button>
                             </div>
                             <div className="text-right">
                                 <Link

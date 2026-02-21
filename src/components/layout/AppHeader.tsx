@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import { useLogout } from '@/hooks/use-logout'
 
 const supportedLocales = new Set(['en', 'fr'])
 
@@ -27,6 +28,7 @@ interface AppHeaderProps {
 
 export function AppHeader({ onMenuClick, userProfile, role }: AppHeaderProps) {
   const pathname = usePathname()
+  const { logout, loading: logoutLoading } = useLogout()
   const firstSegment = pathname?.split('/')[1] ?? ''
   const localePrefix = supportedLocales.has(firstSegment) ? `/${firstSegment}` : ''
   const settingsHref = `${localePrefix}/dashboard/settings`
@@ -165,17 +167,17 @@ export function AppHeader({ onMenuClick, userProfile, role }: AppHeaderProps) {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <form action="/api/auth/logout" method="POST">
-              <DropdownMenuItem asChild>
-                <button
-                  type="submit"
-                  className="flex w-full cursor-pointer items-center gap-2 text-destructive focus:text-destructive"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Deconnexion
-                </button>
-              </DropdownMenuItem>
-            </form>
+            <DropdownMenuItem
+              disabled={logoutLoading}
+              className="cursor-pointer text-destructive focus:text-destructive"
+              onSelect={(event) => {
+                event.preventDefault()
+                void logout()
+              }}
+            >
+              <LogOut className="h-4 w-4" />
+              {logoutLoading ? 'Deconnexion...' : 'Deconnexion'}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

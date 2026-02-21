@@ -18,6 +18,7 @@ import {
 import { cn } from '@/lib/utils'
 import type { NavItemSerializable } from '@/lib/dashboard-nav'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { useLogout } from '@/hooks/use-logout'
 
 const iconMap = {
   home: Home,
@@ -48,6 +49,7 @@ export function AppSidebar({
   onMobileClose,
 }: AppSidebarProps) {
   const pathname = usePathname()
+  const { logout, loading: logoutLoading } = useLogout()
   const localeMatch = pathname.match(/^\/(en|fr)(?=\/|$)/)
   const localePrefix = localeMatch?.[0] ?? ''
   const homeHref = navItems.find((item) => item.iconKey === 'home')?.href ?? `${localePrefix}/dashboard`
@@ -118,27 +120,31 @@ export function AppSidebar({
         >
           Connecte : {role}
         </div>
-        <form action="/api/auth/logout" method="POST">
-          <button
-            type="submit"
+        <button
+          type="button"
+          onClick={() => {
+            onMobileClose()
+            void logout()
+          }}
+          disabled={logoutLoading}
+          className={cn(
+            'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150',
+            compact && 'justify-center px-2',
+            'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/70 dark:hover:text-slate-100',
+            logoutLoading && 'cursor-not-allowed opacity-70'
+          )}
+          title={compact ? 'Deconnexion' : undefined}
+        >
+          <LogOut className="h-[18px] w-[18px] shrink-0" />
+          <span
             className={cn(
-              'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150',
-              compact && 'justify-center px-2',
-              'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/70 dark:hover:text-slate-100'
+              'truncate transition-all duration-200',
+              compact && 'max-w-0 opacity-0'
             )}
-            title={compact ? 'Deconnexion' : undefined}
           >
-            <LogOut className="h-[18px] w-[18px] shrink-0" />
-            <span
-              className={cn(
-                'truncate transition-all duration-200',
-                compact && 'max-w-0 opacity-0'
-              )}
-            >
-              Deconnexion
-            </span>
-          </button>
-        </form>
+            {logoutLoading ? 'Deconnexion...' : 'Deconnexion'}
+          </span>
+        </button>
       </div>
     )
   }
