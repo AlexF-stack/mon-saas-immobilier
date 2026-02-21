@@ -8,6 +8,8 @@ import { createSystemLog } from '@/lib/audit'
 import { enforceCsrf } from '@/lib/csrf'
 import { enforceRateLimit } from '@/lib/security-rate-limit'
 import { captureServerError } from '@/lib/monitoring'
+import { createFinancialAuditLog } from '@/lib/financial-audit'
+import { getLogContextFromRequest, logServerEvent } from '@/lib/logger'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -35,6 +37,7 @@ function amountsMatch(expected: number, provided: number) {
 
 export async function POST(request: Request) {
     try {
+        const { correlationId, route } = getLogContextFromRequest(request)
         const csrfError = enforceCsrf(request)
         if (csrfError) return csrfError
 
@@ -47,6 +50,13 @@ export async function POST(request: Request) {
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
+
+        logServerEvent({
+            event: 'payment.initiate.requested',
+            correlationId,
+            route,
+            userId: user.id,
+        })
 
         const rateLimitError = await enforceRateLimit({
             request,
@@ -88,6 +98,8 @@ export async function POST(request: Request) {
                     action: 'PAYMENT_INITIATION_DUPLICATE_KEY_REJECTED',
                     targetType: 'PAYMENT',
                     targetId: existingByIdempotency.id,
+                    correlationId,
+                    route,
                     details: `idempotencyKey=${idempotencyKey}`,
                 })
                 return NextResponse.json(
@@ -101,6 +113,8 @@ export async function POST(request: Request) {
                 action: 'PAYMENT_INITIATION_REPLAYED',
                 targetType: 'PAYMENT',
                 targetId: existingByIdempotency.id,
+                correlationId,
+                route,
                 details: `idempotencyKey=${idempotencyKey};status=${existingByIdempotency.status}`,
             })
 
@@ -151,6 +165,8 @@ export async function POST(request: Request) {
                 action: 'PAYMENT_INITIATION_BLOCKED',
                 targetType: 'CONTRACT',
                 targetId: contract.id,
+                correlationId,
+                route,
                 details: `reason=contract_not_active;status=${contract.status};idempotencyKey=${idempotencyKey}`,
             })
             return NextResponse.json(
@@ -165,6 +181,8 @@ export async function POST(request: Request) {
                 action: 'PAYMENT_INITIATION_BLOCKED',
                 targetType: 'CONTRACT',
                 targetId: contract.id,
+                correlationId,
+                route,
                 details: `reason=amount_mismatch;expected=${contract.rentAmount};received=${payload.amount};idempotencyKey=${idempotencyKey}`,
             })
             return NextResponse.json(
@@ -186,6 +204,8 @@ export async function POST(request: Request) {
                 action: 'PAYMENT_INITIATION_PROVIDER_FAILED',
                 targetType: 'CONTRACT',
                 targetId: payload.contractId,
+                correlationId,
+                route,
                 details: `provider=${payload.provider};message=${paymentResponse.message};idempotencyKey=${idempotencyKey}`,
             })
             return NextResponse.json({ error: paymentResponse.message }, { status: 400 })
@@ -235,12 +255,41 @@ export async function POST(request: Request) {
             throw error
         }
 
+        await createFinancialAuditLog(prisma, {
+            type: 'PAYMENT',
+            entityId: payment.id,
+            fromStatus: null,
+            toStatus: payment.status,
+            actorId: user.id,
+            correlationId,
+            metadata: {
+                contractId: payload.contractId,
+                amount: payload.amount,
+                provider: payload.provider,
+                idempotencyKey,
+            },
+        })
+
         await createSystemLog({
             actor: user,
             action: 'PAYMENT_INITIATED',
             targetType: 'PAYMENT',
             targetId: payment.id,
+            correlationId,
+            route,
             details: `contractId=${payload.contractId};tenantId=${contract.tenantId};propertyId=${contract.property.id};amount=${payload.amount};provider=${payload.provider};idempotencyKey=${idempotencyKey}`,
+        })
+
+        logServerEvent({
+            event: 'payment.initiate.created',
+            correlationId,
+            route,
+            userId: user.id,
+            details: {
+                paymentId: payment.id,
+                contractId: payload.contractId,
+                status: payment.status,
+            },
         })
 
         return NextResponse.json({
@@ -254,9 +303,13 @@ export async function POST(request: Request) {
         if (error instanceof z.ZodError) {
             return NextResponse.json({ error: error.issues }, { status: 400 })
         }
+        const { correlationId, route } = getLogContextFromRequest(request)
         await captureServerError(error, {
             scope: 'payment_initiate',
             targetType: 'PAYMENT',
+            correlationId,
+            route,
+            event: 'payment.initiate.failed',
         })
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }

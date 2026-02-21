@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma'
 import { verifyWebhookSignature } from '@/lib/payment'
 import { enforceRateLimit } from '@/lib/security-rate-limit'
 import { captureServerError } from '@/lib/monitoring'
+import { createFinancialAuditLog } from '@/lib/financial-audit'
+import { getLogContextFromRequest, logServerEvent } from '@/lib/logger'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -39,6 +41,7 @@ function getWebhookSecret() {
 
 export async function POST(request: Request) {
     try {
+        const { correlationId, route } = getLogContextFromRequest(request)
         const rateLimitError = await enforceRateLimit({
             request,
             bucket: 'MOMO_WEBHOOK',
@@ -60,6 +63,9 @@ export async function POST(request: Request) {
                 {
                     scope: 'momo_webhook_config',
                     targetType: 'WEBHOOK',
+                    correlationId,
+                    route,
+                    event: 'momo.webhook.config.missing',
                 }
             )
             return NextResponse.json(
@@ -163,6 +169,19 @@ export async function POST(request: Request) {
                 },
             })
 
+            await createFinancialAuditLog(tx, {
+                type: 'PAYMENT',
+                entityId: payment.id,
+                fromStatus: payment.status,
+                toStatus: updatedPayment.status,
+                actorId: payment.initiatedById ?? null,
+                correlationId,
+                metadata: {
+                    transactionId: payload.transactionId,
+                    providerStatus: payload.status,
+                },
+            })
+
             const mismatchReason =
                 providerSuccessful && !secureMatch
                     ? `amountMatches=${amountMatchesProvider};contractMatches=${contractMatchesProvider};payloadAmount=${payload.amount ?? 'none'};payloadContractId=${payload.contractId ?? 'none'}`
@@ -173,7 +192,7 @@ export async function POST(request: Request) {
                     action: mismatchReason ? 'PAYMENT_WEBHOOK_VALIDATION_FAILED' : isSuccessful ? 'PAYMENT_COMPLETED' : 'PAYMENT_FAILED',
                     targetType: 'PAYMENT',
                     targetId: payment.id,
-                    details: `transactionId=${payload.transactionId};providerStatus=${payload.status}${mismatchReason ? `;${mismatchReason}` : ''}`,
+                    details: `correlationId=${correlationId};transactionId=${payload.transactionId};providerStatus=${payload.status}${mismatchReason ? `;${mismatchReason}` : ''}`,
                 },
             })
 
@@ -194,7 +213,7 @@ export async function POST(request: Request) {
                         action: 'OWNER_NOTIFIED',
                         targetType: 'USER',
                         targetId: payment.contract.property.managerId,
-                        details: `paymentId=${payment.id}`,
+                        details: `correlationId=${correlationId};paymentId=${payment.id}`,
                     },
                 })
             }
@@ -212,6 +231,15 @@ export async function POST(request: Request) {
         }
 
         if (processed.type === 'already_processed') {
+            logServerEvent({
+                event: 'momo.webhook.already_processed',
+                correlationId,
+                route,
+                details: {
+                    paymentId: processed.paymentId,
+                    status: processed.paymentStatus,
+                },
+            })
             return NextResponse.json({
                 status: 'already_processed',
                 paymentId: processed.paymentId,
@@ -220,6 +248,16 @@ export async function POST(request: Request) {
             })
         }
 
+        logServerEvent({
+            event: 'momo.webhook.processed',
+            correlationId,
+            route,
+            details: {
+                paymentId: processed.paymentId,
+                status: processed.paymentStatus,
+            },
+        })
+
         return NextResponse.json({
             status: 'received',
             paymentId: processed.paymentId,
@@ -227,9 +265,13 @@ export async function POST(request: Request) {
             receiptNumber: processed.receiptNumber,
         })
     } catch (error) {
+        const { correlationId, route } = getLogContextFromRequest(request)
         await captureServerError(error, {
             scope: 'momo_webhook',
             targetType: 'WEBHOOK',
+            correlationId,
+            route,
+            event: 'momo.webhook.failed',
         })
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }

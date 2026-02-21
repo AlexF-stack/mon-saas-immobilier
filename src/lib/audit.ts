@@ -7,10 +7,18 @@ type SystemLogPayload = {
     targetType: string
     targetId?: string
     details?: string
+    correlationId?: string
+    route?: string
 }
 
 export async function createSystemLog(payload: SystemLogPayload) {
     try {
+        const detailParts = [
+            payload.correlationId ? `correlationId=${payload.correlationId}` : null,
+            payload.route ? `route=${payload.route}` : null,
+            payload.details ?? null,
+        ].filter((part): part is string => Boolean(part))
+
         await prisma.systemLog.create({
             data: {
                 actorId: payload.actor?.id ?? null,
@@ -19,7 +27,7 @@ export async function createSystemLog(payload: SystemLogPayload) {
                 action: payload.action,
                 targetType: payload.targetType,
                 targetId: payload.targetId ?? null,
-                details: payload.details ?? null,
+                details: detailParts.length > 0 ? detailParts.join(';').slice(0, 1900) : null,
             },
         })
     } catch (error) {

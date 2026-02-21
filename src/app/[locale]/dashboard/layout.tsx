@@ -22,7 +22,7 @@ export default async function DashboardLayout({
     const role = user.role
     const navItems = getDashboardNav(role, locale)
     const userProfile = user
-        ? { name: user.name ?? null, email: user.email ?? '' }
+        ? { id: user.id, name: user.name ?? null, email: user.email ?? '' }
         : undefined
 
     return (

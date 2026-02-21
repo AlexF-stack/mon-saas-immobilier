@@ -15,7 +15,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     const role = user.role
     const navItems = getDashboardNav(role)
     const userProfile = user
-        ? { name: user.name ?? null, email: user.email ?? '' }
+        ? { id: user.id, name: user.name ?? null, email: user.email ?? '' }
         : undefined
 
     return (

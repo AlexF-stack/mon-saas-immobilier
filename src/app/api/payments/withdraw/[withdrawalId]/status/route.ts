@@ -6,6 +6,8 @@ import { verifyAuth, getTokenFromRequest } from '@/lib/auth'
 import { enforceCsrf } from '@/lib/csrf'
 import { captureServerError } from '@/lib/monitoring'
 import { getClientIpFromHeaders } from '@/lib/request-metadata'
+import { createFinancialAuditLog } from '@/lib/financial-audit'
+import { getLogContextFromRequest, logServerEvent } from '@/lib/logger'
 import {
   canTransitionWithdrawalStatus,
   getLatestWithdrawalRecords,
@@ -31,6 +33,7 @@ export async function PATCH(
   props: { params: Promise<{ withdrawalId: string }> }
 ) {
   try {
+    const { correlationId, route } = getLogContextFromRequest(request)
     const csrfError = enforceCsrf(request)
     if (csrfError) return csrfError
 
@@ -43,6 +46,13 @@ export async function PATCH(
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    logServerEvent({
+      event: 'withdraw.status.update.requested',
+      correlationId,
+      route,
+      userId: user.id,
+    })
 
     if (user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -102,6 +112,7 @@ export async function PATCH(
               note: payload.note?.trim() || latest.note || undefined,
               availableBefore: 0,
               availableAfter: 0,
+              correlationId,
               ip: ipAddress,
               userAgent,
               reviewedById: user.id,
@@ -118,6 +129,19 @@ export async function PATCH(
                 targetType: WITHDRAWAL_TARGET_TYPE,
                 targetId: withdrawalId,
                 details,
+              },
+            })
+
+            await createFinancialAuditLog(tx, {
+              type: 'WITHDRAWAL',
+              entityId: withdrawalId,
+              fromStatus: latest.status,
+              toStatus: payload.status,
+              actorId: user.id,
+              correlationId,
+              metadata: {
+                reviewedById: user.id,
+                reviewedByRole: user.role,
               },
             })
 
@@ -151,15 +175,30 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unable to update withdrawal status.' }, { status: 500 })
     }
 
+    logServerEvent({
+      event: 'withdraw.status.updated',
+      correlationId,
+      route,
+      userId: user.id,
+      details: {
+        withdrawalId,
+        status: updatedStatus,
+      },
+    })
+
     return NextResponse.json({ status: updatedStatus })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues }, { status: 400 })
     }
 
+    const fallbackContext = getLogContextFromRequest(request)
     await captureServerError(error, {
       scope: 'withdrawal_status_update',
       targetType: 'WITHDRAWAL',
+      correlationId: fallbackContext.correlationId,
+      route: fallbackContext.route,
+      event: 'withdraw.status.update.failed',
     })
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }

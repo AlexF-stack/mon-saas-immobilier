@@ -52,6 +52,22 @@ model SystemLog {
   @@index([targetType, targetId])
 }
 
+model FinancialAuditLog {
+  id            String   @id @default(cuid())
+  type          String // PAYMENT, WITHDRAWAL
+  entityId      String
+  fromStatus    String?
+  toStatus      String
+  actorId       String?
+  correlationId String?
+  metadata      String?
+  createdAt     DateTime @default(now())
+
+  @@index([type, entityId, createdAt])
+  @@index([correlationId])
+  @@index([actorId, createdAt])
+}
+
 model Property {
   id          String   @id @default(cuid())
   title       String

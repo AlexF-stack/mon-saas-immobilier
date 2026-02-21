@@ -8,6 +8,8 @@ import { enforceCsrf } from '@/lib/csrf'
 import { enforceRateLimit } from '@/lib/security-rate-limit'
 import { captureServerError } from '@/lib/monitoring'
 import { getClientIpFromHeaders } from '@/lib/request-metadata'
+import { createFinancialAuditLog } from '@/lib/financial-audit'
+import { getLogContextFromRequest, logServerEvent } from '@/lib/logger'
 import {
   getLatestWithdrawalRecords,
   maskAccountNumber,
@@ -51,6 +53,7 @@ function dayStartUtc(): Date {
 
 export async function POST(request: Request) {
   try {
+    const { correlationId, route } = getLogContextFromRequest(request)
     const csrfError = enforceCsrf(request)
     if (csrfError) return csrfError
 
@@ -63,6 +66,13 @@ export async function POST(request: Request) {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    logServerEvent({
+      event: 'withdraw.requested',
+      correlationId,
+      route,
+      userId: user.id,
+    })
 
     if (user.role !== 'ADMIN' && user.role !== 'MANAGER') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -189,6 +199,7 @@ export async function POST(request: Request) {
               note: payload.note?.trim() || undefined,
               availableBefore: availableBalance,
               availableAfter: nextAvailableBalance,
+              correlationId,
               ip: ipAddress,
               userAgent,
             })
@@ -202,6 +213,19 @@ export async function POST(request: Request) {
                 targetType: WITHDRAWAL_TARGET_TYPE,
                 targetId: withdrawalId,
                 details: withdrawalDetails,
+              },
+            })
+
+            await createFinancialAuditLog(tx, {
+              type: 'WITHDRAWAL',
+              entityId: withdrawalId,
+              fromStatus: null,
+              toStatus: 'REQUESTED',
+              actorId: user.id,
+              correlationId,
+              metadata: {
+                amount: payload.amount,
+                method: payload.method,
               },
             })
 
@@ -248,6 +272,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unable to create withdrawal request.' }, { status: 500 })
     }
 
+    logServerEvent({
+      event: 'withdraw.created',
+      correlationId,
+      route,
+      userId: user.id,
+      details: {
+        withdrawalId: result.id,
+        availableBalanceAfter: result.availableBalanceAfter,
+      },
+    })
+
     return NextResponse.json(
       {
         id: result.id,
@@ -261,9 +296,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.issues }, { status: 400 })
     }
 
+    const fallbackContext = getLogContextFromRequest(request)
     await captureServerError(error, {
       scope: 'payment_withdraw',
       targetType: 'WITHDRAWAL',
+      correlationId: fallbackContext.correlationId,
+      route: fallbackContext.route,
+      event: 'withdraw.failed',
     })
 
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
