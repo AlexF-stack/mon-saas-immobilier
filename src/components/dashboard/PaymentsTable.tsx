@@ -87,12 +87,12 @@ export function PaymentsTable({ payments }: PaymentsTableProps) {
           key: 'id',
           header: 'Quittance',
           render: (row) =>
-            row.status === 'COMPLETED' ? (
+                row.status === 'COMPLETED' ? (
               <a
                 href={`/api/payments/${row.id}/receipt`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="opacity-0 text-sm text-blue-600 underline underline-offset-2 transition-opacity duration-150 group-hover:opacity-100 focus-visible:opacity-100 dark:text-blue-400"
+                className="text-sm text-blue-600 underline underline-offset-2 opacity-100 transition-opacity duration-150 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 dark:text-blue-400"
               >
                 PDF
               </a>
