@@ -15,6 +15,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { MarketplaceHeader } from '@/components/marketplace/MarketplaceHeader'
 import { MarketplacePropertyCard } from '@/components/marketplace/MarketplacePropertyCard'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 type MarketplaceSearchParams = {
     q?: string | string[]
     city?: string | string[]

@@ -20,6 +20,9 @@ import {
     type LucideIcon,
 } from 'lucide-react'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 function propertyTypeLabel(propertyType: string, locale: string) {
     if (locale === 'fr') {
         if (propertyType === 'APARTMENT') return 'Appartement'

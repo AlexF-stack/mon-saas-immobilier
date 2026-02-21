@@ -11,6 +11,9 @@ import { MarketplacePropertyCard } from '@/components/marketplace/MarketplacePro
 import { EmptyState } from '@/components/ui/empty-state'
 import { Button } from '@/components/ui/button'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 type CityPageSearchParams = {
     page?: string | string[]
 }

@@ -11,6 +11,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { MarketplaceHeader } from '@/components/marketplace/MarketplaceHeader'
 import { MarketplaceInquiryForm } from '@/components/marketplace/MarketplaceInquiryForm'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 function propertyTypeLabel(propertyType: string) {
     if (propertyType === 'APARTMENT') return 'Appartement'
     if (propertyType === 'HOUSE') return 'Maison'
