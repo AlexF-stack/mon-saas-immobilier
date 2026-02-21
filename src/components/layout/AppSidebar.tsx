@@ -78,11 +78,11 @@ export function AppSidebar({
               aria-current={isActive ? 'page' : undefined}
               className={cn(
                 'group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] font-medium transition-colors duration-150',
-                'hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800/70 dark:hover:text-slate-100',
+                'hover:bg-surface hover:text-primary dark:hover:bg-slate-800/70 dark:hover:text-slate-100',
                 compact && 'justify-center px-2',
                 isActive
                   ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
-                  : 'text-slate-600 dark:text-slate-300'
+                  : 'text-secondary dark:text-slate-300'
               )}
               title={compact ? item.name : undefined}
             >
@@ -111,10 +111,10 @@ export function AppSidebar({
 
   function renderFooter(compact: boolean) {
     return (
-      <div className="shrink-0 border-t border-slate-200 p-3 dark:border-slate-800">
+      <div className="shrink-0 border-t border-border p-3 dark:border-slate-800">
         <div
           className={cn(
-            'mb-2 px-3 text-xs text-slate-500 transition-all duration-200 dark:text-slate-400',
+            'mb-2 px-3 text-xs text-secondary transition-all duration-200 dark:text-slate-400',
             compact && 'max-h-0 overflow-hidden p-0 opacity-0'
           )}
         >
@@ -130,7 +130,7 @@ export function AppSidebar({
           className={cn(
             'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150',
             compact && 'justify-center px-2',
-            'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/70 dark:hover:text-slate-100',
+            'text-secondary hover:bg-surface hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800/70 dark:hover:text-slate-100',
             logoutLoading && 'cursor-not-allowed opacity-70'
           )}
           title={compact ? 'Deconnexion' : undefined}
@@ -153,15 +153,15 @@ export function AppSidebar({
     <>
       <aside
         className={cn(
-          'sticky top-0 hidden h-screen shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white transition-[width] duration-200 dark:border-slate-800 dark:bg-slate-900 md:flex',
+          'sticky top-0 hidden h-screen shrink-0 flex-col overflow-hidden border-r border-border bg-card transition-[width] duration-200 dark:border-slate-800 dark:bg-slate-900 md:flex',
           collapsed ? 'w-20' : 'w-60'
         )}
       >
-        <div className="flex h-16 items-center border-b border-slate-200 px-3 dark:border-slate-800">
+        <div className="flex h-16 items-center border-b border-border px-3 dark:border-slate-800">
           <Link
             href={homeHref}
             className={cn(
-              'flex min-w-0 items-center gap-2 overflow-hidden font-semibold text-slate-900 dark:text-slate-100',
+              'flex min-w-0 items-center gap-2 overflow-hidden font-semibold text-primary dark:text-slate-100',
               collapsed && 'gap-0'
             )}
           >
@@ -180,7 +180,7 @@ export function AppSidebar({
           <button
             type="button"
             onClick={onToggleCollapse}
-            className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+            className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md text-secondary transition-colors hover:bg-surface hover:text-primary dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
             aria-label={collapsed ? 'Ouvrir la sidebar' : 'Replier la sidebar'}
             title={collapsed ? 'Ouvrir' : 'Replier'}
           >
@@ -192,15 +192,15 @@ export function AppSidebar({
       </aside>
 
       <Sheet open={mobileOpen} onOpenChange={(open) => !open && onMobileClose()}>
-        <SheetContent
+      <SheetContent
           side="left"
-          className="data-[state=open]:duration-[var(--motion-modal)] data-[state=closed]:duration-[var(--motion-modal)] flex w-[85vw] max-w-xs flex-col border-slate-200 bg-white/95 p-0 text-slate-900 backdrop-blur-md sm:max-w-sm dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-100"
+          className="data-[state=open]:duration-[var(--motion-modal)] data-[state=closed]:duration-[var(--motion-modal)] flex w-[85vw] max-w-xs flex-col border-border bg-card/95 p-0 text-primary backdrop-blur-md sm:max-w-sm dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-100"
         >
-          <SheetHeader className="border-b border-slate-200 p-4 text-left dark:border-slate-800">
-            <SheetTitle className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+          <SheetHeader className="border-b border-border p-4 text-left dark:border-slate-800">
+            <SheetTitle className="text-lg font-semibold text-primary dark:text-slate-100">
               ImmoSaaS
             </SheetTitle>
-            {role && <span className="text-xs text-slate-500 dark:text-slate-400">Connecte : {role}</span>}
+            {role && <span className="text-xs text-secondary dark:text-slate-400">Connecte : {role}</span>}
           </SheetHeader>
           {renderNavContent(false, true)}
           {renderFooter(false)}

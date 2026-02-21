@@ -169,7 +169,7 @@ export default async function DashboardMarketplacePage(props: {
                 />
             </div>
 
-            <div className="rounded-2xl border border-slate-200/70 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                     <div>
                         <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
@@ -188,7 +188,7 @@ export default async function DashboardMarketplacePage(props: {
                         cityMetrics.map((cityMetric) => (
                             <div
                                 key={cityMetric.city}
-                                className="rounded-xl border border-slate-200/70 bg-slate-50/80 px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-900/70"
+                                className="rounded-xl border border-border bg-surface/80 px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-900/70"
                             >
                                 <p className="font-medium text-slate-900 dark:text-slate-100">{cityMetric.city}</p>
                                 <p className="text-slate-500 dark:text-slate-400">

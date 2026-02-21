@@ -5,12 +5,12 @@
 :root {
   /* Semantic tokens (RGB triplets without rgb() for Tailwind CSS variable usage) */
   /* Light mode: Premium slate + blue */
-  --background: 248 250 252;
-  --surface: 241 245 249;
-  --card: 255 255 255;
-  --border: 226 232 240;
+  --background: 240 245 251;
+  --surface: 232 239 247;
+  --card: 246 250 255;
+  --border: 206 217 230;
   --text-primary: 15 23 42;
-  --text-secondary: 71 85 105;
+  --text-secondary: 55 72 95;
   --primary: 37 99 235;
   --primary-foreground: 255 255 255;
   --accent: 29 78 216;
@@ -39,10 +39,10 @@
   --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* Animated background gradient tokens */
-  --gradient-1: #eef2ff;
-  --gradient-2: #e2e8f0;
-  --gradient-3: #c7d2fe;
-  --gradient-4: #dbeafe;
+  --gradient-1: #e8eff8;
+  --gradient-2: #dde6f2;
+  --gradient-3: #cfdbed;
+  --gradient-4: #d7e3f4;
 }
 
 .dark {
@@ -106,6 +106,28 @@
 .text-on-card { color: rgb(var(--text-primary)); }
 .border-border { border-color: rgb(var(--border)); }
 .ring-primary { box-shadow: 0 0 0 3px rgb(var(--primary) / 0.12); }
+
+/* Legacy light-mode utility harmonization */
+html:not(.dark) .bg-white { background-color: rgb(var(--card)); }
+html:not(.dark) .bg-white\/95 { background-color: rgb(var(--card) / 0.95); }
+html:not(.dark) .bg-white\/90 { background-color: rgb(var(--card) / 0.9); }
+html:not(.dark) .bg-white\/80 { background-color: rgb(var(--card) / 0.84); }
+html:not(.dark) .bg-slate-50 { background-color: rgb(var(--surface)); }
+html:not(.dark) .bg-slate-50\/80 { background-color: rgb(var(--surface) / 0.82); }
+html:not(.dark) .bg-slate-50\/70 { background-color: rgb(var(--surface) / 0.76); }
+html:not(.dark) .bg-slate-50\/30 { background-color: rgb(var(--surface) / 0.38); }
+html:not(.dark) .border-slate-200 { border-color: rgb(var(--border)); }
+html:not(.dark) .border-slate-200\/80 { border-color: rgb(var(--border) / 0.85); }
+html:not(.dark) .border-slate-200\/70 { border-color: rgb(var(--border) / 0.76); }
+html:not(.dark) .border-slate-200\/60 { border-color: rgb(var(--border) / 0.64); }
+html:not(.dark) .from-white {
+  --tw-gradient-from: rgb(var(--card)) var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(var(--card) / 0) var(--tw-gradient-to-position);
+}
+html:not(.dark) .via-slate-50 {
+  --tw-gradient-to: rgb(var(--surface) / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--surface)) var(--tw-gradient-via-position), var(--tw-gradient-to);
+}
 
 /* CTA premium motion (shared for all Button variant=cta) */
 [data-slot="button"][data-variant="cta"]::after {
@@ -335,10 +357,10 @@
 
 /* ===== Glass System ===== */
 .glass-card {
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(246, 250, 255, 0.74);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(148, 163, 184, 0.38);
+  border: 1px solid rgba(148, 163, 184, 0.42);
   box-shadow: 0 8px 28px rgba(15, 23, 42, 0.12);
   border-radius: 16px;
 }

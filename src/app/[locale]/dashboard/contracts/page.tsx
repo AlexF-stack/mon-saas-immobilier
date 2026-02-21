@@ -142,19 +142,19 @@ export default async function ContractsPage(props: {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                   <div className="space-y-1">
-                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Debut</p>
-                    <p className="font-medium text-slate-900 dark:text-slate-100">{formatDate(contract.startDate)}</p>
+                    <p className="text-xs uppercase tracking-wide text-secondary dark:text-slate-400">Debut</p>
+                    <p className="font-medium text-primary dark:text-slate-100">{formatDate(contract.startDate)}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Fin</p>
-                    <p className="font-medium text-slate-900 dark:text-slate-100">{formatDate(contract.endDate)}</p>
+                    <p className="text-xs uppercase tracking-wide text-secondary dark:text-slate-400">Fin</p>
+                    <p className="font-medium text-primary dark:text-slate-100">{formatDate(contract.endDate)}</p>
                   </div>
                 </div>
-                <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 px-3 py-2 dark:border-slate-800 dark:bg-slate-900/70">
-                  <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Loyer mensuel</p>
-                  <p className="text-lg font-semibold text-slate-900 tabular-nums dark:text-slate-100">
+                <div className="rounded-xl border border-border bg-surface/80 px-3 py-2 dark:border-slate-800 dark:bg-slate-900/70">
+                  <p className="text-xs uppercase tracking-wide text-secondary dark:text-slate-400">Loyer mensuel</p>
+                  <p className="text-lg font-semibold text-primary tabular-nums dark:text-slate-100">
                     {contract.rentAmount.toLocaleString('fr-FR')} FCFA
                   </p>
                 </div>

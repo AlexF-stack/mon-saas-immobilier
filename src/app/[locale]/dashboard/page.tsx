@@ -56,7 +56,7 @@ export default async function DashboardPage(props: {
 
     return (
       <div className="space-y-6">
-        <Card className="animate-fade-up overflow-hidden border-slate-200/80 bg-gradient-to-r from-white via-slate-50 to-blue-50/50 dark:border-slate-800 dark:from-slate-900/80 dark:via-slate-900/60 dark:to-blue-950/30">
+        <Card className="animate-fade-up overflow-hidden border-border bg-gradient-to-r from-[rgb(var(--card))] via-[rgb(var(--surface))] to-[rgb(var(--surface)/0.7)] dark:border-slate-800 dark:from-slate-900/80 dark:via-slate-900/60 dark:to-blue-950/30">
           <CardHeader className="gap-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Espace locataire
@@ -259,7 +259,7 @@ export default async function DashboardPage(props: {
 
   return (
     <div className="space-y-6">
-      <Card className="animate-fade-up overflow-hidden border-slate-200/80 bg-gradient-to-r from-white via-slate-50 to-blue-50/50 dark:border-slate-800 dark:from-slate-900/80 dark:via-slate-900/60 dark:to-blue-950/30">
+      <Card className="animate-fade-up overflow-hidden border-border bg-gradient-to-r from-[rgb(var(--card))] via-[rgb(var(--surface))] to-[rgb(var(--surface)/0.7)] dark:border-slate-800 dark:from-slate-900/80 dark:via-slate-900/60 dark:to-blue-950/30">
         <CardHeader className="gap-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-2">
@@ -294,21 +294,21 @@ export default async function DashboardPage(props: {
         </CardHeader>
         <CardContent className="pt-0">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="hover-lift-soft rounded-xl border border-slate-200/70 bg-white/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
+            <div className="hover-lift-soft rounded-xl border border-border bg-card/85 p-4 dark:border-slate-800 dark:bg-slate-900/70">
               <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Taux occupation</p>
               <p className="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100">{occupancyRate}%</p>
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 {propertiesCount - availableCount} biens occupes sur {propertiesCount}
               </p>
             </div>
-            <div className="hover-lift-soft rounded-xl border border-slate-200/70 bg-white/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
+            <div className="hover-lift-soft rounded-xl border border-border bg-card/85 p-4 dark:border-slate-800 dark:bg-slate-900/70">
               <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Revenu moyen / bien</p>
               <p className="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100">
                 {averageRevenuePerProperty.toLocaleString('fr-FR')} FCFA
               </p>
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Calcul sur revenus completes</p>
             </div>
-            <div className="hover-lift-soft rounded-xl border border-slate-200/70 bg-white/80 p-4 dark:border-slate-800 dark:bg-slate-900/70 sm:col-span-2 lg:col-span-1">
+            <div className="hover-lift-soft rounded-xl border border-border bg-card/85 p-4 dark:border-slate-800 dark:bg-slate-900/70 sm:col-span-2 lg:col-span-1">
               <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Alertes contrats</p>
               <p className="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100">{expiringSoonCount}</p>
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
@@ -380,7 +380,7 @@ export default async function DashboardPage(props: {
                 <span>Occupation portefeuille</span>
                 <span className="font-medium text-slate-700 dark:text-slate-300">{occupancyRate}%</span>
               </div>
-              <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800">
+              <div className="h-2 rounded-full bg-surface dark:bg-slate-800">
                 <div
                   className="h-2 rounded-full bg-blue-500 transition-[width] duration-500"
                   style={{ width: `${Math.min(100, Math.max(0, occupancyRate))}%` }}
@@ -388,13 +388,13 @@ export default async function DashboardPage(props: {
               </div>
             </div>
 
-            <div className="rounded-xl border border-slate-200/70 bg-slate-50/80 p-3 dark:border-slate-800 dark:bg-slate-900/70">
+            <div className="rounded-xl border border-border bg-surface/80 p-3 dark:border-slate-800 dark:bg-slate-900/70">
               <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Biens disponibles</p>
               <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">{availableCount}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">Opportunites a louer immediatement</p>
             </div>
 
-            <div className="rounded-xl border border-slate-200/70 bg-slate-50/80 p-3 dark:border-slate-800 dark:bg-slate-900/70">
+            <div className="rounded-xl border border-border bg-surface/80 p-3 dark:border-slate-800 dark:bg-slate-900/70">
               <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Contrats a surveiller</p>
               <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">{expiringSoonCount}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -426,19 +426,19 @@ export default async function DashboardPage(props: {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex items-center justify-between rounded-xl border border-slate-200/70 bg-slate-50/80 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/70">
+            <div className="flex items-center justify-between rounded-xl border border-border bg-surface/80 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/70">
               <span className="text-sm text-slate-600 dark:text-slate-300">Total cumule</span>
               <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                 {totalRevenue.toLocaleString('fr-FR')} FCFA
               </span>
             </div>
-            <div className="flex items-center justify-between rounded-xl border border-slate-200/70 bg-slate-50/80 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/70">
+            <div className="flex items-center justify-between rounded-xl border border-border bg-surface/80 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/70">
               <span className="text-sm text-slate-600 dark:text-slate-300">Mois precedent</span>
               <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                 {lastMonthRevenue.toLocaleString('fr-FR')} FCFA
               </span>
             </div>
-            <div className="flex items-center justify-between rounded-xl border border-slate-200/70 bg-slate-50/80 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/70">
+            <div className="flex items-center justify-between rounded-xl border border-border bg-surface/80 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/70">
               <span className="text-sm text-slate-600 dark:text-slate-300">Variation</span>
               <span
                 className={`text-sm font-semibold ${revenueGrowth >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}

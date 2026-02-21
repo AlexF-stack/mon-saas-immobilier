@@ -261,25 +261,25 @@ export function WithdrawPanel({
 
         {draft ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
-              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Confirmer le retrait</h3>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+            <div className="w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+              <h3 className="text-base font-semibold text-primary dark:text-slate-100">Confirmer le retrait</h3>
+              <p className="mt-2 text-sm text-secondary dark:text-slate-300">
                 Verifie les informations avant validation.
               </p>
-              <div className="mt-4 space-y-1 rounded-xl border border-slate-200/70 bg-slate-50/70 p-3 text-sm dark:border-slate-800 dark:bg-slate-900/60">
+              <div className="mt-4 space-y-1 rounded-xl border border-border bg-surface/70 p-3 text-sm dark:border-slate-800 dark:bg-slate-900/60">
                 <p>
-                  <span className="text-slate-500 dark:text-slate-400">Montant:</span>{' '}
-                  <span className="font-medium text-slate-900 dark:text-slate-100">
+                  <span className="text-secondary dark:text-slate-400">Montant:</span>{' '}
+                  <span className="font-medium text-primary dark:text-slate-100">
                     {draft.amount.toLocaleString('fr-FR')} FCFA
                   </span>
                 </p>
                 <p>
-                  <span className="text-slate-500 dark:text-slate-400">Methode:</span>{' '}
-                  <span className="font-medium text-slate-900 dark:text-slate-100">{methodLabel(draft.method)}</span>
+                  <span className="text-secondary dark:text-slate-400">Methode:</span>{' '}
+                  <span className="font-medium text-primary dark:text-slate-100">{methodLabel(draft.method)}</span>
                 </p>
                 <p>
-                  <span className="text-slate-500 dark:text-slate-400">Compte:</span>{' '}
-                  <span className="font-medium text-slate-900 dark:text-slate-100">{draft.accountLabel}</span>
+                  <span className="text-secondary dark:text-slate-400">Compte:</span>{' '}
+                  <span className="font-medium text-primary dark:text-slate-100">{draft.accountLabel}</span>
                 </p>
               </div>
               <div className="mt-5 flex items-center justify-end gap-2">
@@ -302,30 +302,30 @@ export function WithdrawPanel({
         ) : null}
 
         <div className="space-y-3">
-          <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Historique retraits</p>
+          <p className="text-sm font-medium text-primary dark:text-slate-100">Historique retraits</p>
           {recentWithdrawals.length === 0 ? (
-            <p className="text-sm text-slate-500 dark:text-slate-400">Aucun retrait enregistre.</p>
+            <p className="text-sm text-secondary dark:text-slate-400">Aucun retrait enregistre.</p>
           ) : (
             <div className="space-y-2">
               {recentWithdrawals.map((item) => (
                 <div
                   key={item.withdrawalId}
-                  className="flex flex-col gap-2 rounded-xl border border-slate-200/70 bg-slate-50/70 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-900/60"
+                  className="flex flex-col gap-2 rounded-xl border border-border bg-surface/70 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-900/60"
                 >
                   <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="truncate font-medium text-slate-900 dark:text-slate-100">
+                    <p className="truncate font-medium text-primary dark:text-slate-100">
                       {item.accountLabel} - {item.accountNumberMasked}
                     </p>
                     <div className="flex items-center gap-2">
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusBadgeClass(item.status)}`}>
                         {statusLabel(item.status)}
                       </span>
-                      <p className="font-semibold tabular-nums text-slate-900 dark:text-slate-100">
+                      <p className="font-semibold tabular-nums text-primary dark:text-slate-100">
                         {item.amount.toLocaleString('fr-FR')} FCFA
                       </p>
                     </div>
                   </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                  <p className="text-xs text-secondary dark:text-slate-400">
                     {methodLabel(item.method)} - Demande le {new Date(item.requestedAt).toLocaleDateString('fr-FR')} -
                     Mise a jour le {new Date(item.updatedAt).toLocaleDateString('fr-FR')}
                     {item.note ? ` - ${item.note}` : ''}
@@ -338,22 +338,22 @@ export function WithdrawPanel({
 
         {isAdmin ? (
           <div className="space-y-3">
-            <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Validation admin</p>
+            <p className="text-sm font-medium text-primary dark:text-slate-100">Validation admin</p>
             {reviewQueue.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">Aucun retrait en attente de validation.</p>
+              <p className="text-sm text-secondary dark:text-slate-400">Aucun retrait en attente de validation.</p>
             ) : (
               <div className="space-y-2">
                 {reviewQueue.map((item) => (
                   <div
                     key={`review-${item.withdrawalId}`}
-                    className="rounded-xl border border-slate-200/70 bg-slate-50/70 px-3 py-3 dark:border-slate-800 dark:bg-slate-900/60"
+                    className="rounded-xl border border-border bg-surface/70 px-3 py-3 dark:border-slate-800 dark:bg-slate-900/60"
                   >
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">
+                        <p className="truncate text-sm font-medium text-primary dark:text-slate-100">
                           {item.actorEmail || 'Manager'} - {item.accountLabel} ({item.accountNumberMasked})
                         </p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                        <p className="text-xs text-secondary dark:text-slate-400">
                           {methodLabel(item.method)} - {item.amount.toLocaleString('fr-FR')} FCFA -{' '}
                           {statusLabel(item.status)}
                         </p>
