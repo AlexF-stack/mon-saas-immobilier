@@ -18,14 +18,10 @@ async function initSentryForRuntime() {
   if (!dsn) return
 
   try {
-    const dynamicImporter = new Function(
-      'specifier',
-      'return import(specifier)'
-    ) as (specifier: string) => Promise<{
+    const sentryModuleName: string = '@sentry/nextjs'
+    const sentry = (await import(sentryModuleName)) as {
       init?: (config: Record<string, unknown>) => void
-    }>
-
-    const sentry = await dynamicImporter('@sentry/nextjs')
+    }
     sentry.init?.({
       dsn,
       environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV,
