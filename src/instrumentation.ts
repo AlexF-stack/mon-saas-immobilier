@@ -1,7 +1,7 @@
 function writeInstrumentationError(message: string, error?: unknown) {
   const details =
     error instanceof Error ? `${error.name}: ${error.message}` : error ? String(error) : ''
-  process.stderr.write(`[monitoring] ${message}${details ? ` (${details})` : ''}\n`)
+  console.error(`[monitoring] ${message}${details ? ` (${details})` : ''}`)
 }
 
 function resolveReleaseVersion() {
