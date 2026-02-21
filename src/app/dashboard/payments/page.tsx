@@ -6,7 +6,15 @@ import { verifyAuth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { Button } from '@/components/ui/button'
 import { PaymentsTable } from '@/components/dashboard/PaymentsTable'
+import { WithdrawPanel } from '@/components/dashboard/WithdrawPanel'
 import { StatCard } from '@/components/ui/stat-card'
+import {
+  getLatestWithdrawalRecords,
+  sumPaidWithdrawals,
+  sumReservedWithdrawals,
+  WITHDRAWAL_ACTION,
+  WITHDRAWAL_TARGET_TYPE,
+} from '@/lib/withdrawals'
 
 export default async function PaymentsPage() {
   const cookieStore = await cookies()
@@ -40,6 +48,59 @@ export default async function PaymentsPage() {
   const pendingCount = payments.filter((payment) => payment.status === 'PENDING').length
   const failedCount = payments.filter((payment) => payment.status === 'FAILED').length
   const canCreatePayment = role === 'MANAGER' || role === 'TENANT'
+  const canWithdraw = role === 'ADMIN' || role === 'MANAGER'
+
+  const withdrawalLogs = canWithdraw
+    ? await prisma.systemLog.findMany({
+        where: {
+          action: WITHDRAWAL_ACTION,
+          targetType: WITHDRAWAL_TARGET_TYPE,
+          ...(role === 'ADMIN' ? {} : { actorId: userId }),
+        },
+        orderBy: { createdAt: 'desc' },
+        take: role === 'ADMIN' ? 400 : 120,
+        select: {
+          id: true,
+          actorId: true,
+          actorEmail: true,
+          actorRole: true,
+          targetId: true,
+          details: true,
+          createdAt: true,
+        },
+      })
+    : []
+
+  const allWithdrawalRecords = getLatestWithdrawalRecords(withdrawalLogs)
+  const ownWithdrawalRecords =
+    role === 'ADMIN'
+      ? allWithdrawalRecords.filter((record) => record.actorId === userId)
+      : allWithdrawalRecords
+
+  const reservedTotal = sumReservedWithdrawals(ownWithdrawalRecords)
+  const paidTotal = sumPaidWithdrawals(ownWithdrawalRecords)
+  const availableBalance = Math.max(0, totalRevenue - reservedTotal)
+  const recentWithdrawals = ownWithdrawalRecords.slice(0, 8).map((item) => ({
+    ...item,
+    requestedAt: item.requestedAt.toISOString(),
+    updatedAt: item.updatedAt.toISOString(),
+  }))
+
+  const reviewQueue =
+    role === 'ADMIN'
+      ? allWithdrawalRecords
+          .filter(
+            (record) =>
+              record.actorRole === 'MANAGER' &&
+              (record.status === 'REQUESTED' || record.status === 'APPROVED')
+          )
+          .slice(0, 20)
+          .map((item) => ({
+            ...item,
+            requestedAt: item.requestedAt.toISOString(),
+            updatedAt: item.updatedAt.toISOString(),
+          }))
+      : []
 
   const rows = payments.map((payment) => ({
     id: payment.id,
@@ -103,6 +164,16 @@ export default async function PaymentsPage() {
       </div>
 
       <PaymentsTable payments={rows} />
+      {canWithdraw ? (
+        <WithdrawPanel
+          availableBalance={availableBalance}
+          reservedTotal={reservedTotal}
+          paidTotal={paidTotal}
+          recentWithdrawals={recentWithdrawals}
+          reviewQueue={reviewQueue}
+          isAdmin={role === 'ADMIN'}
+        />
+      ) : null}
     </section>
   )
 }
