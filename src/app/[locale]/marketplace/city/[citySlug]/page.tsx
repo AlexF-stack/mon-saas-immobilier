@@ -207,7 +207,7 @@ export default async function MarketplaceCityPage(props: {
                                 <MarketplacePropertyCard key={property.id} locale={locale} property={property} />
                             ))}
                         </section>
-                        <nav className="flex items-center justify-end gap-2">
+                        <nav className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
                             {clampedPage <= 1 ? (
                                 <Button variant="outline" size="sm" disabled>
                                     Precedent

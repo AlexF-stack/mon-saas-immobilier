@@ -169,7 +169,7 @@ export default async function MarketplacePropertyDetailPage(props: {
             <MarketplaceHeader locale={locale} isAuthenticated={Boolean(user)} />
 
             <main className="container-app space-y-8 py-8">
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
                     <Button asChild variant="outline" size="sm">
                         <Link href={`/${locale}/marketplace`}>Retour a la marketplace</Link>
                     </Button>

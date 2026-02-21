@@ -439,12 +439,12 @@ export default async function MarketplacePage(props: {
                             </Select>
                         </div>
 
-                        <div className="flex items-end gap-2 lg:col-span-2">
-                            <Button type="submit" className="w-full">
+                        <div className="flex flex-col items-stretch gap-2 sm:flex-row lg:col-span-2">
+                            <Button type="submit" className="w-full sm:flex-1">
                                 <Filter className="h-4 w-4" />
                                 Filtrer
                             </Button>
-                            <Button asChild variant="outline" className="w-full">
+                            <Button asChild variant="outline" className="w-full sm:flex-1">
                                 <Link href={basePath}>Reinitialiser</Link>
                             </Button>
                         </div>
@@ -482,7 +482,7 @@ export default async function MarketplacePage(props: {
                             ))}
                         </section>
 
-                        <nav className="flex items-center justify-end gap-2">
+                        <nav className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
                             {clampedPage <= 1 ? (
                                 <Button variant="outline" size="sm" disabled>
                                     Precedent

@@ -400,7 +400,7 @@ export function SettingsWorkspace({ locale, profile, loginHistory, wishlist: ini
             <div className='space-y-2'><Label>Current Password</Label><Input type='password' value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required /></div>
             <div className='space-y-2'><Label>New Password</Label><Input type='password' value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required /></div>
             <div className='space-y-2'><Label>Confirm Password</Label><Input type='password' value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required /></div>
-            <div className='md:col-span-3 flex items-center justify-between'>
+            <div className='md:col-span-3 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between'>
               <div>
                 {passwordError ? <p className='text-sm text-rose-600 dark:text-rose-400'>{passwordError}</p> : null}
                 {passwordMessage ? <p className='text-sm text-emerald-600 dark:text-emerald-400'>{passwordMessage}</p> : null}
@@ -409,13 +409,13 @@ export function SettingsWorkspace({ locale, profile, loginHistory, wishlist: ini
             </div>
           </form>
 
-          <div className='overflow-hidden rounded-xl border border-slate-200/70 dark:border-slate-800'>
-            <table className='w-full text-sm'>
+          <div className='overflow-x-auto rounded-xl border border-slate-200/70 dark:border-slate-800'>
+            <table className='min-w-[680px] w-full text-sm'>
               <thead className='bg-slate-50 dark:bg-slate-900/70'><tr><th className='px-3 py-2 text-left'>Date</th><th className='px-3 py-2 text-left'>IP</th><th className='px-3 py-2 text-left'>Agent</th><th className='px-3 py-2 text-left'>Status</th></tr></thead>
               <tbody>
                 {loginRows.map((row) => (
                   <tr key={row.id} className='border-t border-slate-200/70 dark:border-slate-800'>
-                    <td className='px-3 py-2'>{row.when}</td><td className='px-3 py-2'>{row.ip}</td><td className='px-3 py-2'>{row.agent}</td>
+                    <td className='px-3 py-2'>{row.when}</td><td className='px-3 py-2'>{row.ip}</td><td className='max-w-[280px] break-words px-3 py-2'>{row.agent}</td>
                     <td className='px-3 py-2'><Badge variant={row.success ? 'success' : 'destructive'}>{row.success ? 'Success' : 'Failed'}</Badge></td>
                   </tr>
                 ))}
@@ -429,21 +429,21 @@ export function SettingsWorkspace({ locale, profile, loginHistory, wishlist: ini
         <Card>
           <CardHeader><CardTitle>Wishlist</CardTitle><CardDescription>Track listings and revisit them quickly.</CardDescription></CardHeader>
           <CardContent className='space-y-4'>
-            <form className='flex gap-2' onSubmit={addWishlist}>
+            <form className='flex flex-col gap-2 sm:flex-row' onSubmit={addWishlist}>
               <Input value={wishlistPropertyId} onChange={(e) => setWishlistPropertyId(e.target.value)} placeholder='Property ID (cuid)' />
-              <Button type='submit' disabled={wishlistBusy}>Add</Button>
+              <Button type='submit' disabled={wishlistBusy} className='sm:w-auto'>Add</Button>
             </form>
             {wishlistError ? <p className='text-sm text-rose-600 dark:text-rose-400'>{wishlistError}</p> : null}
             {wishlistMessage ? <p className='text-sm text-emerald-600 dark:text-emerald-400'>{wishlistMessage}</p> : null}
             {wishlist.length === 0 ? <p className='text-sm text-slate-500 dark:text-slate-400'>No favorite listing yet.</p> : (
               <div className='space-y-2'>
                 {wishlist.map((item) => (
-                  <div key={item.propertyId} className='flex items-center justify-between gap-4 rounded-xl border border-slate-200/70 px-3 py-2 dark:border-slate-800'>
+                  <div key={item.propertyId} className='flex flex-col items-start gap-3 rounded-xl border border-slate-200/70 px-3 py-2 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between'>
                     <div>
                       <p className='font-medium'>{item.title}</p>
                       <p className='text-xs text-slate-500 dark:text-slate-400'>{[item.city, item.address].filter(Boolean).join(', ')} - {item.price.toLocaleString(uiLocale)} FCFA</p>
                     </div>
-                    <div className='flex items-center gap-2'>
+                    <div className='flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap'>
                       <Button asChild size='sm' variant='outline'><Link href={`${localePrefix}/marketplace/${item.propertyId}`}>Open</Link></Button>
                       <Button size='sm' variant='destructive' disabled={wishlistBusy} onClick={() => removeWishlist(item.propertyId)}>Remove</Button>
                     </div>
@@ -468,7 +468,7 @@ export function SettingsWorkspace({ locale, profile, loginHistory, wishlist: ini
                 <Textarea value={row.value} placeholder='Value (JSON/string)' className='min-h-28 font-mono text-xs' onChange={(e) => updateConfig(index, 'value', e.target.value)} />
               </div>
             ))}
-            <div className='flex items-center gap-2'>
+            <div className='flex flex-wrap items-center gap-2'>
               <Button variant='outline' onClick={addLandingPricingTemplates}>Add pricing templates</Button>
               <Button variant='outline' onClick={() => setSystemConfig((prev) => [...prev, { key: '', value: '', description: null, updatedAt: new Date().toISOString() }])}>Add row</Button>
               <Button onClick={saveSystemConfig} disabled={systemBusy}>{systemBusy ? 'Saving...' : 'Save config'}</Button>
