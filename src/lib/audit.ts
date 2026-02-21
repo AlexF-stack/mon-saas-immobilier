@@ -23,6 +23,8 @@ export async function createSystemLog(payload: SystemLogPayload) {
             },
         })
     } catch (error) {
-        console.error('Failed to persist system log', error)
+        if (process.env.NODE_ENV !== 'production') {
+            console.error('Failed to persist system log', error)
+        }
     }
 }

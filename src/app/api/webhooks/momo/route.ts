@@ -2,10 +2,14 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { verifyWebhookSignature } from '@/lib/payment'
+import { enforceRateLimit } from '@/lib/security-rate-limit'
+import { captureServerError } from '@/lib/monitoring'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+const WEBHOOK_RATE_LIMIT = 120
+const WEBHOOK_WINDOW_MS = 10 * 60 * 1000
 
 function buildReceiptNumber(paymentId: string, date: Date) {
     const suffix = paymentId.slice(-6).toUpperCase()
@@ -35,12 +39,29 @@ function getWebhookSecret() {
 
 export async function POST(request: Request) {
     try {
+        const rateLimitError = await enforceRateLimit({
+            request,
+            bucket: 'MOMO_WEBHOOK',
+            limit: WEBHOOK_RATE_LIMIT,
+            windowMs: WEBHOOK_WINDOW_MS,
+            message: 'Too many webhook requests',
+        })
+        if (rateLimitError) {
+            return rateLimitError
+        }
+
         const signature = request.headers.get('X-Callback-Signature')
         const bodyText = await request.text()
         const webhookSecret = getWebhookSecret()
 
         if (!webhookSecret) {
-            console.error('MOMO_WEBHOOK_SECRET is missing in production environment')
+            await captureServerError(
+                new Error('MOMO_WEBHOOK_SECRET is missing in production environment'),
+                {
+                    scope: 'momo_webhook_config',
+                    targetType: 'WEBHOOK',
+                }
+            )
             return NextResponse.json(
                 { error: 'Webhook secret is not configured' },
                 { status: 500 }
@@ -206,7 +227,10 @@ export async function POST(request: Request) {
             receiptNumber: processed.receiptNumber,
         })
     } catch (error) {
-        console.error('Webhook error:', error)
+        await captureServerError(error, {
+            scope: 'momo_webhook',
+            targetType: 'WEBHOOK',
+        })
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
 }

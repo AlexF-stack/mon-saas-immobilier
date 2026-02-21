@@ -6,10 +6,14 @@ import { requestPayment } from '@/lib/payment'
 import { verifyAuth, getTokenFromRequest } from '@/lib/auth'
 import { createSystemLog } from '@/lib/audit'
 import { enforceCsrf } from '@/lib/csrf'
+import { enforceRateLimit } from '@/lib/security-rate-limit'
+import { captureServerError } from '@/lib/monitoring'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+const PAYMENT_INITIATE_RATE_LIMIT = 20
+const PAYMENT_INITIATE_WINDOW_MS = 10 * 60 * 1000
 
 const initiatePaymentSchema = z.object({
     contractId: z.string().trim().min(1),
@@ -42,6 +46,19 @@ export async function POST(request: Request) {
         const user = await verifyAuth(token)
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        const rateLimitError = await enforceRateLimit({
+            request,
+            bucket: 'PAYMENT_INITIATE',
+            limit: PAYMENT_INITIATE_RATE_LIMIT,
+            windowMs: PAYMENT_INITIATE_WINDOW_MS,
+            actor: user,
+            extraKey: user.id,
+            message: 'Too many payment initiation attempts. Please retry later.',
+        })
+        if (rateLimitError) {
+            return rateLimitError
         }
 
         const idempotencyHeader = request.headers.get('x-idempotency-key')
@@ -237,7 +254,10 @@ export async function POST(request: Request) {
         if (error instanceof z.ZodError) {
             return NextResponse.json({ error: error.issues }, { status: 400 })
         }
-        console.error('Payment initiation error:', error)
+        await captureServerError(error, {
+            scope: 'payment_initiate',
+            targetType: 'PAYMENT',
+        })
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
 }
