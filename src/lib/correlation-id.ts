@@ -1,4 +1,5 @@
 export const CORRELATION_ID_HEADER = 'x-correlation-id'
+const REQUEST_CORRELATION_IDS = new WeakMap<Request, string>()
 
 function fallbackCorrelationId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`
@@ -18,7 +19,15 @@ export function getCorrelationIdFromHeaders(headers: Headers): string {
 }
 
 export function getCorrelationIdFromRequest(request: Request): string {
-  return getCorrelationIdFromHeaders(request.headers)
+  const fromHeaders = request.headers.get(CORRELATION_ID_HEADER)?.trim()
+  if (fromHeaders) return fromHeaders
+
+  const existing = REQUEST_CORRELATION_IDS.get(request)
+  if (existing) return existing
+
+  const created = createCorrelationId()
+  REQUEST_CORRELATION_IDS.set(request, created)
+  return created
 }
 
 export function setCorrelationIdOnResponse<T extends Response>(response: T, correlationId: string): T {

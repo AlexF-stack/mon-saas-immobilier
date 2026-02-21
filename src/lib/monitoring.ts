@@ -15,6 +15,19 @@ type MonitoringContext = {
 
 const SENSITIVE_KEY_PATTERN = /password|token|secret|authorization|cookie|set-cookie|signature/i
 
+function resolveMonitoringEnvironment() {
+  return process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? 'unknown'
+}
+
+function resolveMonitoringRelease() {
+  return (
+    process.env.SENTRY_RELEASE?.trim() ||
+    process.env.VERCEL_GIT_COMMIT_SHA?.trim() ||
+    process.env.NEXT_PUBLIC_APP_VERSION?.trim() ||
+    undefined
+  )
+}
+
 function stringifyError(error: unknown): string {
   if (error instanceof Error) {
     return `${error.name}: ${error.message}`
@@ -83,6 +96,8 @@ async function sendToSentryIfConfigured(error: unknown, context: MonitoringConte
         correlationId: context.correlationId,
         route: context.route,
         event: context.event,
+        environment: resolveMonitoringEnvironment(),
+        release: resolveMonitoringRelease(),
       },
       extra: {
         ...sanitizedDetails,

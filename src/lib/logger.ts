@@ -1,4 +1,4 @@
-import { getCorrelationIdFromHeaders } from '@/lib/correlation-id'
+import { getCorrelationIdFromRequest } from '@/lib/correlation-id'
 
 type LogLevel = 'info' | 'warn' | 'error'
 
@@ -12,7 +12,8 @@ type LogEntry = {
   details?: Record<string, unknown>
 }
 
-const SENSITIVE_KEY_PATTERN = /password|token|secret|authorization|cookie|set-cookie|signature|jwt/i
+const SENSITIVE_KEY_PATTERN =
+  /password|token|secret|authorization|cookie|set-cookie|signature|jwt|iban|accountnumber|account_number/i
 
 function sanitizeValue(value: unknown, depth = 0): unknown {
   if (depth > 4) return '[MaxDepth]'
@@ -72,7 +73,7 @@ function requestRoute(request: Request): string {
 
 export function getLogContextFromRequest(request: Request, userId?: string | null) {
   return {
-    correlationId: getCorrelationIdFromHeaders(request.headers),
+    correlationId: getCorrelationIdFromRequest(request),
     route: requestRoute(request),
     userId: userId ?? null,
   }

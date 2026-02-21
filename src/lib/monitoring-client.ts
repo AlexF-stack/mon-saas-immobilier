@@ -4,7 +4,20 @@ type SentryUser = {
 }
 
 let initialized = false
-let sentryModulePromise: Promise<{ init?: (config: Record<string, unknown>) => void; setUser?: (user: SentryUser | null) => void; captureException?: (error: unknown, context?: unknown) => void }> | null = null
+let sentryModulePromise: Promise<{
+  init?: (config: Record<string, unknown>) => void
+  setUser?: (user: SentryUser | null) => void
+  captureException?: (error: unknown, context?: unknown) => void
+}> | null = null
+
+function resolveClientRelease() {
+  return (
+    process.env.NEXT_PUBLIC_SENTRY_RELEASE?.trim() ||
+    process.env.NEXT_PUBLIC_APP_VERSION?.trim() ||
+    process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.trim() ||
+    undefined
+  )
+}
 
 function getSentryModule() {
   if (!sentryModulePromise) {
@@ -31,6 +44,7 @@ export async function initClientMonitoring() {
     sentry.init?.({
       dsn,
       environment: process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV,
+      release: resolveClientRelease(),
       tracesSampleRate: Number(process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE ?? '0.1'),
       sendDefaultPii: false,
     })

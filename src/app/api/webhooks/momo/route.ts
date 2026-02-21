@@ -86,6 +86,8 @@ export async function POST(request: Request) {
         const payload = parsedPayload.data
 
         const processed = await prisma.$transaction(async (tx) => {
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`momo:${payload.transactionId}`}))`
+
             const payment = await tx.payment.findUnique({
                 where: { transactionId: payload.transactionId },
                 include: {
