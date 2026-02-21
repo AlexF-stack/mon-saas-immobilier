@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { comparePassword, generateToken, normalizeUserRole } from '@/lib/auth'
+import { comparePassword, generateToken, hashPassword, normalizeUserRole } from '@/lib/auth'
 import { getDashboardPathForRole } from '@/lib/auth-policy'
 import { enforceCsrf } from '@/lib/csrf'
 import { createSystemLog } from '@/lib/audit'
@@ -29,6 +29,10 @@ const LOGIN_GLOBAL_LIMIT = 30
 const LOGIN_GLOBAL_WINDOW_MS = 10 * 60 * 1000
 const LOGIN_BRUTE_FORCE_LIMIT = 6
 const LOGIN_BRUTE_FORCE_WINDOW_MS = 15 * 60 * 1000
+
+function looksLikeBcryptHash(value: string) {
+    return /^\$2[aby]\$\d{2}\$/.test(value)
+}
 
 export async function POST(request: Request) {
     try {
@@ -105,7 +109,14 @@ export async function POST(request: Request) {
             )
         }
 
-        const isValidPassword = await comparePassword(password, user.password)
+        let isValidPassword = await comparePassword(password, user.password)
+        let upgradedPasswordHash: string | null = null
+
+        // Backward compatibility: migrate legacy plain-text passwords on first successful login.
+        if (!isValidPassword && !looksLikeBcryptHash(user.password) && user.password === password) {
+            isValidPassword = true
+            upgradedPasswordHash = await hashPassword(password)
+        }
 
         if (!isValidPassword) {
             await recordRateLimitEvent(
@@ -197,12 +208,17 @@ export async function POST(request: Request) {
         const userUpdateData: {
             lastLoginAt: Date
             role?: string
+            password?: string
         } = {
             lastLoginAt: new Date(),
         }
 
         if (user.role !== normalizedRole) {
             userUpdateData.role = normalizedRole
+        }
+
+        if (upgradedPasswordHash) {
+            userUpdateData.password = upgradedPasswordHash
         }
 
         await prisma.$transaction([
