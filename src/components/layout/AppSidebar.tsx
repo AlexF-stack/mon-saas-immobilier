@@ -52,11 +52,12 @@ export function AppSidebar({
   const localePrefix = localeMatch?.[0] ?? ''
   const homeHref = navItems.find((item) => item.iconKey === 'home')?.href ?? `${localePrefix}/dashboard`
 
-  function renderNavContent(compact: boolean) {
+  function renderNavContent(compact: boolean, allowScroll = false) {
     return (
       <nav
         className={cn(
-          'min-h-0 flex flex-1 flex-col gap-1 overflow-y-auto py-4',
+          'min-h-0 flex flex-1 flex-col gap-1 py-4',
+          allowScroll ? 'overflow-y-auto' : 'overflow-hidden',
           compact ? 'px-2' : 'px-3'
         )}
       >
@@ -146,7 +147,7 @@ export function AppSidebar({
     <>
       <aside
         className={cn(
-          'hidden h-screen shrink-0 flex-col border-r border-slate-200 bg-white transition-[width] duration-200 dark:border-slate-800 dark:bg-slate-900 md:flex',
+          'sticky top-0 hidden h-screen shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white transition-[width] duration-200 dark:border-slate-800 dark:bg-slate-900 md:flex',
           collapsed ? 'w-20' : 'w-60'
         )}
       >
@@ -180,7 +181,7 @@ export function AppSidebar({
             {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
           </button>
         </div>
-        {renderNavContent(collapsed)}
+        {renderNavContent(collapsed, false)}
         {renderFooter(collapsed)}
       </aside>
 
@@ -195,7 +196,7 @@ export function AppSidebar({
             </SheetTitle>
             {role && <span className="text-xs text-slate-500 dark:text-slate-400">Connecte : {role}</span>}
           </SheetHeader>
-          {renderNavContent(false)}
+          {renderNavContent(false, true)}
           {renderFooter(false)}
         </SheetContent>
       </Sheet>
