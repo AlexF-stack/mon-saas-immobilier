@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Plus, ShieldAlert, UserCheck, Users } from 'lucide-react'
+import { Plus, Users } from 'lucide-react'
 import { cookies } from 'next/headers'
 import { forbidden, redirect } from 'next/navigation'
 import { verifyAuth } from '@/lib/auth'
@@ -9,7 +9,6 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
-import { StatCard } from '@/components/ui/stat-card'
 
 export default async function TenantsPage(props: {
   params: Promise<{ locale: string }>
@@ -44,9 +43,6 @@ export default async function TenantsPage(props: {
     orderBy: { createdAt: 'desc' },
   })
 
-  const totalTenants = tenants.length
-  const suspendedCount = tenants.filter((tenant) => tenant.isSuspended).length
-  const activeCount = totalTenants - suspendedCount
   const canCreateTenant = user.role === 'ADMIN' || user.role === 'MANAGER'
 
   return (
@@ -67,30 +63,6 @@ export default async function TenantsPage(props: {
           </Button>
         )}
       </header>
-
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        <StatCard
-          title="Total locataires"
-          value={totalTenants}
-          subtitle="Dans votre perimetre"
-          icon={<Users className="h-5 w-5" />}
-          iconBg="primary"
-        />
-        <StatCard
-          title="Comptes actifs"
-          value={activeCount}
-          subtitle="Peuvent se connecter"
-          icon={<UserCheck className="h-5 w-5" />}
-          iconBg="success"
-        />
-        <StatCard
-          title="Suspendus"
-          value={suspendedCount}
-          subtitle="Acces bloque"
-          icon={<ShieldAlert className="h-5 w-5" />}
-          iconBg={suspendedCount > 0 ? 'warning' : 'muted'}
-        />
-      </div>
 
       {tenants.length === 0 ? (
         <EmptyState

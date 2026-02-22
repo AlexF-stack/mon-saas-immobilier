@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Building, Home, Plus, Wrench } from 'lucide-react'
+import { Building, Plus } from 'lucide-react'
 import { cookies } from 'next/headers'
 import { forbidden, redirect } from 'next/navigation'
 import { verifyAuth } from '@/lib/auth'
@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { StatCard } from '@/components/ui/stat-card'
 
 function statusVariant(status: string): 'success' | 'warning' | 'destructive' {
   if (status === 'AVAILABLE') return 'success'
@@ -45,10 +44,6 @@ export default async function PropertiesPage(props: {
     orderBy: { createdAt: 'desc' },
   })
 
-  const totalProperties = properties.length
-  const availableCount = properties.filter((property) => property.status === 'AVAILABLE').length
-  const rentedCount = properties.filter((property) => property.status === 'RENTED').length
-  const maintenanceCount = properties.filter((property) => property.status === 'MAINTENANCE').length
   const isManager = user.role === 'MANAGER'
 
   return (
@@ -69,37 +64,6 @@ export default async function PropertiesPage(props: {
           </Button>
         )}
       </header>
-
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-        <StatCard
-          title="Total biens"
-          value={totalProperties}
-          subtitle="Portefeuille actif"
-          icon={<Building className="h-5 w-5" />}
-          iconBg="primary"
-        />
-        <StatCard
-          title="Disponibles"
-          value={availableCount}
-          subtitle="Prets a louer"
-          icon={<Home className="h-5 w-5" />}
-          iconBg="success"
-        />
-        <StatCard
-          title="Occupes"
-          value={rentedCount}
-          subtitle="Sous bail actif"
-          icon={<Building className="h-5 w-5" />}
-          iconBg="warning"
-        />
-        <StatCard
-          title="Maintenance"
-          value={maintenanceCount}
-          subtitle="Intervention en cours"
-          icon={<Wrench className="h-5 w-5" />}
-          iconBg={maintenanceCount > 0 ? 'warning' : 'muted'}
-        />
-      </div>
 
       {properties.length === 0 ? (
         <EmptyState

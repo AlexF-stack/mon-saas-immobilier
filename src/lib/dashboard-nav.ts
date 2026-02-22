@@ -4,7 +4,8 @@ export function getDashboardNav(role: string, locale?: string): NavItemSerializa
     const prefix = locale ? `/${locale}` : ''
 
     const baseNavigation: NavItemSerializable[] = [
-        { name: 'Dashboard', href: `${prefix}/dashboard`, iconKey: 'home' },
+        { name: 'Accueil', href: `${prefix}/dashboard`, iconKey: 'home' },
+        { name: 'Statistiques', href: `${prefix}/dashboard/statistics`, iconKey: 'chart' },
         { name: 'Biens', href: `${prefix}/dashboard/properties`, iconKey: 'building' },
         { name: 'Marketplace', href: `${prefix}/dashboard/marketplace`, iconKey: 'store' },
         { name: 'Locataires', href: `${prefix}/dashboard/tenants`, iconKey: 'users' },
@@ -26,7 +27,7 @@ export function getDashboardNav(role: string, locale?: string): NavItemSerializa
 
     if (role === 'TENANT') {
         return [
-            { name: 'Dashboard', href: `${prefix}/dashboard`, iconKey: 'home' },
+            { name: 'Accueil', href: `${prefix}/dashboard`, iconKey: 'home' },
             { name: 'Contrats', href: `${prefix}/dashboard/contracts`, iconKey: 'fileText' },
             { name: 'Paiements', href: `${prefix}/dashboard/payments`, iconKey: 'creditCard' },
             { name: 'Parametres', href: `${prefix}/dashboard/settings`, iconKey: 'settings' },

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
+  BarChart3,
   Building,
     CreditCard,
     FileText,
@@ -22,6 +23,7 @@ import { useLogout } from '@/hooks/use-logout'
 
 const iconMap = {
   home: Home,
+  chart: BarChart3,
   building: Building,
   users: Users,
   fileText: FileText,
