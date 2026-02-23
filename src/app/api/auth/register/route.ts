@@ -8,6 +8,8 @@ import {
 } from '@/lib/auth-policy'
 import { enforceCsrf } from '@/lib/csrf'
 import { createSystemLog } from '@/lib/audit'
+import { getCorrelationIdFromRequest } from '@/lib/correlation-id'
+import { trackEvent } from '@/lib/analytics/track-event'
 import { z } from 'zod'
 
 export const runtime = 'nodejs'
@@ -22,6 +24,7 @@ const registerSchema = z.object({
 
 export async function POST(request: Request) {
     try {
+        const correlationId = getCorrelationIdFromRequest(request)
         const csrfError = enforceCsrf(request)
         if (csrfError) return csrfError
 
@@ -109,6 +112,18 @@ export async function POST(request: Request) {
             action: 'USER_REGISTERED',
             targetType: 'USER',
             targetId: user.id,
+            correlationId,
+            route: '/api/auth/register',
+        })
+
+        // Non-blocking analytics capture for signup.
+        void trackEvent({
+            type: 'SIGNUP',
+            userId: user.id,
+            metadata: {
+                role: user.role,
+            },
+            correlationId,
         })
 
         return response
