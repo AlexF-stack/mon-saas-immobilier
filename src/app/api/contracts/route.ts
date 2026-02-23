@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma'
 import { verifyAuth, getTokenFromRequest } from '@/lib/auth'
 import { createSystemLog } from '@/lib/audit'
 import { enforceCsrf } from '@/lib/csrf'
+import { getCorrelationIdFromRequest } from '@/lib/correlation-id'
+import { trackEvent } from '@/lib/analytics/track-event'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -55,6 +57,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
+        const correlationId = getCorrelationIdFromRequest(request)
         const csrfError = enforceCsrf(request)
         if (csrfError) return csrfError
 
@@ -139,6 +142,21 @@ export async function POST(request: Request) {
             targetType: 'CONTRACT',
             targetId: contract.id,
             details: `propertyId=${payload.propertyId};tenantId=${payload.tenantId}`,
+            correlationId,
+            route: '/api/contracts',
+        })
+
+        // Non-blocking analytics capture (must not impact contract creation response).
+        void trackEvent({
+            type: 'CONTRACT_CREATED',
+            userId: user.id,
+            entityId: contract.id,
+            metadata: {
+                rentAmount: contract.rentAmount,
+                tenantId: contract.tenantId,
+                propertyId: contract.propertyId,
+            },
+            correlationId,
         })
 
         return NextResponse.json(contract, { status: 201 })
