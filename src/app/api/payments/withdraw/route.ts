@@ -9,6 +9,7 @@ import { enforceRateLimit } from '@/lib/security-rate-limit'
 import { captureServerError } from '@/lib/monitoring'
 import { getClientIpFromHeaders } from '@/lib/request-metadata'
 import { createFinancialAuditLog } from '@/lib/financial-audit'
+import { trackEvent } from '@/lib/analytics/track-event'
 import { getLogContextFromRequest, logServerEvent } from '@/lib/logger'
 import {
   getLatestWithdrawalRecords,
@@ -281,6 +282,18 @@ export async function POST(request: Request) {
         withdrawalId: result.id,
         availableBalanceAfter: result.availableBalanceAfter,
       },
+    })
+
+    void trackEvent({
+      type: 'WITHDRAW_REQUESTED',
+      userId: user.id,
+      entityId: result.id,
+      metadata: {
+        amount: payload.amount,
+        method: payload.method,
+        availableBalanceAfter: result.availableBalanceAfter,
+      },
+      correlationId,
     })
 
     return NextResponse.json(
