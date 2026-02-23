@@ -7,6 +7,35 @@ generator client {
   provider = "prisma-client-js"
 }
 
+enum EventType {
+  SIGNUP
+  CONTRACT_CREATED
+  PAYMENT_COMPLETED
+  WITHDRAW_REQUESTED
+}
+
+model BusinessEvent {
+  id        String    @id @default(cuid())
+  type      EventType
+  userId    String?
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime  @default(now())
+
+  @@index([type, createdAt])
+}
+
+model DailyKPI {
+  id          String   @id @default(cuid())
+  date        DateTime @unique
+  signups     Int      @default(0)
+  contracts   Int      @default(0)
+  payments    Int      @default(0)
+  withdrawals Int      @default(0)
+  grossVolume Float    @default(0)
+  netRevenue  Float    @default(0)
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
