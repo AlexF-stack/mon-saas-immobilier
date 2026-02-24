@@ -11,9 +11,10 @@ export default function ThemeRegistry({ children }: Props) {
   return (
     <ThemeProvider
       attribute="class"
+      storageKey="immosaas-theme"
       defaultTheme="system"
       enableSystem={true}
-      disableTransitionOnChange={true}
+      disableTransitionOnChange={false}
     >
       {children}
     </ThemeProvider>
