@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 
 export interface StatCardProps extends React.ComponentProps<'div'> {
   title: string
-  value: string | number
+  value: React.ReactNode
   subtitle?: string
   icon?: React.ReactNode
   iconBg?: 'primary' | 'accent' | 'success' | 'warning' | 'muted'

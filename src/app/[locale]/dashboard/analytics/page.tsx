@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { cookies, headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { BadgeCheck, BarChart3, Building2, RotateCcw, Smartphone } from 'lucide-react'
+import { Activity, BadgeCheck, BarChart3, Building2, RotateCcw, Smartphone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -29,6 +29,14 @@ type DailyKpiRow = {
   withdrawalVolume: number
   grossVolume: number
   netCashFlow: number
+}
+
+type LatestKpiDateRow = {
+  lastDate: Date | null
+}
+
+type DbPingRow = {
+  ok: number
 }
 
 type DailyKpiPoint = {
@@ -199,6 +207,7 @@ export default async function DashboardAnalyticsPage(props: {
   const previousStart = addUtcDays(previousEnd, -(selectedRange - 1))
 
   const queryEnd = addUtcDays(currentEnd, 1)
+  const metricsStartedAt = Date.now()
   const rows = await prisma.$queryRaw<DailyKpiRow[]>`
       SELECT
         "date",
@@ -222,7 +231,14 @@ export default async function DashboardAnalyticsPage(props: {
   const previousTotals = sumTotals(previousSeries)
   const chartData = toChartData(currentSeries)
 
-  const [activePropertiesCount, occupiedPropertiesCount, rentPayments, providerGroups] = await Promise.all([
+  const [
+    activePropertiesCount,
+    occupiedPropertiesCount,
+    rentPayments,
+    providerGroups,
+    latestKpiDateRows,
+    dbPingRows,
+  ] = await Promise.all([
     prisma.property.count({
       where: {
         status: { in: ['AVAILABLE', 'RENTED'] },
@@ -255,7 +271,14 @@ export default async function DashboardAnalyticsPage(props: {
       _sum: { amount: true },
       _count: { _all: true },
     }),
+    prisma.$queryRaw<LatestKpiDateRow[]>`
+      SELECT MAX("date") AS "lastDate" FROM "DailyKPI"
+    `,
+    prisma.$queryRaw<DbPingRow[]>`
+      SELECT 1 AS "ok"
+    `,
   ])
+  const queryLatencyMs = Date.now() - metricsStartedAt
 
   const occupancyRate = safeRate(occupiedPropertiesCount, activePropertiesCount)
   const conversionSignupToContract = safeRate(currentTotals.contracts, currentTotals.signups)
@@ -302,6 +325,8 @@ export default async function DashboardAnalyticsPage(props: {
       volume: providerSummary.mtn.volume,
       share: safeRate(providerSummary.mtn.volume, currentTotals.grossVolume),
       badge: 'default' as const,
+      dotClass: 'bg-yellow-400',
+      barClass: 'bg-yellow-400',
     },
     {
       name: 'Moov Money',
@@ -309,6 +334,8 @@ export default async function DashboardAnalyticsPage(props: {
       volume: providerSummary.moov.volume,
       share: safeRate(providerSummary.moov.volume, currentTotals.grossVolume),
       badge: 'warning' as const,
+      dotClass: 'bg-blue-500',
+      barClass: 'bg-blue-500',
     },
     {
       name: 'Autres',
@@ -316,8 +343,21 @@ export default async function DashboardAnalyticsPage(props: {
       volume: providerSummary.other.volume,
       share: safeRate(providerSummary.other.volume, currentTotals.grossVolume),
       badge: 'secondary' as const,
+      dotClass: 'bg-slate-400',
+      barClass: 'bg-slate-400',
     },
   ]
+
+  const latestKpiDateRaw = latestKpiDateRows?.[0]?.lastDate
+  const latestKpiDate = latestKpiDateRaw ? toUtcDayStart(new Date(latestKpiDateRaw)) : null
+  const kpiLagDays = latestKpiDate
+    ? Math.max(
+        0,
+        Math.floor((currentEnd.getTime() - latestKpiDate.getTime()) / (24 * 60 * 60 * 1000))
+      )
+    : null
+  const dbHealthy = Number(dbPingRows?.[0]?.ok ?? 0) === 1
+  const cronHealthy = kpiLagDays !== null && kpiLagDays <= 1
 
   const securityControls = [
     {
@@ -396,8 +436,13 @@ export default async function DashboardAnalyticsPage(props: {
   }
 
   return (
-    <section className="space-y-6">
-      <Card className="animate-fade-up overflow-hidden border-border bg-gradient-to-r from-[rgb(var(--card))] via-[rgb(var(--surface))] to-[rgb(var(--surface)/0.7)] dark:border-slate-800 dark:from-slate-900/80 dark:via-slate-900/60 dark:to-blue-950/30">
+    <section className="relative space-y-6 overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute -left-20 -top-28 h-80 w-80 rounded-full bg-emerald-400/20 blur-3xl dark:bg-emerald-500/10" />
+        <div className="absolute -bottom-20 right-0 h-72 w-72 rounded-full bg-blue-500/20 blur-3xl dark:bg-blue-500/12" />
+      </div>
+
+      <Card className="glass-card animate-fade-up overflow-hidden border-border bg-gradient-to-r from-[rgb(var(--card)/0.9)] via-[rgb(var(--surface)/0.82)] to-[rgb(var(--surface)/0.65)] dark:border-slate-800 dark:from-slate-900/80 dark:via-slate-900/60 dark:to-blue-950/30">
         <CardHeader className="gap-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-2">
@@ -405,9 +450,15 @@ export default async function DashboardAnalyticsPage(props: {
                 <BarChart3 className="h-3.5 w-3.5" />
                 Pilotage Executif
               </p>
-              <CardTitle className="text-2xl font-semibold tracking-tight text-primary sm:text-3xl dark:text-slate-100">
-                Admin Analytics
-              </CardTitle>
+              <div className="flex flex-wrap items-center gap-2">
+                <CardTitle className="text-2xl font-semibold tracking-tight text-primary sm:text-3xl dark:text-slate-100">
+                  Admin Analytics
+                </CardTitle>
+                <Badge variant="success" className="gap-1.5">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
+                  Live data
+                </Badge>
+              </div>
               <CardDescription className="max-w-2xl text-sm text-secondary dark:text-slate-300">
                 Vue business consolidee sur {selectedRange} jours, comparee a la periode precedente.
               </CardDescription>
@@ -438,7 +489,7 @@ export default async function DashboardAnalyticsPage(props: {
       </Card>
 
       {showRebuilt ? (
-        <Card className="border-emerald-200 bg-emerald-50/80 dark:border-emerald-900/60 dark:bg-emerald-950/20">
+        <Card className="glass-card border-emerald-200 bg-emerald-50/80 dark:border-emerald-900/60 dark:bg-emerald-950/20">
           <CardContent className="py-3 text-sm text-emerald-700 dark:text-emerald-300">
             Rebuild KPI termine avec succes.
           </CardContent>
@@ -446,7 +497,7 @@ export default async function DashboardAnalyticsPage(props: {
       ) : null}
 
       {showRebuildError ? (
-        <Card className="border-rose-200 bg-rose-50/80 dark:border-rose-900/60 dark:bg-rose-950/20">
+        <Card className="glass-card border-rose-200 bg-rose-50/80 dark:border-rose-900/60 dark:bg-rose-950/20">
           <CardContent className="py-3 text-sm text-rose-700 dark:text-rose-300">
             Le rebuild KPI a echoue. Verifiez les secrets et relancez l&apos;operation.
           </CardContent>
@@ -455,7 +506,7 @@ export default async function DashboardAnalyticsPage(props: {
 
       <KpiCards current={currentTotals} previous={previousTotals} />
 
-      <Card className="animate-fade-up">
+      <Card className="glass-card animate-fade-up">
         <CardHeader>
           <CardTitle className="text-base font-semibold">Gross Volume vs Net Cash Flow</CardTitle>
           <CardDescription className="text-xs text-secondary dark:text-slate-400">
@@ -468,7 +519,7 @@ export default async function DashboardAnalyticsPage(props: {
       </Card>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <Card className="animate-fade-up">
+        <Card className="glass-card animate-fade-up">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
               <Building2 className="h-4 w-4" />
@@ -496,7 +547,7 @@ export default async function DashboardAnalyticsPage(props: {
               </span>
             </div>
             <div className="flex items-center justify-between rounded-xl border border-border bg-surface/80 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/70">
-              <span className="text-secondary dark:text-slate-300">Conversion signup → contrat</span>
+              <span className="text-secondary dark:text-slate-300">Conversion signup -&gt; contrat</span>
               <span className="font-semibold text-primary dark:text-slate-100">
                 {formatPercent(conversionSignupToContract)}
               </span>
@@ -504,7 +555,7 @@ export default async function DashboardAnalyticsPage(props: {
           </CardContent>
         </Card>
 
-        <Card className="animate-fade-up">
+        <Card className="glass-card animate-fade-up">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
               <Smartphone className="h-4 w-4" />
@@ -528,21 +579,27 @@ export default async function DashboardAnalyticsPage(props: {
             </div>
             <div className="space-y-2">
               {providerRows.map((provider) => (
-                <div
-                  key={provider.name}
-                  className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2.5 dark:border-slate-800 dark:bg-slate-900/60"
-                >
-                  <div className="flex items-center gap-2">
-                    <Badge variant={provider.badge}>{provider.name}</Badge>
-                    <span className="text-xs text-secondary dark:text-slate-400">
-                      {provider.count.toLocaleString('fr-FR')} tx
-                    </span>
+                <div key={provider.name} className="rounded-lg border border-border bg-card px-3 py-2.5 dark:border-slate-800 dark:bg-slate-900/60">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className={`h-2.5 w-2.5 rounded-full ${provider.dotClass}`} />
+                      <Badge variant={provider.badge}>{provider.name}</Badge>
+                      <span className="text-xs text-secondary dark:text-slate-400">
+                        {provider.count.toLocaleString('fr-FR')} tx
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-primary dark:text-slate-100">
+                        {formatMoney(provider.volume)}
+                      </p>
+                      <p className="text-xs text-secondary dark:text-slate-400">{formatPercent(provider.share)}</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-primary dark:text-slate-100">
-                      {formatMoney(provider.volume)}
-                    </p>
-                    <p className="text-xs text-secondary dark:text-slate-400">{formatPercent(provider.share)}</p>
+                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-surface dark:bg-slate-800">
+                    <div
+                      className={`h-full rounded-full ${provider.barClass} transition-[width] duration-500`}
+                      style={{ width: `${Math.min(100, Math.max(0, provider.share))}%` }}
+                    />
                   </div>
                 </div>
               ))}
@@ -550,7 +607,7 @@ export default async function DashboardAnalyticsPage(props: {
           </CardContent>
         </Card>
 
-        <Card className="animate-fade-up">
+        <Card className="glass-card animate-fade-up">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
               <BadgeCheck className="h-4 w-4" />
@@ -581,6 +638,47 @@ export default async function DashboardAnalyticsPage(props: {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="glass-card animate-fade-up">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base font-semibold">
+            <Activity className="h-4 w-4" />
+            Performance System Health
+          </CardTitle>
+          <CardDescription className="text-xs text-secondary dark:text-slate-400">
+            Etat runtime et fraicheur du pipeline analytics.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-xl border border-border bg-surface/80 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/70">
+            <p className="text-xs uppercase tracking-wide text-secondary dark:text-slate-400">Query latency</p>
+            <p className="mt-1 text-lg font-semibold text-primary dark:text-slate-100">{queryLatencyMs} ms</p>
+          </div>
+          <div className="rounded-xl border border-border bg-surface/80 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/70">
+            <p className="text-xs uppercase tracking-wide text-secondary dark:text-slate-400">Dernier jour KPI</p>
+            <p className="mt-1 text-lg font-semibold text-primary dark:text-slate-100">
+              {latestKpiDate ? formatUtcDate(latestKpiDate) : 'N/A'}
+            </p>
+          </div>
+          <div className="rounded-xl border border-border bg-surface/80 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/70">
+            <p className="text-xs uppercase tracking-wide text-secondary dark:text-slate-400">DB status</p>
+            <div className="mt-1">
+              <Badge variant={dbHealthy ? 'success' : 'destructive'}>{dbHealthy ? 'Healthy' : 'Down'}</Badge>
+            </div>
+          </div>
+          <div className="rounded-xl border border-border bg-surface/80 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/70">
+            <p className="text-xs uppercase tracking-wide text-secondary dark:text-slate-400">Cron freshness</p>
+            <div className="mt-1 flex items-center gap-2">
+              <Badge variant={cronHealthy ? 'success' : 'warning'}>
+                {cronHealthy ? 'On track' : 'Delayed'}
+              </Badge>
+              <span className="text-xs text-secondary dark:text-slate-400">
+                {kpiLagDays === null ? 'N/A' : `lag ${kpiLagDays}j`}
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </section>
   )
 }

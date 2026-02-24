@@ -1,10 +1,10 @@
 'use client'
 
 import {
+  Area,
+  AreaChart,
   CartesianGrid,
   Legend,
-  Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -36,7 +36,17 @@ export function KpiChart({ data }: KpiChartProps) {
   return (
     <div className="h-[320px] w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+        <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+          <defs>
+            <linearGradient id="grossGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#2563eb" stopOpacity={0.28} />
+              <stop offset="100%" stopColor="#2563eb" stopOpacity={0} />
+            </linearGradient>
+            <linearGradient id="netGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#16a34a" stopOpacity={0.28} />
+              <stop offset="100%" stopColor="#16a34a" stopOpacity={0} />
+            </linearGradient>
+          </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" vertical={false} />
           <XAxis
             dataKey="label"
@@ -53,10 +63,11 @@ export function KpiChart({ data }: KpiChartProps) {
           />
           <Tooltip
             contentStyle={{
-              backgroundColor: 'rgb(var(--card))',
-              border: '1px solid rgb(var(--border))',
-              borderRadius: '1rem',
-              boxShadow: '0 8px 24px rgba(15, 23, 42, 0.12)',
+              background: 'linear-gradient(135deg, rgb(var(--card) / 0.95), rgb(var(--surface) / 0.92))',
+              border: '1px solid rgb(var(--border) / 0.8)',
+              borderRadius: '0.95rem',
+              boxShadow: '0 12px 28px rgba(15, 23, 42, 0.16)',
+              backdropFilter: 'blur(8px)',
             }}
             labelStyle={{ color: 'rgb(var(--text-primary))' }}
             formatter={(value: unknown, key: string | undefined) => {
@@ -74,23 +85,29 @@ export function KpiChart({ data }: KpiChartProps) {
             height={24}
             formatter={(value) => (value === 'grossVolume' ? 'Gross Volume' : 'Net Cash Flow')}
           />
-          <Line
+          <Area
             type="monotone"
             dataKey="grossVolume"
             stroke="#2563eb"
-            strokeWidth={2.4}
+            fill="url(#grossGradient)"
+            strokeWidth={2.6}
             dot={false}
             activeDot={{ r: 4 }}
+            animationDuration={800}
+            animationEasing="ease-out"
           />
-          <Line
+          <Area
             type="monotone"
             dataKey="netCashFlow"
             stroke="#16a34a"
-            strokeWidth={2.4}
+            fill="url(#netGradient)"
+            strokeWidth={2.6}
             dot={false}
             activeDot={{ r: 4 }}
+            animationDuration={900}
+            animationEasing="ease-out"
           />
-        </LineChart>
+        </AreaChart>
       </ResponsiveContainer>
     </div>
   )
