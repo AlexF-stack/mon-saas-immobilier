@@ -3,6 +3,10 @@
     {
       "path": "/api/internal/kpi/rebuild/daily",
       "schedule": "10 0 * * *"
+    },
+    {
+      "path": "/api/internal/payments/reminders/daily",
+      "schedule": "15 0 * * *"
     }
   ]
 }

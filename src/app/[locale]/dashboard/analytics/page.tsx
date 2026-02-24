@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { verifyAuth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { captureServerError } from '@/lib/monitoring'
 import { KpiCards, type KpiTotals } from '@/components/admin/KpiCards'
 import { KpiChart, type KpiChartPoint } from '@/components/admin/KpiChart'
 
@@ -196,19 +197,80 @@ export default async function DashboardAnalyticsPage(props: {
     redirect(`/${locale}/login`)
   }
 
-  if (user.role !== 'ADMIN') {
+  const canViewAnalytics = user.role === 'ADMIN' || user.role === 'MANAGER'
+  const canManageAnalytics = user.role === 'ADMIN'
+
+  if (!canViewAnalytics) {
     redirect(`/${locale}/forbidden`)
   }
+
+  const requestHeaders = await headers()
+  const correlationId = requestHeaders.get('x-correlation-id') ?? undefined
 
   const todayUtc = toUtcDayStart(new Date())
   const currentEnd = addUtcDays(todayUtc, -1)
   const currentStart = addUtcDays(currentEnd, -(selectedRange - 1))
   const previousEnd = addUtcDays(currentStart, -1)
   const previousStart = addUtcDays(previousEnd, -(selectedRange - 1))
-
   const queryEnd = addUtcDays(currentEnd, 1)
-  const metricsStartedAt = Date.now()
-  const rows = await prisma.$queryRaw<DailyKpiRow[]>`
+  const defaultTotals: KpiTotals = {
+    signups: 0,
+    contracts: 0,
+    grossVolume: 0,
+    withdrawalVolume: 0,
+    netCashFlow: 0,
+  }
+  const defaultProviderRows = [
+    {
+      name: 'MTN MoMo',
+      count: 0,
+      volume: 0,
+      share: 0,
+      badge: 'default' as const,
+      dotClass: 'bg-yellow-400',
+      barClass: 'bg-yellow-400',
+    },
+    {
+      name: 'Moov Money',
+      count: 0,
+      volume: 0,
+      share: 0,
+      badge: 'warning' as const,
+      dotClass: 'bg-blue-500',
+      barClass: 'bg-blue-500',
+    },
+    {
+      name: 'Autres',
+      count: 0,
+      volume: 0,
+      share: 0,
+      badge: 'secondary' as const,
+      dotClass: 'bg-slate-400',
+      barClass: 'bg-slate-400',
+    },
+  ]
+
+  let dataUnavailable = false
+  let queryLatencyMs = 0
+  let currentTotals = defaultTotals
+  let previousTotals = defaultTotals
+  let chartData: KpiChartPoint[] = []
+  let activePropertiesCount = 0
+  let occupancyRate = 0
+  let onTimePaymentRate = 0
+  let conversionSignupToContract = 0
+  let providerRows = defaultProviderRows
+  let mobileMoneyVolume = 0
+  let mobileMoneyCount = 0
+  let mobileMoneyShare = 0
+  let latestKpiDate: Date | null = null
+  let kpiLagDays: number | null = null
+  let dbHealthy = false
+  let cronHealthy = false
+
+  try {
+    const metricsStartedAt = Date.now()
+    const rows = await prisma.$queryRaw<DailyKpiRow[]>`
       SELECT
         "date",
         "signups",
@@ -223,143 +285,157 @@ export default async function DashboardAnalyticsPage(props: {
       ORDER BY "date" ASC
     `
 
-  const byDate = new Map(rows.map((row) => [formatUtcDate(new Date(row.date)), row] as const))
-  const currentSeries = buildSeries(currentStart, currentEnd, byDate)
-  const previousSeries = buildSeries(previousStart, previousEnd, byDate)
+    const byDate = new Map(rows.map((row) => [formatUtcDate(new Date(row.date)), row] as const))
+    const currentSeries = buildSeries(currentStart, currentEnd, byDate)
+    const previousSeries = buildSeries(previousStart, previousEnd, byDate)
+    currentTotals = sumTotals(currentSeries)
+    previousTotals = sumTotals(previousSeries)
+    chartData = toChartData(currentSeries)
 
-  const currentTotals = sumTotals(currentSeries)
-  const previousTotals = sumTotals(previousSeries)
-  const chartData = toChartData(currentSeries)
-
-  const [
-    activePropertiesCount,
-    occupiedPropertiesCount,
-    rentPayments,
-    providerGroups,
-    latestKpiDateRows,
-    dbPingRows,
-  ] = await Promise.all([
-    prisma.property.count({
-      where: {
-        status: { in: ['AVAILABLE', 'RENTED'] },
-      },
-    }),
-    prisma.property.count({
-      where: { status: 'RENTED' },
-    }),
-    prisma.payment.findMany({
-      where: {
-        status: 'COMPLETED',
-        type: 'RENT',
-        createdAt: { gte: currentStart, lt: queryEnd },
-      },
-      select: {
-        createdAt: true,
-        contract: {
-          select: {
-            startDate: true,
+    const [
+      activeProperties,
+      occupiedPropertiesCount,
+      rentPayments,
+      providerGroups,
+      latestKpiDateRows,
+      dbPingRows,
+    ] = await Promise.all([
+      prisma.property.count({
+        where: {
+          status: { in: ['AVAILABLE', 'RENTED'] },
+        },
+      }),
+      prisma.property.count({
+        where: { status: 'RENTED' },
+      }),
+      prisma.payment.findMany({
+        where: {
+          status: 'COMPLETED',
+          type: 'RENT',
+          createdAt: { gte: currentStart, lt: queryEnd },
+        },
+        select: {
+          createdAt: true,
+          contract: {
+            select: {
+              startDate: true,
+            },
           },
         },
-      },
-    }),
-    prisma.payment.groupBy({
-      by: ['method'],
-      where: {
-        status: 'COMPLETED',
-        createdAt: { gte: currentStart, lt: queryEnd },
-      },
-      _sum: { amount: true },
-      _count: { _all: true },
-    }),
-    prisma.$queryRaw<LatestKpiDateRow[]>`
+      }),
+      prisma.payment.groupBy({
+        by: ['method'],
+        where: {
+          status: 'COMPLETED',
+          createdAt: { gte: currentStart, lt: queryEnd },
+        },
+        _sum: { amount: true },
+        _count: { _all: true },
+      }),
+      prisma.$queryRaw<LatestKpiDateRow[]>`
       SELECT MAX("date") AS "lastDate" FROM "DailyKPI"
     `,
-    prisma.$queryRaw<DbPingRow[]>`
+      prisma.$queryRaw<DbPingRow[]>`
       SELECT 1 AS "ok"
     `,
-  ])
-  const queryLatencyMs = Date.now() - metricsStartedAt
+    ])
+    queryLatencyMs = Date.now() - metricsStartedAt
 
-  const occupancyRate = safeRate(occupiedPropertiesCount, activePropertiesCount)
-  const conversionSignupToContract = safeRate(currentTotals.contracts, currentTotals.signups)
+    activePropertiesCount = activeProperties
+    occupancyRate = safeRate(occupiedPropertiesCount, activePropertiesCount)
+    conversionSignupToContract = safeRate(currentTotals.contracts, currentTotals.signups)
 
-  const onTimePayments = rentPayments.filter((payment) => {
-    const paymentDate = new Date(payment.createdAt)
-    const dueDay = getDueDay(new Date(payment.contract.startDate), paymentDate)
-    return paymentDate.getUTCDate() <= dueDay
-  }).length
-  const onTimePaymentRate = safeRate(onTimePayments, rentPayments.length)
+    const onTimePayments = rentPayments.filter((payment) => {
+      const paymentDate = new Date(payment.createdAt)
+      const dueDay = getDueDay(new Date(payment.contract.startDate), paymentDate)
+      return paymentDate.getUTCDate() <= dueDay
+    }).length
+    onTimePaymentRate = safeRate(onTimePayments, rentPayments.length)
 
-  const providerSummary = providerGroups.reduce(
-    (acc, entry) => {
-      const provider = normalizeProvider(entry.method)
-      const amount = Number(entry._sum.amount ?? 0)
-      const count = Number(entry._count._all ?? 0)
+    const providerSummary = providerGroups.reduce(
+      (acc, entry) => {
+        const provider = normalizeProvider(entry.method)
+        const amount = Number(entry._sum.amount ?? 0)
+        const count = Number(entry._count._all ?? 0)
 
-      if (provider === 'MTN MoMo') {
-        acc.mtn.volume += amount
-        acc.mtn.count += count
-      } else if (provider === 'Moov Money') {
-        acc.moov.volume += amount
-        acc.moov.count += count
-      } else {
-        acc.other.volume += amount
-        acc.other.count += count
+        if (provider === 'MTN MoMo') {
+          acc.mtn.volume += amount
+          acc.mtn.count += count
+        } else if (provider === 'Moov Money') {
+          acc.moov.volume += amount
+          acc.moov.count += count
+        } else {
+          acc.other.volume += amount
+          acc.other.count += count
+        }
+        return acc
+      },
+      {
+        mtn: { volume: 0, count: 0 },
+        moov: { volume: 0, count: 0 },
+        other: { volume: 0, count: 0 },
       }
-      return acc
-    },
-    {
-      mtn: { volume: 0, count: 0 },
-      moov: { volume: 0, count: 0 },
-      other: { volume: 0, count: 0 },
-    }
-  )
+    )
 
-  const mobileMoneyVolume = providerSummary.mtn.volume + providerSummary.moov.volume
-  const mobileMoneyCount = providerSummary.mtn.count + providerSummary.moov.count
-  const mobileMoneyShare = safeRate(mobileMoneyVolume, currentTotals.grossVolume)
-  const providerRows = [
-    {
-      name: 'MTN MoMo',
-      count: providerSummary.mtn.count,
-      volume: providerSummary.mtn.volume,
-      share: safeRate(providerSummary.mtn.volume, currentTotals.grossVolume),
-      badge: 'default' as const,
-      dotClass: 'bg-yellow-400',
-      barClass: 'bg-yellow-400',
-    },
-    {
-      name: 'Moov Money',
-      count: providerSummary.moov.count,
-      volume: providerSummary.moov.volume,
-      share: safeRate(providerSummary.moov.volume, currentTotals.grossVolume),
-      badge: 'warning' as const,
-      dotClass: 'bg-blue-500',
-      barClass: 'bg-blue-500',
-    },
-    {
-      name: 'Autres',
-      count: providerSummary.other.count,
-      volume: providerSummary.other.volume,
-      share: safeRate(providerSummary.other.volume, currentTotals.grossVolume),
-      badge: 'secondary' as const,
-      dotClass: 'bg-slate-400',
-      barClass: 'bg-slate-400',
-    },
-  ]
+    mobileMoneyVolume = providerSummary.mtn.volume + providerSummary.moov.volume
+    mobileMoneyCount = providerSummary.mtn.count + providerSummary.moov.count
+    mobileMoneyShare = safeRate(mobileMoneyVolume, currentTotals.grossVolume)
+    providerRows = [
+      {
+        name: 'MTN MoMo',
+        count: providerSummary.mtn.count,
+        volume: providerSummary.mtn.volume,
+        share: safeRate(providerSummary.mtn.volume, currentTotals.grossVolume),
+        badge: 'default' as const,
+        dotClass: 'bg-yellow-400',
+        barClass: 'bg-yellow-400',
+      },
+      {
+        name: 'Moov Money',
+        count: providerSummary.moov.count,
+        volume: providerSummary.moov.volume,
+        share: safeRate(providerSummary.moov.volume, currentTotals.grossVolume),
+        badge: 'warning' as const,
+        dotClass: 'bg-blue-500',
+        barClass: 'bg-blue-500',
+      },
+      {
+        name: 'Autres',
+        count: providerSummary.other.count,
+        volume: providerSummary.other.volume,
+        share: safeRate(providerSummary.other.volume, currentTotals.grossVolume),
+        badge: 'secondary' as const,
+        dotClass: 'bg-slate-400',
+        barClass: 'bg-slate-400',
+      },
+    ]
 
-  const latestKpiDateRaw = latestKpiDateRows?.[0]?.lastDate
-  const latestKpiDate = latestKpiDateRaw ? toUtcDayStart(new Date(latestKpiDateRaw)) : null
-  const kpiLagDays = latestKpiDate
-    ? Math.max(
-        0,
-        Math.floor((currentEnd.getTime() - latestKpiDate.getTime()) / (24 * 60 * 60 * 1000))
-      )
-    : null
-  const dbHealthy = Number(dbPingRows?.[0]?.ok ?? 0) === 1
-  const cronHealthy = kpiLagDays !== null && kpiLagDays <= 1
+    const latestKpiDateRaw = latestKpiDateRows?.[0]?.lastDate
+    latestKpiDate = latestKpiDateRaw ? toUtcDayStart(new Date(latestKpiDateRaw)) : null
+    kpiLagDays = latestKpiDate
+      ? Math.max(
+          0,
+          Math.floor((currentEnd.getTime() - latestKpiDate.getTime()) / (24 * 60 * 60 * 1000))
+        )
+      : null
+    dbHealthy = Number(dbPingRows?.[0]?.ok ?? 0) === 1
+    cronHealthy = kpiLagDays !== null && kpiLagDays <= 1
+  } catch (error) {
+    dataUnavailable = true
+    await captureServerError(error, {
+      scope: 'dashboard_analytics_page',
+      actor: user,
+      targetType: 'ANALYTICS',
+      correlationId,
+      route: `/${locale}/dashboard/analytics`,
+      event: 'dashboard.analytics.page.failed',
+      details: {
+        range: selectedRange,
+      },
+    })
+  }
 
-  const securityControls = [
+  const securityControls = canManageAnalytics ? [
     {
       label: 'Internal rebuild key',
       enabled: Boolean(process.env.INTERNAL_API_KEY?.trim()),
@@ -375,7 +451,7 @@ export default async function DashboardAnalyticsPage(props: {
       enabled: true,
       detail: 'Secret non expose client',
     },
-  ]
+  ] : []
 
   async function rebuildAction(formData: FormData) {
     'use server'
@@ -452,15 +528,16 @@ export default async function DashboardAnalyticsPage(props: {
               </p>
               <div className="flex flex-wrap items-center gap-2">
                 <CardTitle className="text-2xl font-semibold tracking-tight text-primary sm:text-3xl dark:text-slate-100">
-                  Admin Analytics
+                  {canManageAnalytics ? 'Admin Analytics' : 'Analytics'}
                 </CardTitle>
-                <Badge variant="success" className="gap-1.5">
+                <Badge variant={dataUnavailable ? 'warning' : 'success'} className="gap-1.5">
                   <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
-                  Live data
+                  {dataUnavailable ? 'Mode degrade' : 'Live data'}
                 </Badge>
               </div>
               <CardDescription className="max-w-2xl text-sm text-secondary dark:text-slate-300">
                 Vue business consolidee sur {selectedRange} jours, comparee a la periode precedente.
+                {!canManageAnalytics ? ' Rebuild reserve aux administrateurs.' : ''}
               </CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -474,15 +551,17 @@ export default async function DashboardAnalyticsPage(props: {
                   <Link href={`/${locale}/dashboard/analytics?range=${range}`}>{range}j</Link>
                 </Button>
               ))}
-              <form action={rebuildAction}>
-                <input type="hidden" name="from" value={formatUtcDate(currentStart)} />
-                <input type="hidden" name="to" value={formatUtcDate(currentEnd)} />
-                <input type="hidden" name="range" value={String(selectedRange)} />
-                <Button type="submit" variant="outline" size="sm">
-                  <RotateCcw className="h-4 w-4" />
-                  Rebuild
-                </Button>
-              </form>
+              {canManageAnalytics ? (
+                <form action={rebuildAction}>
+                  <input type="hidden" name="from" value={formatUtcDate(currentStart)} />
+                  <input type="hidden" name="to" value={formatUtcDate(currentEnd)} />
+                  <input type="hidden" name="range" value={String(selectedRange)} />
+                  <Button type="submit" variant="outline" size="sm">
+                    <RotateCcw className="h-4 w-4" />
+                    Rebuild
+                  </Button>
+                </form>
+              ) : null}
             </div>
           </div>
         </CardHeader>
@@ -500,6 +579,14 @@ export default async function DashboardAnalyticsPage(props: {
         <Card className="glass-card border-rose-200 bg-rose-50/80 dark:border-rose-900/60 dark:bg-rose-950/20">
           <CardContent className="py-3 text-sm text-rose-700 dark:text-rose-300">
             Le rebuild KPI a echoue. Verifiez les secrets et relancez l&apos;operation.
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {dataUnavailable ? (
+        <Card className="glass-card border-amber-200 bg-amber-50/80 dark:border-amber-900/60 dark:bg-amber-950/20">
+          <CardContent className="py-3 text-sm text-amber-700 dark:text-amber-300">
+            Certaines donnees analytics sont indisponibles. La page reste accessible avec des valeurs de secours.
           </CardContent>
         </Card>
       ) : null}
@@ -607,36 +694,38 @@ export default async function DashboardAnalyticsPage(props: {
           </CardContent>
         </Card>
 
-        <Card className="glass-card animate-fade-up">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base font-semibold">
-              <BadgeCheck className="h-4 w-4" />
-              Security Controls
-            </CardTitle>
-            <CardDescription className="text-xs text-secondary dark:text-slate-400">
-              Etat des protections internes analytics.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {securityControls.map((control) => (
-              <div
-                key={control.label}
-                className="flex items-center justify-between rounded-xl border border-border bg-surface/80 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/70"
-              >
-                <div>
-                  <p className="text-sm font-medium text-primary dark:text-slate-100">{control.label}</p>
-                  <p className="text-xs text-secondary dark:text-slate-400">{control.detail}</p>
+        {canManageAnalytics ? (
+          <Card className="glass-card animate-fade-up">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                <BadgeCheck className="h-4 w-4" />
+                Security Controls
+              </CardTitle>
+              <CardDescription className="text-xs text-secondary dark:text-slate-400">
+                Etat des protections internes analytics.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {securityControls.map((control) => (
+                <div
+                  key={control.label}
+                  className="flex items-center justify-between rounded-xl border border-border bg-surface/80 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/70"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-primary dark:text-slate-100">{control.label}</p>
+                    <p className="text-xs text-secondary dark:text-slate-400">{control.detail}</p>
+                  </div>
+                  <Badge variant={control.enabled ? 'success' : 'destructive'}>
+                    {control.enabled ? 'Enabled' : 'Missing'}
+                  </Badge>
                 </div>
-                <Badge variant={control.enabled ? 'success' : 'destructive'}>
-                  {control.enabled ? 'Enabled' : 'Missing'}
-                </Badge>
+              ))}
+              <div className="rounded-xl border border-border bg-card p-3 text-xs text-secondary dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400">
+                Rebuild protege par role admin + internal key + rate limit + cron bearer token.
               </div>
-            ))}
-            <div className="rounded-xl border border-border bg-card p-3 text-xs text-secondary dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400">
-              Rebuild protege par role admin + internal key + rate limit + cron bearer token.
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ) : null}
       </div>
 
       <Card className="glass-card animate-fade-up">

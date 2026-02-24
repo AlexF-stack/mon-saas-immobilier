@@ -1,4 +1,5 @@
-// Redirect handled by middleware
+import { redirect } from 'next/navigation'
+
 export default function Page() {
-  return null
+  redirect('/en/dashboard/analytics')
 }

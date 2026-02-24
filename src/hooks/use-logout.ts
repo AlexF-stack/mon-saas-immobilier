@@ -26,7 +26,7 @@ export function useLogout() {
     if (loading) return
 
     setLoading(true)
-    const fallbackRedirect = `${localePrefix || ''}/login`
+    const fallbackRedirect = localePrefix || '/'
 
     try {
       const response = await fetch('/api/auth/logout', {
@@ -60,4 +60,3 @@ export function useLogout() {
 
   return { logout, loading }
 }
-

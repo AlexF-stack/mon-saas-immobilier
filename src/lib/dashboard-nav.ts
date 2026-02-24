@@ -5,7 +5,7 @@ export function getDashboardNav(role: string, locale?: string): NavItemSerializa
 
     const baseNavigation: NavItemSerializable[] = [
         { name: 'Accueil', href: `${prefix}/dashboard`, iconKey: 'home' },
-        { name: 'Statistiques', href: `${prefix}/dashboard/statistics`, iconKey: 'chart' },
+        { name: 'Analytics', href: `${prefix}/dashboard/analytics`, iconKey: 'chart' },
         { name: 'Biens', href: `${prefix}/dashboard/properties`, iconKey: 'building' },
         { name: 'Marketplace', href: `${prefix}/dashboard/marketplace`, iconKey: 'store' },
         { name: 'Locataires', href: `${prefix}/dashboard/tenants`, iconKey: 'users' },
@@ -16,14 +16,6 @@ export function getDashboardNav(role: string, locale?: string): NavItemSerializa
 
     if (role === 'ADMIN') {
         const nav = [...baseNavigation]
-        const statisticsIndex = nav.findIndex((item) => item.href === `${prefix}/dashboard/statistics`)
-        if (statisticsIndex >= 0) {
-            nav[statisticsIndex] = {
-                name: 'Analytics',
-                href: `${prefix}/dashboard/analytics`,
-                iconKey: 'chart',
-            }
-        }
         nav.splice(1, 0, { name: 'Utilisateurs', href: `${prefix}/dashboard/users`, iconKey: 'users' })
         nav.splice(nav.length - 1, 0, { name: 'Logs', href: `${prefix}/dashboard/logs`, iconKey: 'logs' })
         return nav
