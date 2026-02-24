@@ -166,9 +166,9 @@ export default async function DashboardHomePage(props: {
             <div className="flex flex-wrap gap-2">
               {role !== 'TENANT' ? (
                 <Button asChild size="sm">
-                  <Link href={`${dashboardPrefix}/statistics`}>
+                  <Link href={role === 'ADMIN' ? `${dashboardPrefix}/analytics` : `${dashboardPrefix}/statistics`}>
                     <BarChart3 className="h-4 w-4" />
-                    Voir les statistiques
+                    {role === 'ADMIN' ? 'Voir analytics' : 'Voir les statistiques'}
                   </Link>
                 </Button>
               ) : null}

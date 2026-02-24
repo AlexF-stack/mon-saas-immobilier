@@ -40,6 +40,7 @@ export function AppHeader({ onMenuClick, userProfile, role }: AppHeaderProps) {
   const pageLabels: Record<string, string> = {
     dashboard: 'Accueil',
     statistics: 'Statistiques',
+    analytics: 'Analytics',
     properties: 'Biens',
     tenants: 'Locataires',
     contracts: 'Contrats',

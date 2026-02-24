@@ -16,6 +16,14 @@ export function getDashboardNav(role: string, locale?: string): NavItemSerializa
 
     if (role === 'ADMIN') {
         const nav = [...baseNavigation]
+        const statisticsIndex = nav.findIndex((item) => item.href === `${prefix}/dashboard/statistics`)
+        if (statisticsIndex >= 0) {
+            nav[statisticsIndex] = {
+                name: 'Analytics',
+                href: `${prefix}/dashboard/analytics`,
+                iconKey: 'chart',
+            }
+        }
         nav.splice(1, 0, { name: 'Utilisateurs', href: `${prefix}/dashboard/users`, iconKey: 'users' })
         nav.splice(nav.length - 1, 0, { name: 'Logs', href: `${prefix}/dashboard/logs`, iconKey: 'logs' })
         return nav
