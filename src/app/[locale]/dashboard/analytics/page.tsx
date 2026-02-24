@@ -2,9 +2,10 @@ import Link from 'next/link'
 import { cookies, headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { BarChart3, RotateCcw } from 'lucide-react'
+import { BadgeCheck, BarChart3, Building2, RotateCcw, Smartphone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { verifyAuth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { KpiCards, type KpiTotals } from '@/components/admin/KpiCards'
@@ -141,6 +142,34 @@ function toChartData(points: DailyKpiPoint[]): KpiChartPoint[] {
   })
 }
 
+function formatMoney(value: number) {
+  return `${value.toLocaleString('fr-FR')} FCFA`
+}
+
+function formatPercent(value: number) {
+  return `${value.toFixed(1)}%`
+}
+
+function safeRate(numerator: number, denominator: number) {
+  if (denominator <= 0) return 0
+  return (numerator / denominator) * 100
+}
+
+function normalizeProvider(method: string) {
+  const value = method.trim().toUpperCase()
+  if (value.includes('MTN')) return 'MTN MoMo'
+  if (value.includes('MOOV')) return 'Moov Money'
+  return 'Autres'
+}
+
+function getDueDay(contractStartDate: Date, paymentDate: Date) {
+  const contractDueDay = contractStartDate.getUTCDate()
+  const lastDayOfMonth = new Date(
+    Date.UTC(paymentDate.getUTCFullYear(), paymentDate.getUTCMonth() + 1, 0)
+  ).getUTCDate()
+  return Math.min(contractDueDay, lastDayOfMonth)
+}
+
 export default async function DashboardAnalyticsPage(props: {
   params: Promise<{ locale: string }>
   searchParams: Promise<AnalyticsSearchParams>
@@ -192,6 +221,121 @@ export default async function DashboardAnalyticsPage(props: {
   const currentTotals = sumTotals(currentSeries)
   const previousTotals = sumTotals(previousSeries)
   const chartData = toChartData(currentSeries)
+
+  const [activePropertiesCount, occupiedPropertiesCount, rentPayments, providerGroups] = await Promise.all([
+    prisma.property.count({
+      where: {
+        status: { in: ['AVAILABLE', 'RENTED'] },
+      },
+    }),
+    prisma.property.count({
+      where: { status: 'RENTED' },
+    }),
+    prisma.payment.findMany({
+      where: {
+        status: 'COMPLETED',
+        type: 'RENT',
+        createdAt: { gte: currentStart, lt: queryEnd },
+      },
+      select: {
+        createdAt: true,
+        contract: {
+          select: {
+            startDate: true,
+          },
+        },
+      },
+    }),
+    prisma.payment.groupBy({
+      by: ['method'],
+      where: {
+        status: 'COMPLETED',
+        createdAt: { gte: currentStart, lt: queryEnd },
+      },
+      _sum: { amount: true },
+      _count: { _all: true },
+    }),
+  ])
+
+  const occupancyRate = safeRate(occupiedPropertiesCount, activePropertiesCount)
+  const conversionSignupToContract = safeRate(currentTotals.contracts, currentTotals.signups)
+
+  const onTimePayments = rentPayments.filter((payment) => {
+    const paymentDate = new Date(payment.createdAt)
+    const dueDay = getDueDay(new Date(payment.contract.startDate), paymentDate)
+    return paymentDate.getUTCDate() <= dueDay
+  }).length
+  const onTimePaymentRate = safeRate(onTimePayments, rentPayments.length)
+
+  const providerSummary = providerGroups.reduce(
+    (acc, entry) => {
+      const provider = normalizeProvider(entry.method)
+      const amount = Number(entry._sum.amount ?? 0)
+      const count = Number(entry._count._all ?? 0)
+
+      if (provider === 'MTN MoMo') {
+        acc.mtn.volume += amount
+        acc.mtn.count += count
+      } else if (provider === 'Moov Money') {
+        acc.moov.volume += amount
+        acc.moov.count += count
+      } else {
+        acc.other.volume += amount
+        acc.other.count += count
+      }
+      return acc
+    },
+    {
+      mtn: { volume: 0, count: 0 },
+      moov: { volume: 0, count: 0 },
+      other: { volume: 0, count: 0 },
+    }
+  )
+
+  const mobileMoneyVolume = providerSummary.mtn.volume + providerSummary.moov.volume
+  const mobileMoneyCount = providerSummary.mtn.count + providerSummary.moov.count
+  const mobileMoneyShare = safeRate(mobileMoneyVolume, currentTotals.grossVolume)
+  const providerRows = [
+    {
+      name: 'MTN MoMo',
+      count: providerSummary.mtn.count,
+      volume: providerSummary.mtn.volume,
+      share: safeRate(providerSummary.mtn.volume, currentTotals.grossVolume),
+      badge: 'default' as const,
+    },
+    {
+      name: 'Moov Money',
+      count: providerSummary.moov.count,
+      volume: providerSummary.moov.volume,
+      share: safeRate(providerSummary.moov.volume, currentTotals.grossVolume),
+      badge: 'warning' as const,
+    },
+    {
+      name: 'Autres',
+      count: providerSummary.other.count,
+      volume: providerSummary.other.volume,
+      share: safeRate(providerSummary.other.volume, currentTotals.grossVolume),
+      badge: 'secondary' as const,
+    },
+  ]
+
+  const securityControls = [
+    {
+      label: 'Internal rebuild key',
+      enabled: Boolean(process.env.INTERNAL_API_KEY?.trim()),
+      detail: 'INTERNAL_API_KEY',
+    },
+    {
+      label: 'Cron bearer token',
+      enabled: Boolean(process.env.CRON_SECRET?.trim()),
+      detail: 'CRON_SECRET',
+    },
+    {
+      label: 'Server action rebuild',
+      enabled: true,
+      detail: 'Secret non expose client',
+    },
+  ]
 
   async function rebuildAction(formData: FormData) {
     'use server'
@@ -322,6 +466,121 @@ export default async function DashboardAnalyticsPage(props: {
           <KpiChart data={chartData} />
         </CardContent>
       </Card>
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <Card className="animate-fade-up">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <Building2 className="h-4 w-4" />
+              KPI Immobilier
+            </CardTitle>
+            <CardDescription className="text-xs text-secondary dark:text-slate-400">
+              Metriques metier pour pilotage immobilier.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className="flex items-center justify-between rounded-xl border border-border bg-surface/80 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/70">
+              <span className="text-secondary dark:text-slate-300">Biens actifs</span>
+              <span className="font-semibold text-primary dark:text-slate-100">
+                {activePropertiesCount.toLocaleString('fr-FR')}
+              </span>
+            </div>
+            <div className="flex items-center justify-between rounded-xl border border-border bg-surface/80 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/70">
+              <span className="text-secondary dark:text-slate-300">Taux d&apos;occupation</span>
+              <span className="font-semibold text-primary dark:text-slate-100">{formatPercent(occupancyRate)}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-xl border border-border bg-surface/80 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/70">
+              <span className="text-secondary dark:text-slate-300">Paiements a temps</span>
+              <span className="font-semibold text-primary dark:text-slate-100">
+                {formatPercent(onTimePaymentRate)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between rounded-xl border border-border bg-surface/80 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/70">
+              <span className="text-secondary dark:text-slate-300">Conversion signup → contrat</span>
+              <span className="font-semibold text-primary dark:text-slate-100">
+                {formatPercent(conversionSignupToContract)}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="animate-fade-up">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <Smartphone className="h-4 w-4" />
+              Mobile Money (Benin)
+            </CardTitle>
+            <CardDescription className="text-xs text-secondary dark:text-slate-400">
+              Repartition des paiements par provider.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-xl border border-border bg-surface/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
+              <p className="text-xs uppercase tracking-wide text-secondary dark:text-slate-400">
+                Part Mobile Money
+              </p>
+              <p className="mt-1 text-xl font-semibold text-primary dark:text-slate-100">
+                {formatPercent(mobileMoneyShare)}
+              </p>
+              <p className="mt-1 text-xs text-secondary dark:text-slate-400">
+                {mobileMoneyCount.toLocaleString('fr-FR')} transactions | {formatMoney(mobileMoneyVolume)}
+              </p>
+            </div>
+            <div className="space-y-2">
+              {providerRows.map((provider) => (
+                <div
+                  key={provider.name}
+                  className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2.5 dark:border-slate-800 dark:bg-slate-900/60"
+                >
+                  <div className="flex items-center gap-2">
+                    <Badge variant={provider.badge}>{provider.name}</Badge>
+                    <span className="text-xs text-secondary dark:text-slate-400">
+                      {provider.count.toLocaleString('fr-FR')} tx
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-primary dark:text-slate-100">
+                      {formatMoney(provider.volume)}
+                    </p>
+                    <p className="text-xs text-secondary dark:text-slate-400">{formatPercent(provider.share)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="animate-fade-up">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <BadgeCheck className="h-4 w-4" />
+              Security Controls
+            </CardTitle>
+            <CardDescription className="text-xs text-secondary dark:text-slate-400">
+              Etat des protections internes analytics.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {securityControls.map((control) => (
+              <div
+                key={control.label}
+                className="flex items-center justify-between rounded-xl border border-border bg-surface/80 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/70"
+              >
+                <div>
+                  <p className="text-sm font-medium text-primary dark:text-slate-100">{control.label}</p>
+                  <p className="text-xs text-secondary dark:text-slate-400">{control.detail}</p>
+                </div>
+                <Badge variant={control.enabled ? 'success' : 'destructive'}>
+                  {control.enabled ? 'Enabled' : 'Missing'}
+                </Badge>
+              </div>
+            ))}
+            <div className="rounded-xl border border-border bg-card p-3 text-xs text-secondary dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400">
+              Rebuild protege par role admin + internal key + rate limit + cron bearer token.
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </section>
   )
 }
