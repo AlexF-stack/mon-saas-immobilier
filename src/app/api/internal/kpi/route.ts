@@ -1,15 +1,27 @@
+import crypto from 'crypto'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getTokenFromRequest, verifyAuth } from '@/lib/auth'
 import { getLogContextFromRequest, logServerEvent } from '@/lib/logger'
 import { captureServerError } from '@/lib/monitoring'
 import { prisma } from '@/lib/prisma'
+import { enforceRateLimit } from '@/lib/security-rate-limit'
+import { rebuildDailyKpiRange } from '@/lib/analytics/rebuild-daily-kpi'
+import { enforceCsrf } from '@/lib/csrf'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const MAX_RANGE_DAYS = 90
+const REBUILD_RATE_LIMIT = 8
+const REBUILD_RATE_WINDOW_MS = 60 * 60 * 1000
 const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD format')
+const rebuildBodySchema = z
+  .object({
+    from: isoDateSchema,
+    to: isoDateSchema,
+  })
+  .strict()
 
 type DailyKpiRow = {
   date: Date
@@ -56,6 +68,13 @@ function formatUtcDay(date: Date): string {
 function toNumber(value: unknown): number {
   const parsed = typeof value === 'number' ? value : Number(value)
   return Number.isFinite(parsed) ? parsed : 0
+}
+
+function timingSafeMatch(candidate: string, expected: string): boolean {
+  const left = Buffer.from(candidate)
+  const right = Buffer.from(expected)
+  if (left.length !== right.length) return false
+  return crypto.timingSafeEqual(left, right)
 }
 
 export async function GET(request: Request) {
@@ -185,6 +204,126 @@ export async function GET(request: Request) {
       correlationId,
       route,
       event: 'internal.kpi.fetch.failed',
+    })
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const { correlationId, route } = getLogContextFromRequest(request)
+
+    const csrfError = enforceCsrf(request)
+    if (csrfError) return csrfError
+
+    const token = getTokenFromRequest(request)
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const user = await verifyAuth(token)
+    if (!user || user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const internalApiKey = process.env.INTERNAL_API_KEY?.trim()
+    if (!internalApiKey) {
+      return NextResponse.json(
+        { error: 'Internal KPI rebuild is not configured.' },
+        { status: 503 }
+      )
+    }
+
+    const providedKey = request.headers.get('x-internal-api-key')?.trim()
+    if (!providedKey || !timingSafeMatch(providedKey, internalApiKey)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const rateLimitError = await enforceRateLimit({
+      request,
+      bucket: 'INTERNAL_KPI_REBUILD',
+      limit: REBUILD_RATE_LIMIT,
+      windowMs: REBUILD_RATE_WINDOW_MS,
+      actor: user,
+      extraKey: user.id,
+      message: 'Too many KPI rebuild requests. Please retry later.',
+    })
+    if (rateLimitError) {
+      return rateLimitError
+    }
+
+    const parsedBody = rebuildBodySchema.parse(await request.json())
+    const from = parseUtcDay(parsedBody.from)
+    const to = parseUtcDay(parsedBody.to)
+    if (!from || !to) {
+      return NextResponse.json({ error: 'Invalid calendar date value.' }, { status: 400 })
+    }
+
+    if (to < from) {
+      return NextResponse.json({ error: 'Invalid date range: from must be <= to.' }, { status: 400 })
+    }
+
+    const rangeDays = Math.floor((to.getTime() - from.getTime()) / (24 * 60 * 60 * 1000)) + 1
+    if (rangeDays > MAX_RANGE_DAYS) {
+      return NextResponse.json(
+        { error: `Date range too large. Maximum is ${MAX_RANGE_DAYS} days.` },
+        { status: 400 }
+      )
+    }
+
+    logServerEvent({
+      event: 'internal.kpi.rebuild.requested',
+      correlationId,
+      route,
+      userId: user.id,
+      details: {
+        from: parsedBody.from,
+        to: parsedBody.to,
+        rangeDays,
+      },
+    })
+
+    const rebuilt = await rebuildDailyKpiRange(from, to)
+    const data = rebuilt.map((row) => ({
+      date: formatUtcDay(row.date),
+      signups: row.signups,
+      contracts: row.contracts,
+      payments: row.payments,
+      withdrawalCount: row.withdrawalCount,
+      withdrawalVolume: row.withdrawalVolume,
+      grossVolume: row.grossVolume,
+      netCashFlow: row.netCashFlow,
+    }))
+
+    logServerEvent({
+      event: 'internal.kpi.rebuild.completed',
+      correlationId,
+      route,
+      userId: user.id,
+      details: {
+        from: parsedBody.from,
+        to: parsedBody.to,
+        rebuiltDays: data.length,
+      },
+    })
+
+    return NextResponse.json({
+      from: parsedBody.from,
+      to: parsedBody.to,
+      rebuiltDays: data.length,
+      data,
+    })
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: error.issues }, { status: 400 })
+    }
+    const { correlationId, route } = getLogContextFromRequest(request)
+    await captureServerError(error, {
+      scope: 'internal_kpi_rebuild',
+      targetType: 'ANALYTICS',
+      correlationId,
+      route,
+      event: 'internal.kpi.rebuild.failed',
     })
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
