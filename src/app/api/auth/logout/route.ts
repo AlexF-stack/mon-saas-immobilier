@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     if (csrfError) return csrfError
 
     const locale = getLocaleFromRequest(request)
-    const redirectTo = locale ? `/${locale}/login` : '/login'
+    const redirectTo = locale ? `/${locale}` : '/'
 
     const cookieStore = await cookies()
     cookieStore.delete('token')
