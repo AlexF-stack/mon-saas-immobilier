@@ -60,7 +60,7 @@ export function CustomTable<T>({
     <div className={cn('space-y-4', className)}>
       {onSearchChange != null && (
         <div className="relative w-full max-w-sm">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary dark:text-slate-500" />
           <Input
             type="search"
             placeholder={searchPlaceholder}
@@ -72,15 +72,15 @@ export function CustomTable<T>({
         </div>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white dark:border-slate-800 dark:bg-slate-900/60">
+      <div className="overflow-hidden rounded-2xl border border-border bg-card dark:border-slate-800 dark:bg-slate-900/60">
         <Table>
           <TableHeader>
-            <TableRow className="border-slate-200 bg-slate-50/80 hover:bg-slate-50/80 dark:border-slate-800 dark:bg-slate-900/80 dark:hover:bg-slate-900/80">
+            <TableRow className="border-border bg-surface/80 hover:bg-surface/80 dark:border-slate-800 dark:bg-slate-900/80 dark:hover:bg-slate-900/80">
               {columns.map((col) => (
                 <TableHead
                   key={col.key}
                   className={cn(
-                    'sticky top-0 z-10 bg-inherit text-slate-500 dark:text-slate-400',
+                    'sticky top-0 z-10 bg-inherit text-secondary dark:text-slate-400',
                     col.className
                   )}
                 >
@@ -101,8 +101,8 @@ export function CustomTable<T>({
                 <TableRow
                   key={keyExtractor(row)}
                   className={cn(
-                    'group border-slate-200 transition-colors duration-150 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50',
-                    idx % 2 === 1 && 'bg-slate-50/30 dark:bg-slate-900/40'
+                    'group border-border transition-colors duration-150 hover:bg-surface/80 dark:border-slate-800 dark:hover:bg-slate-800/50',
+                    idx % 2 === 1 && 'bg-surface/40 dark:bg-slate-900/40'
                   )}
                 >
                   {columns.map((col) => {

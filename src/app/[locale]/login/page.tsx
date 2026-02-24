@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
-import { Home, Mail, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react'
+import { Building2, Home, Mail, Lock, AlertCircle, Eye, EyeOff, UserRound } from 'lucide-react'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 
 function getLocalizedRedirectPath(locale: string, redirectTo: string): string {
@@ -73,6 +73,9 @@ export default function LoginPage() {
     }
 
     const oauthError = searchParams.get('error')
+    const profileParam = searchParams.get('profile')
+    const selectedProfile =
+        profileParam === 'tenant' || profileParam === 'owner' ? profileParam : null
     const oauthErrorMessage =
         oauthError === 'oauth_not_configured'
             ? 'Connexion sociale indisponible: configuration manquante.'
@@ -81,6 +84,87 @@ export default function LoginPage() {
               : oauthError
                 ? 'Echec de la connexion sociale. Reessayez.'
                 : ''
+    const profileTitle =
+        selectedProfile === 'tenant'
+            ? locale === 'fr'
+                ? 'Espace locataire'
+                : 'Tenant access'
+            : locale === 'fr'
+              ? 'Espace proprietaire / manager'
+              : 'Owner / manager access'
+    const profileDescription =
+        selectedProfile === 'tenant'
+            ? locale === 'fr'
+                ? 'Connectez-vous pour consulter votre bail, vos paiements et vos quittances.'
+                : 'Sign in to view your lease, payments and receipts.'
+            : locale === 'fr'
+              ? 'Connectez-vous pour gerer vos biens, contrats, paiements et locataires.'
+              : 'Sign in to manage properties, contracts, payments and tenants.'
+
+    if (!selectedProfile) {
+        return (
+            <div className="relative flex min-h-screen items-center justify-center overflow-x-hidden bg-background px-4 py-8 text-primary">
+                <div className="absolute top-4 right-4 z-50">
+                    <LanguageSwitcher />
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-accent/10 to-surface/50 dark:from-primary/10 dark:via-accent/5 dark:to-background" />
+                <div className="absolute top-20 left-20 w-72 h-72 bg-primary/25 rounded-full blur-3xl animate-pulse" />
+                <div className="absolute bottom-20 right-20 w-96 h-96 bg-accent/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+
+                <Card className="relative z-10 w-full max-w-xl border-border bg-card backdrop-blur-sm shadow-2xl shadow-primary/10">
+                    <CardHeader className="space-y-3 text-center">
+                        <CardTitle className="text-2xl sm:text-3xl font-bold">
+                            {locale === 'fr' ? 'Choisissez votre espace' : 'Choose your access'}
+                        </CardTitle>
+                        <CardDescription className="text-base text-secondary">
+                            {locale === 'fr'
+                                ? 'Selectionnez votre profil avant la connexion.'
+                                : 'Select your profile before signing in.'}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid gap-3 sm:grid-cols-2">
+                        <Link href={`/${locale}/login?profile=tenant`} className="group">
+                            <div className="h-full rounded-2xl border border-border bg-card/90 p-4 transition-all [transition-duration:var(--motion-standard)] hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-card">
+                                <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[rgb(var(--primary)/0.12)] text-primary">
+                                    <UserRound className="h-5 w-5" />
+                                </div>
+                                <p className="font-semibold text-primary">
+                                    {locale === 'fr' ? 'Locataire' : 'Tenant'}
+                                </p>
+                                <p className="mt-1 text-sm text-secondary">
+                                    {locale === 'fr'
+                                        ? 'Voir vos paiements, votre bail et vos recus.'
+                                        : 'View your lease, payments and receipts.'}
+                                </p>
+                            </div>
+                        </Link>
+                        <Link href={`/${locale}/login?profile=owner`} className="group">
+                            <div className="h-full rounded-2xl border border-border bg-card/90 p-4 transition-all [transition-duration:var(--motion-standard)] hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-card">
+                                <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[rgb(var(--accent)/0.12)] text-accent">
+                                    <Building2 className="h-5 w-5" />
+                                </div>
+                                <p className="font-semibold text-primary">
+                                    {locale === 'fr' ? 'Proprietaire / Manager' : 'Owner / Manager'}
+                                </p>
+                                <p className="mt-1 text-sm text-secondary">
+                                    {locale === 'fr'
+                                        ? 'Gerer les biens, contrats, locataires et paiements.'
+                                        : 'Manage properties, contracts, tenants and payments.'}
+                                </p>
+                            </div>
+                        </Link>
+                    </CardContent>
+                    <CardFooter className="flex flex-col gap-3 pt-1">
+                        <Button asChild variant="outline" className="w-full">
+                            <Link href={`/${locale}/register`}>
+                                {locale === 'fr' ? 'Creer un compte' : 'Create an account'}
+                            </Link>
+                        </Button>
+                    </CardFooter>
+                </Card>
+            </div>
+        )
+    }
 
     return (
         <div className="relative flex min-h-screen items-center justify-center overflow-x-hidden bg-background px-4 py-8 text-primary">
@@ -103,8 +187,9 @@ export default function LoginPage() {
                         <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                             {t('auth.login')}
                         </CardTitle>
+                        <p className="mt-2 text-sm font-medium text-primary">{profileTitle}</p>
                         <CardDescription className="mt-2 text-base text-secondary">
-                            {t('auth.enterCredentials')}
+                            {profileDescription}
                         </CardDescription>
                     </div>
                 </CardHeader>
@@ -166,6 +251,12 @@ export default function LoginPage() {
                                 </button>
                             </div>
                             <div className="text-right">
+                                <Link
+                                    href={`/${locale}/login`}
+                                    className="mr-3 text-xs font-medium text-secondary hover:underline"
+                                >
+                                    {locale === 'fr' ? 'Changer de profil' : 'Switch profile'}
+                                </Link>
                                 <Link
                                     href={`/${locale}/forgot-password`}
                                     className="text-xs font-medium text-primary hover:underline"

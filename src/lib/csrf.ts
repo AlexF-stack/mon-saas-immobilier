@@ -16,6 +16,15 @@ function getExpectedOrigin(request: Request): string {
     return `${protocol}://${host}`
 }
 
+function extractOriginFromReferer(referer: string | null): string | null {
+    if (!referer) return null
+    try {
+        return new URL(referer).origin
+    } catch {
+        return null
+    }
+}
+
 export function enforceCsrf(request: Request): NextResponse | null {
     const method = request.method.toUpperCase()
     if (SAFE_METHODS.has(method)) {
@@ -46,6 +55,13 @@ export function enforceCsrf(request: Request): NextResponse | null {
             { error: 'CSRF validation failed: invalid fetch site' },
             { status: 403 }
         )
+    }
+
+    if (!origin && !fetchSite) {
+        const refererOrigin = extractOriginFromReferer(request.headers.get('referer'))
+        if (refererOrigin && refererOrigin === expectedOrigin) {
+            return null
+        }
     }
 
     if (!fetchSite) {

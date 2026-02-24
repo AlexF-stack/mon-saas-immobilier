@@ -38,7 +38,9 @@ export function AppHeader({ onMenuClick, userProfile, role }: AppHeaderProps) {
     .filter((segment) => !supportedLocales.has(segment))
   const pageSegments = pathSegments.length > 0 ? pathSegments : ['dashboard']
   const pageLabels: Record<string, string> = {
-    dashboard: 'Tableau de bord',
+    dashboard: 'Accueil',
+    statistics: 'Statistiques',
+    analytics: 'Analytics',
     properties: 'Biens',
     tenants: 'Locataires',
     contracts: 'Contrats',

@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/empty-state'
-import { StatCard } from '@/components/ui/stat-card'
 import ThemeToggle from '@/components/ui/theme-toggle'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { getLandingPricingPlans, type LandingPricingPlan } from '@/lib/landing-pricing'
@@ -15,6 +14,7 @@ import {
     CreditCard,
     FileText,
     Home,
+    Menu,
     Sparkles,
     Star,
     type LucideIcon,
@@ -111,6 +111,74 @@ export default async function LandingPage(props: {
     const pricingCustomQuestion =
         locale === 'fr' ? 'Besoin dun plan sur mesure ?' : 'Need a custom enterprise setup?'
     const pricingCustomLink = locale === 'fr' ? 'Demander une demo' : 'Request a demo'
+    const heroEyebrow =
+        locale === 'fr'
+            ? 'Plateforme SaaS immobiliere complete'
+            : 'Complete real estate SaaS platform'
+    const heroTitle =
+        locale === 'fr'
+            ? 'Publiez vos biens, signez vos baux et encaissez vos loyers depuis une seule interface.'
+            : 'Publish listings, sign leases and collect rent from one operating system.'
+    const heroSubtitle =
+        locale === 'fr'
+            ? 'ImmoSaaS relie proprietaires, managers et locataires avec un workflow simple: marketplace, contrats, paiements et suivi en temps reel.'
+            : 'ImmoSaaS connects owners, managers and tenants in one clear workflow: marketplace, contracts, payments and real-time tracking.'
+    const heroSecondaryCta =
+        locale === 'fr' ? 'Explorer les annonces' : 'Explore listings'
+    const heroTrustLine =
+        locale === 'fr'
+            ? 'Concu pour les equipes terrain, les proprietaires et les locataires.'
+            : 'Built for on-site teams, owners and tenants.'
+    const heroJourneyTitle =
+        locale === 'fr'
+            ? 'Un parcours locatif clair de bout en bout'
+            : 'A clear rental journey from start to finish'
+    const heroJourneySubtitle =
+        locale === 'fr'
+            ? 'Chaque etape est tracee et securisee, de la publication au recu de paiement.'
+            : 'Every step is tracked and secured, from listing to payment receipt.'
+    const heroJourneySteps: Array<{ id: string; title: string; description: string; icon: LucideIcon }> =
+        locale === 'fr'
+            ? [
+                  {
+                      id: 'publish',
+                      title: 'Publier un bien',
+                      description: 'Mettez votre annonce en ligne avec disponibilite et prix.',
+                      icon: Building2,
+                  },
+                  {
+                      id: 'contract',
+                      title: 'Creer le bail',
+                      description: 'Associez le locataire et generez les documents en quelques clics.',
+                      icon: FileText,
+                  },
+                  {
+                      id: 'payment',
+                      title: 'Suivre le paiement',
+                      description: 'Recevez, confirmez et archivez les paiements en temps reel.',
+                      icon: CreditCard,
+                  },
+              ]
+            : [
+                  {
+                      id: 'publish',
+                      title: 'Publish listing',
+                      description: 'Go live with availability, rent and property details.',
+                      icon: Building2,
+                  },
+                  {
+                      id: 'contract',
+                      title: 'Create lease',
+                      description: 'Attach tenant data and generate contract docs in minutes.',
+                      icon: FileText,
+                  },
+                  {
+                      id: 'payment',
+                      title: 'Track payment',
+                      description: 'Receive, confirm and archive rent payments with full traceability.',
+                      icon: CreditCard,
+                  },
+              ]
 
     return (
         <div className="animated-bg noise-overlay flex min-h-screen flex-col text-primary">
@@ -149,8 +217,8 @@ export default async function LandingPage(props: {
                             Marketplace
                         </Link>
                     </nav>
-                    <div className="ml-auto flex items-center gap-2">
-                        <div className="elevation-1 hidden items-center gap-1 rounded-full border border-border/70 bg-card/75 p-1 backdrop-blur-sm sm:flex">
+                    <div className="ml-auto hidden items-center gap-2 md:flex">
+                        <div className="elevation-1 flex items-center gap-1 rounded-full border border-border/70 bg-card/75 p-1 backdrop-blur-sm">
                             <ThemeToggle />
                             <LanguageSwitcher />
                         </div>
@@ -169,30 +237,49 @@ export default async function LandingPage(props: {
                             </Button>
                         </Link>
                     </div>
-                    <nav className="flex w-full flex-wrap items-center gap-x-3 gap-y-2 border-t border-border pt-2 text-sm md:hidden">
-                        <Link
-                            href={`/${locale}#features`}
-                            className="rounded-full px-3 py-1 text-secondary transition-colors hover:bg-surface hover:text-primary"
-                        >
-                            {t('nav.features')}
-                        </Link>
-                        <Link
-                            href={pricingSectionHref}
-                            className="rounded-full px-3 py-1 text-secondary transition-colors hover:bg-surface hover:text-primary"
-                        >
-                            {t('nav.pricing')}
-                        </Link>
-                        <Link
-                            href={`/${locale}/marketplace`}
-                            className="rounded-full px-3 py-1 text-secondary transition-colors hover:bg-surface hover:text-primary"
-                        >
-                            Marketplace
-                        </Link>
-                        <div className="ml-auto flex items-center gap-1">
+                    <div className="ml-auto flex items-center gap-2 md:hidden">
+                        <div className="elevation-1 flex items-center gap-1 rounded-full border border-border/70 bg-card/75 p-1 backdrop-blur-sm">
                             <ThemeToggle />
                             <LanguageSwitcher />
                         </div>
-                    </nav>
+                        <details className="relative">
+                            <summary className="elevation-1 flex cursor-pointer list-none items-center gap-2 rounded-full border border-border/70 bg-card/80 px-3 py-2 text-sm font-medium text-primary backdrop-blur-sm transition-colors [transition-duration:var(--motion-hover)] hover:bg-surface/80">
+                                <Menu className="h-4 w-4" aria-hidden />
+                                <span>{locale === 'fr' ? 'Menu' : 'Menu'}</span>
+                            </summary>
+                            <div className="absolute right-0 top-12 z-50 w-64 rounded-2xl border border-border bg-card/95 p-2 shadow-lift backdrop-blur-xl">
+                                <nav className="flex flex-col gap-1 text-sm">
+                                    <Link
+                                        href={`/${locale}#features`}
+                                        className="rounded-xl px-3 py-2 text-secondary transition-colors hover:bg-surface hover:text-primary"
+                                    >
+                                        {t('nav.features')}
+                                    </Link>
+                                    <Link
+                                        href={pricingSectionHref}
+                                        className="rounded-xl px-3 py-2 text-secondary transition-colors hover:bg-surface hover:text-primary"
+                                    >
+                                        {t('nav.pricing')}
+                                    </Link>
+                                    <Link
+                                        href={`/${locale}/marketplace`}
+                                        className="rounded-xl px-3 py-2 text-secondary transition-colors hover:bg-surface hover:text-primary"
+                                    >
+                                        Marketplace
+                                    </Link>
+                                    <div className="my-1 h-px bg-border" />
+                                    <Button asChild variant="outline" size="sm" className="w-full rounded-full">
+                                        <Link href={`/${locale}/login`}>
+                                            {locale === 'fr' ? 'Connexion' : 'Login'}
+                                        </Link>
+                                    </Button>
+                                    <Button asChild variant="cta" size="sm" className="w-full rounded-full">
+                                        <Link href={`/${locale}/register`}>{t('nav.getStarted')}</Link>
+                                    </Button>
+                                </nav>
+                            </div>
+                        </details>
+                    </div>
                 </div>
             </header>
 
@@ -200,37 +287,62 @@ export default async function LandingPage(props: {
                 <section className="py-16 sm:py-24">
                     <div className="container-app grid items-center gap-10 lg:grid-cols-2">
                         <div className="animate-fade-up space-y-6">
+                            <Badge
+                                variant="outline"
+                                className="w-fit rounded-full border-primary/25 bg-[rgb(var(--primary)/0.08)] text-primary"
+                            >
+                                {heroEyebrow}
+                            </Badge>
                             <h1 className="text-3xl font-extrabold leading-tight sm:text-4xl md:text-5xl">
-                                {t('landing.hero.title')}
+                                {heroTitle}
                             </h1>
-                            <p className="max-w-xl text-lg text-secondary">{t('landing.hero.subtitle')}</p>
+                            <p className="max-w-xl text-lg text-secondary">{heroSubtitle}</p>
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                                 <Link href={`/${locale}/register`}>
                                     <Button variant="cta" className="shadow-card hover-lift-soft">{t('landing.hero.cta')}</Button>
                                 </Link>
-                                <a href="#demo" className="inline-flex items-center text-secondary hover:underline">
-                                    View Demo
-                                </a>
+                                <Link
+                                    href={`/${locale}/marketplace`}
+                                    className="inline-flex items-center text-secondary transition-colors hover:text-primary hover:underline"
+                                >
+                                    {heroSecondaryCta}
+                                </Link>
                             </div>
+                            <p className="text-sm text-secondary">{heroTrustLine}</p>
                         </div>
 
                         <div aria-hidden className="relative animate-fade-up stagger-2 depth-wrapper floating">
                             <div className="glass-card depth-layer p-6 shadow-lift">
-                                <div className="transform-gpu rounded-xl bg-card p-6 shadow-card transition-all duration-200 hover:-translate-y-1">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <p className="text-sm text-secondary">Portfolio Value</p>
-                                            <p className="text-2xl font-bold">$4,256,321</p>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <StatCard
-                                                title="Occupancy"
-                                                value="96%"
-                                                subtitle="Across properties"
-                                                iconBg="success"
-                                            />
-                                        </div>
-                                    </div>
+                                <div className="space-y-3">
+                                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-secondary">
+                                        {heroJourneyTitle}
+                                    </p>
+                                    <p className="text-sm text-secondary">{heroJourneySubtitle}</p>
+                                </div>
+                                <div className="mt-5 space-y-3">
+                                    {heroJourneySteps.map((step) => {
+                                        const Icon = step.icon
+                                        return (
+                                            <article
+                                                key={step.id}
+                                                className="rounded-xl border border-border/80 bg-card/90 p-4 shadow-soft"
+                                            >
+                                                <div className="flex items-start gap-3">
+                                                    <span className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg bg-[rgb(var(--primary)/0.12)] text-primary">
+                                                        <Icon className="h-4 w-4" aria-hidden />
+                                                    </span>
+                                                    <div className="space-y-1">
+                                                        <h3 className="text-sm font-semibold text-primary">
+                                                            {step.title}
+                                                        </h3>
+                                                        <p className="text-sm text-secondary">
+                                                            {step.description}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </article>
+                                        )
+                                    })}
                                 </div>
                             </div>
                         </div>

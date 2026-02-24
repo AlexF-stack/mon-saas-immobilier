@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { CalendarRange, Download, FileText, Plus, Wallet } from 'lucide-react'
+import { Download, FileText, Plus } from 'lucide-react'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { verifyAuth } from '@/lib/auth'
@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { StatCard } from '@/components/ui/stat-card'
 
 function resolveContractState(status: string, endDate: Date): string {
   if (status === 'TERMINATED') return 'TERMINE'
@@ -52,12 +51,6 @@ export default async function ContractsPage(props: {
     viewState: resolveContractState(contract.status, contract.endDate),
   }))
 
-  const totalContracts = withState.length
-  const activeContracts = withState.filter((contract) => contract.viewState === 'ACTIF').length
-  const expiredContracts = withState.filter((contract) => contract.viewState === 'EXPIRE').length
-  const totalRent = withState
-    .filter((contract) => contract.viewState === 'ACTIF')
-    .reduce((sum, contract) => sum + contract.rentAmount, 0)
   const canCreateContract = user.role === 'MANAGER'
   const canInitiatePayment = user.role === 'MANAGER' || user.role === 'TENANT'
 
@@ -82,37 +75,6 @@ export default async function ContractsPage(props: {
           </Button>
         )}
       </header>
-
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-        <StatCard
-          title="Total baux"
-          value={totalContracts}
-          subtitle="Tous statuts"
-          icon={<FileText className="h-5 w-5" />}
-          iconBg="primary"
-        />
-        <StatCard
-          title="Actifs"
-          value={activeContracts}
-          subtitle="En cours"
-          icon={<CalendarRange className="h-5 w-5" />}
-          iconBg="success"
-        />
-        <StatCard
-          title="Expires"
-          value={expiredContracts}
-          subtitle="A renouveler"
-          icon={<CalendarRange className="h-5 w-5" />}
-          iconBg={expiredContracts > 0 ? 'warning' : 'muted'}
-        />
-        <StatCard
-          title="Loyers actifs"
-          value={`${totalRent.toLocaleString('fr-FR')} FCFA`}
-          subtitle="Mensuel cumule"
-          icon={<Wallet className="h-5 w-5" />}
-          iconBg="accent"
-        />
-      </div>
 
       {withState.length === 0 ? (
         <EmptyState
@@ -142,19 +104,19 @@ export default async function ContractsPage(props: {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                   <div className="space-y-1">
-                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Debut</p>
-                    <p className="font-medium text-slate-900 dark:text-slate-100">{formatDate(contract.startDate)}</p>
+                    <p className="text-xs uppercase tracking-wide text-secondary dark:text-slate-400">Debut</p>
+                    <p className="font-medium text-primary dark:text-slate-100">{formatDate(contract.startDate)}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Fin</p>
-                    <p className="font-medium text-slate-900 dark:text-slate-100">{formatDate(contract.endDate)}</p>
+                    <p className="text-xs uppercase tracking-wide text-secondary dark:text-slate-400">Fin</p>
+                    <p className="font-medium text-primary dark:text-slate-100">{formatDate(contract.endDate)}</p>
                   </div>
                 </div>
-                <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 px-3 py-2 dark:border-slate-800 dark:bg-slate-900/70">
-                  <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Loyer mensuel</p>
-                  <p className="text-lg font-semibold text-slate-900 tabular-nums dark:text-slate-100">
+                <div className="rounded-xl border border-border bg-surface/80 px-3 py-2 dark:border-slate-800 dark:bg-slate-900/70">
+                  <p className="text-xs uppercase tracking-wide text-secondary dark:text-slate-400">Loyer mensuel</p>
+                  <p className="text-lg font-semibold text-primary tabular-nums dark:text-slate-100">
                     {contract.rentAmount.toLocaleString('fr-FR')} FCFA
                   </p>
                 </div>

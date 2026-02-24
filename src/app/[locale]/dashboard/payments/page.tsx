@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { AlertTriangle, Clock3, CreditCard, Plus, Wallet } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { verifyAuth } from '@/lib/auth'
@@ -7,7 +7,6 @@ import { prisma } from '@/lib/prisma'
 import { Button } from '@/components/ui/button'
 import { PaymentsTable } from '@/components/dashboard/PaymentsTable'
 import { WithdrawPanel } from '@/components/dashboard/WithdrawPanel'
-import { StatCard } from '@/components/ui/stat-card'
 import {
   getLatestWithdrawalRecords,
   sumPaidWithdrawals,
@@ -47,9 +46,6 @@ export default async function PaymentsPage(props: {
   const totalRevenue = payments
     .filter((payment) => payment.status === 'COMPLETED')
     .reduce((sum, payment) => sum + payment.amount, 0)
-  const completedCount = payments.filter((payment) => payment.status === 'COMPLETED').length
-  const pendingCount = payments.filter((payment) => payment.status === 'PENDING').length
-  const failedCount = payments.filter((payment) => payment.status === 'FAILED').length
   const canCreatePayment = role === 'MANAGER' || role === 'TENANT'
   const canWithdraw = role === 'ADMIN' || role === 'MANAGER'
 
@@ -134,37 +130,6 @@ export default async function PaymentsPage(props: {
           </Button>
         )}
       </header>
-
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-        <StatCard
-          title="Revenus encaisses"
-          value={`${totalRevenue.toLocaleString('fr-FR')} FCFA`}
-          subtitle="Paiements completes"
-          icon={<Wallet className="h-5 w-5" />}
-          iconBg="primary"
-        />
-        <StatCard
-          title="Completes"
-          value={completedCount}
-          subtitle="Transactions validees"
-          icon={<CreditCard className="h-5 w-5" />}
-          iconBg="success"
-        />
-        <StatCard
-          title="En attente"
-          value={pendingCount}
-          subtitle="Verification en cours"
-          icon={<Clock3 className="h-5 w-5" />}
-          iconBg="warning"
-        />
-        <StatCard
-          title="Echoues"
-          value={failedCount}
-          subtitle="A traiter"
-          icon={<AlertTriangle className="h-5 w-5" />}
-          iconBg={failedCount > 0 ? 'warning' : 'muted'}
-        />
-      </div>
 
       <PaymentsTable payments={rows} />
       {canWithdraw ? (

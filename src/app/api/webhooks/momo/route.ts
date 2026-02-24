@@ -6,6 +6,7 @@ import { enforceRateLimit } from '@/lib/security-rate-limit'
 import { captureServerError } from '@/lib/monitoring'
 import { createFinancialAuditLog } from '@/lib/financial-audit'
 import { getLogContextFromRequest, logServerEvent } from '@/lib/logger'
+import { trackEvent } from '@/lib/analytics/track-event'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -223,8 +224,15 @@ export async function POST(request: Request) {
             return {
                 type: 'updated' as const,
                 paymentId: updatedPayment.id,
+                previousStatus: payment.status,
                 paymentStatus: updatedPayment.status,
                 receiptNumber: updatedPayment.receiptNumber,
+                userId:
+                    payment.tenantId ??
+                    payment.initiatedById ??
+                    payment.contract.tenant.id,
+                amount: payment.amount,
+                method: payment.method,
             }
         })
 
@@ -259,6 +267,24 @@ export async function POST(request: Request) {
                 status: processed.paymentStatus,
             },
         })
+
+        // Track only the successful status transition once (anti-duplicate).
+        if (
+            processed.paymentStatus === 'COMPLETED' &&
+            processed.previousStatus !== 'COMPLETED'
+        ) {
+            void trackEvent({
+                type: 'PAYMENT_COMPLETED',
+                userId: processed.userId ?? undefined,
+                entityId: processed.paymentId,
+                metadata: {
+                    amount: processed.amount,
+                    provider: processed.method,
+                    currency: 'FCFA',
+                },
+                correlationId,
+            })
+        }
 
         return NextResponse.json({
             status: 'received',

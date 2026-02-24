@@ -13,11 +13,11 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive text-primary-foreground elevation-1 hover:bg-destructive/90 hover:-translate-y-px hover:elevation-2 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:
-          "border border-slate-300 bg-white text-slate-700 elevation-1 hover:bg-slate-100 hover:elevation-2 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200 dark:hover:bg-slate-800",
+          "border border-border bg-card/90 text-primary elevation-1 hover:bg-surface hover:elevation-2 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200 dark:hover:bg-slate-800",
         secondary:
-          "bg-slate-100 text-slate-700 elevation-1 hover:bg-slate-200 hover:elevation-2 dark:bg-slate-800/70 dark:text-slate-200 dark:hover:bg-slate-700/80",
+          "bg-surface text-primary elevation-1 hover:bg-surface/80 hover:elevation-2 dark:bg-slate-800/70 dark:text-slate-200 dark:hover:bg-slate-700/80",
         ghost:
-          "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100",
+          "text-secondary hover:bg-surface hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100",
         link: "text-primary underline-offset-4 hover:underline",
         cta: "cta-modern relative isolate overflow-hidden bg-blue-600 text-white elevation-2 rounded-xl font-semibold hover:bg-blue-700 hover:-translate-y-px hover:elevation-3 focus-visible:ring-blue-500/40",
       },
