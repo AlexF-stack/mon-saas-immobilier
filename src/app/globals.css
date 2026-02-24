@@ -4,16 +4,16 @@
 
 :root {
   /* Semantic tokens (RGB triplets without rgb() for Tailwind CSS variable usage) */
-  /* Light mode: Premium slate + blue */
-  --background: 240 245 251;
-  --surface: 232 239 247;
-  --card: 246 250 255;
-  --border: 206 217 230;
+  /* Light mode: warm-slate + blue depth (less harsh white) */
+  --background: 236 242 250;
+  --surface: 226 236 247;
+  --card: 242 248 255;
+  --border: 192 206 224;
   --text-primary: 15 23 42;
-  --text-secondary: 55 72 95;
-  --primary: 37 99 235;
+  --text-secondary: 63 82 108;
+  --primary: 30 102 235;
   --primary-foreground: 255 255 255;
-  --accent: 29 78 216;
+  --accent: 59 130 246;
   --success: 34 197 94;
   --warning: 245 158 11;
   --danger: 239 68 68;
@@ -39,31 +39,31 @@
   --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* Animated background gradient tokens */
-  --gradient-1: #e8eff8;
-  --gradient-2: #dde6f2;
-  --gradient-3: #cfdbed;
-  --gradient-4: #d7e3f4;
+  --gradient-1: #edf3fb;
+  --gradient-2: #e4edf8;
+  --gradient-3: #d8e6f7;
+  --gradient-4: #e8f0fb;
 }
 
 .dark {
-  /* Dark mode: premium slate */
-  --background: 2 6 23;
-  --surface: 15 23 42;
-  --card: 15 23 42;
-  --border: 30 41 59;
+  /* Dark mode: deep slate with softer blue energy */
+  --background: 6 10 22;
+  --surface: 14 22 40;
+  --card: 18 27 46;
+  --border: 42 56 80;
   --text-primary: 241 245 249;
-  --text-secondary: 163 177 198;
-  --primary: 59 130 246;
+  --text-secondary: 169 184 206;
+  --primary: 96 165 250;
   --primary-foreground: 255 255 255;
-  --accent: 37 99 235;
+  --accent: 56 189 248;
   --success: 34 197 94;
   --warning: 245 158 11;
   --danger: 239 68 68;
 
-  --gradient-1: #020617;
-  --gradient-2: #0b1220;
-  --gradient-3: #111827;
-  --gradient-4: #1e293b;
+  --gradient-1: #050914;
+  --gradient-2: #0a1122;
+  --gradient-3: #101a31;
+  --gradient-4: #18253f;
 
   --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.45), 0 4px 10px rgba(0, 0, 0, 0.28);
   --elevation-2: 0 7px 18px rgba(0, 0, 0, 0.44);
@@ -84,9 +84,23 @@
   }
   body {
     background-color: rgb(var(--background));
+    background-image:
+      radial-gradient(820px circle at 8% -12%, rgb(var(--primary) / 0.12), transparent 56%),
+      radial-gradient(760px circle at 88% -18%, rgb(var(--accent) / 0.09), transparent 54%);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
     color: rgb(var(--text-primary));
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition:
+      background-color var(--motion-standard) var(--ease-standard),
+      color var(--motion-standard) var(--ease-standard),
+      background-image var(--motion-standard) var(--ease-standard);
+  }
+  .dark body {
+    background-image:
+      radial-gradient(900px circle at 10% -14%, rgb(var(--primary) / 0.18), transparent 58%),
+      radial-gradient(760px circle at 90% -20%, rgb(var(--accent) / 0.12), transparent 58%);
   }
   /* Smooth but subtle interactions across the app. */
   button, a, [role="button"], input, select, textarea { transition: color 200ms var(--tw-ease-in-out), background-color 200ms var(--tw-ease-in-out); }
@@ -357,18 +371,18 @@ html:not(.dark) .via-slate-50 {
 
 /* ===== Glass System ===== */
 .glass-card {
-  background: rgba(246, 250, 255, 0.74);
+  background: rgba(244, 249, 255, 0.76);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(148, 163, 184, 0.42);
-  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.38);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
   border-radius: 16px;
 }
 
 .dark .glass-card {
-  background: rgba(15, 23, 42, 0.68);
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.34);
+  background: rgba(15, 23, 42, 0.62);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.4);
 }
 
 /* ===== Depth System ===== */
