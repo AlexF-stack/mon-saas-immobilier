@@ -218,10 +218,8 @@ export default async function LandingPage(props: {
                         </Link>
                     </nav>
                     <div className="ml-auto hidden items-center gap-2 md:flex">
-                        <div className="elevation-1 flex items-center gap-1 rounded-full border border-border/70 bg-card/75 p-1 backdrop-blur-sm">
-                            <ThemeToggle />
-                            <LanguageSwitcher />
-                        </div>
+                        <ThemeToggle />
+                        <LanguageSwitcher />
                         <Link href={`/${locale}/login`}>
                             <Button
                                 variant="outline"
@@ -238,10 +236,8 @@ export default async function LandingPage(props: {
                         </Link>
                     </div>
                     <div className="ml-auto flex items-center gap-2 md:hidden">
-                        <div className="elevation-1 flex items-center gap-1 rounded-full border border-border/70 bg-card/75 p-1 backdrop-blur-sm">
-                            <ThemeToggle />
-                            <LanguageSwitcher />
-                        </div>
+                        <ThemeToggle />
+                        <LanguageSwitcher />
                         <details className="relative">
                             <summary className="elevation-1 flex cursor-pointer list-none items-center gap-2 rounded-full border border-border/70 bg-card/80 px-3 py-2 text-sm font-medium text-primary backdrop-blur-sm transition-colors [transition-duration:var(--motion-hover)] hover:bg-surface/80">
                                 <Menu className="h-4 w-4" aria-hidden />

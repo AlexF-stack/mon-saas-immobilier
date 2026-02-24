@@ -120,12 +120,12 @@ export function AppHeader({ onMenuClick, userProfile, role }: AppHeaderProps) {
         </div>
       </div>
 
-      <div className="elevation-2 flex shrink-0 items-center gap-1 rounded-full border border-border/70 bg-card/85 p-1 backdrop-blur-sm">
+      <div className="flex shrink-0 items-center gap-2">
         <ThemeToggle />
         <Button
           variant="ghost"
           size="icon"
-          className="relative h-9 w-9 rounded-full text-secondary hover:bg-surface hover:text-primary"
+          className="relative h-9 w-9 rounded-md border border-border/70 bg-card/85 text-secondary backdrop-blur-sm hover:bg-surface hover:text-primary"
           aria-label="Notifications"
         >
           <Bell className="h-[18px] w-[18px]" />
@@ -136,7 +136,7 @@ export function AppHeader({ onMenuClick, userProfile, role }: AppHeaderProps) {
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              className="flex h-9 items-center gap-2 rounded-full border border-transparent pl-2 pr-2 hover:border-border/70 hover:bg-surface"
+              className="flex h-9 items-center gap-2 rounded-md border border-border/70 bg-card/85 pl-2 pr-2 backdrop-blur-sm hover:border-border/80 hover:bg-surface"
               aria-label="Profil"
             >
               <Avatar className="h-8 w-8 shrink-0 border border-slate-200 dark:border-slate-700">
