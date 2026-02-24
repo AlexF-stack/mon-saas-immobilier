@@ -26,14 +26,17 @@ model BusinessEvent {
 }
 
 model DailyKPI {
-  id          String   @id @default(cuid())
-  date        DateTime @unique
-  signups     Int      @default(0)
-  contracts   Int      @default(0)
-  payments    Int      @default(0)
-  withdrawals Int      @default(0)
-  grossVolume Float    @default(0)
-  netRevenue  Float    @default(0)
+  id               String   @id @default(cuid())
+  date             DateTime @unique
+  signups          Int      @default(0)
+  contracts        Int      @default(0)
+  payments         Int      @default(0)
+  withdrawalCount  Int      @default(0)
+  withdrawalVolume Float    @default(0)
+  grossVolume      Float    @default(0)
+  netCashFlow      Float    @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model User {
