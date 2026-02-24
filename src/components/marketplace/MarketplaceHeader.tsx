@@ -42,7 +42,7 @@ export function MarketplaceHeader({ locale, isAuthenticated }: MarketplaceHeader
                 </nav>
 
                 <div className="ml-auto flex items-center gap-2">
-                    <div className="elevation-1 hidden items-center gap-1 rounded-full border border-border/70 bg-card/75 p-1 backdrop-blur-sm sm:flex">
+                    <div className="hidden items-center gap-2 sm:flex">
                         <ThemeToggle />
                         <LanguageSwitcher />
                     </div>
