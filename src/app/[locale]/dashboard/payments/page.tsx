@@ -2,11 +2,17 @@ import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import type { Prisma } from '@prisma/client'
 import { verifyAuth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { PaymentsTable } from '@/components/dashboard/PaymentsTable'
 import { WithdrawPanel } from '@/components/dashboard/WithdrawPanel'
+import { ServerPager } from '@/components/dashboard/ServerPager'
+import { buildPageHref, normalizeEnum, normalizePage, normalizeText } from '@/lib/dashboard-list-query'
 import {
   getLatestWithdrawalRecords,
   sumPaidWithdrawals,
@@ -15,10 +21,21 @@ import {
   WITHDRAWAL_TARGET_TYPE,
 } from '@/lib/withdrawals'
 
+const PAGE_SIZE = 10
+
+type PaymentsSearchParams = {
+  page?: string | string[]
+  q?: string | string[]
+  status?: string | string[]
+  method?: string | string[]
+}
+
 export default async function PaymentsPage(props: {
   params: Promise<{ locale: string }>
+  searchParams: Promise<PaymentsSearchParams>
 }) {
   const { locale } = await props.params
+  const searchParams = await props.searchParams
   const cookieStore = await cookies()
   const token = cookieStore.get('token')?.value
   const user = token ? await verifyAuth(token) : null
@@ -30,22 +47,54 @@ export default async function PaymentsPage(props: {
   const role = user.role
   const userId = user.id
 
-  let whereClause = {}
-  if (role === 'MANAGER') {
-    whereClause = { contract: { property: { managerId: userId } } }
-  } else if (role === 'TENANT') {
-    whereClause = { contract: { tenantId: userId } }
+  const page = normalizePage(searchParams.page)
+  const query = normalizeText(searchParams.q)
+  const status = normalizeEnum(searchParams.status, ['COMPLETED', 'PENDING', 'FAILED'])
+  const method = normalizeEnum(searchParams.method, ['MOMO_MTN', 'MOOV', 'CASH'])
+
+  const scopeWhere: Prisma.PaymentWhereInput =
+    role === 'MANAGER'
+      ? { contract: { property: { managerId: userId } } }
+      : role === 'TENANT'
+        ? { contract: { tenantId: userId } }
+        : {}
+
+  const andFilters: Prisma.PaymentWhereInput[] = []
+  if (status) andFilters.push({ status })
+  if (method) andFilters.push({ method })
+  if (query) {
+    andFilters.push({
+      OR: [
+        { transactionId: { contains: query, mode: 'insensitive' } },
+        { method: { contains: query, mode: 'insensitive' } },
+        { contract: { property: { title: { contains: query, mode: 'insensitive' } } } },
+        { contract: { tenant: { name: { contains: query, mode: 'insensitive' } } } },
+        { contract: { tenant: { email: { contains: query, mode: 'insensitive' } } } },
+      ],
+    })
   }
 
-  const payments = await prisma.payment.findMany({
-    where: whereClause,
+  const tableWhere: Prisma.PaymentWhereInput =
+    andFilters.length > 0 ? { ...scopeWhere, AND: andFilters } : scopeWhere
+
+  const [totalPayments, grossRevenue] = await Promise.all([
+    prisma.payment.count({ where: tableWhere }),
+    prisma.payment.aggregate({
+      where: { ...scopeWhere, status: 'COMPLETED' },
+      _sum: { amount: true },
+    }),
+  ])
+  const totalPages = Math.max(1, Math.ceil(totalPayments / PAGE_SIZE))
+  const clampedPage = Math.min(page, totalPages)
+  const pagedPayments = await prisma.payment.findMany({
+    where: tableWhere,
     orderBy: { createdAt: 'desc' },
     include: { contract: { include: { property: true, tenant: true } } },
+    take: PAGE_SIZE,
+    skip: (clampedPage - 1) * PAGE_SIZE,
   })
 
-  const totalRevenue = payments
-    .filter((payment) => payment.status === 'COMPLETED')
-    .reduce((sum, payment) => sum + payment.amount, 0)
+  const totalRevenue = grossRevenue._sum.amount ?? 0
   const canCreatePayment = role === 'MANAGER' || role === 'TENANT'
   const canWithdraw = role === 'ADMIN' || role === 'MANAGER'
 
@@ -101,7 +150,7 @@ export default async function PaymentsPage(props: {
           }))
       : []
 
-  const rows = payments.map((payment) => ({
+  const rows = pagedPayments.map((payment) => ({
     id: payment.id,
     amount: payment.amount,
     status: payment.status,
@@ -111,6 +160,11 @@ export default async function PaymentsPage(props: {
     propertyTitle: payment.contract.property.title,
     tenantName: payment.contract.tenant.name || payment.contract.tenant.email,
   }))
+
+  const hasActiveFilters = Boolean(query || status || method)
+  const basePath = `/${locale}/dashboard/payments`
+  const buildHref = (targetPage: number) =>
+    buildPageHref(basePath, { q: query, status, method }, targetPage)
 
   return (
     <section className="space-y-6">
@@ -131,7 +185,63 @@ export default async function PaymentsPage(props: {
         )}
       </header>
 
+      <Card>
+        <CardContent className="pt-6">
+          <form method="get" className="grid grid-cols-1 gap-4 md:grid-cols-4">
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="payments-q">Recherche</Label>
+              <Input
+                id="payments-q"
+                name="q"
+                defaultValue={query}
+                placeholder="Bien, locataire, transaction..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="payments-status">Statut</Label>
+              <select
+                id="payments-status"
+                name="status"
+                defaultValue={status || ''}
+                className="h-10 w-full rounded-xl border border-border bg-card px-3 text-sm text-primary outline-none"
+              >
+                <option value="">Tous</option>
+                <option value="COMPLETED">Paye</option>
+                <option value="PENDING">En attente</option>
+                <option value="FAILED">Echoue</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="payments-method">Methode</Label>
+              <select
+                id="payments-method"
+                name="method"
+                defaultValue={method || ''}
+                className="h-10 w-full rounded-xl border border-border bg-card px-3 text-sm text-primary outline-none"
+              >
+                <option value="">Toutes</option>
+                <option value="MOMO_MTN">MTN MoMo</option>
+                <option value="MOOV">Moov Money</option>
+                <option value="CASH">Cash</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2 md:col-span-4">
+              <Button type="submit" size="sm">
+                Filtrer
+              </Button>
+              {hasActiveFilters ? (
+                <Button asChild variant="outline" size="sm">
+                  <Link href={basePath}>Reinitialiser</Link>
+                </Button>
+              ) : null}
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
       <PaymentsTable payments={rows} />
+      <ServerPager page={clampedPage} totalPages={totalPages} buildHref={buildHref} />
+
       {canWithdraw ? (
         <WithdrawPanel
           availableBalance={availableBalance}

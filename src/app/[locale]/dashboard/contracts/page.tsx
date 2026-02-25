@@ -2,12 +2,25 @@ import Link from 'next/link'
 import { Download, FileText, Plus } from 'lucide-react'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import type { Prisma } from '@prisma/client'
 import { verifyAuth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { ServerPager } from '@/components/dashboard/ServerPager'
+import { buildPageHref, normalizeEnum, normalizePage, normalizeText } from '@/lib/dashboard-list-query'
+
+const PAGE_SIZE = 10
+
+type ContractsSearchParams = {
+  page?: string | string[]
+  q?: string | string[]
+  status?: string | string[]
+}
 
 function resolveContractState(status: string, endDate: Date): string {
   if (status === 'TERMINATED') return 'TERMINE'
@@ -23,8 +36,10 @@ function statusVariant(state: string): 'success' | 'warning' | 'outline' {
 
 export default async function ContractsPage(props: {
   params: Promise<{ locale: string }>
+  searchParams: Promise<ContractsSearchParams>
 }) {
   const { locale } = await props.params
+  const searchParams = await props.searchParams
   const cookieStore = await cookies()
   const token = cookieStore.get('token')?.value
   const user = token ? await verifyAuth(token) : null
@@ -33,17 +48,42 @@ export default async function ContractsPage(props: {
     redirect(`/${locale}/login`)
   }
 
-  const where =
+  const page = normalizePage(searchParams.page)
+  const query = normalizeText(searchParams.q)
+  const status = normalizeEnum(searchParams.status, ['ACTIVE', 'EXPIRED', 'TERMINATED'])
+
+  const baseWhere: Prisma.ContractWhereInput =
     user.role === 'ADMIN'
       ? {}
       : user.role === 'MANAGER'
         ? { property: { managerId: user.id } }
         : { tenantId: user.id }
 
+  const andFilters: Prisma.ContractWhereInput[] = []
+  if (query) {
+    andFilters.push({
+      OR: [
+        { property: { title: { contains: query, mode: 'insensitive' } } },
+        { tenant: { name: { contains: query, mode: 'insensitive' } } },
+        { tenant: { email: { contains: query, mode: 'insensitive' } } },
+      ],
+    })
+  }
+  if (status) andFilters.push({ status })
+
+  const where: Prisma.ContractWhereInput =
+    andFilters.length > 0 ? { ...baseWhere, AND: andFilters } : baseWhere
+
+  const totalContracts = await prisma.contract.count({ where })
+  const totalPages = Math.max(1, Math.ceil(totalContracts / PAGE_SIZE))
+  const clampedPage = Math.min(page, totalPages)
+
   const contracts = await prisma.contract.findMany({
     where,
     include: { property: true, tenant: true },
     orderBy: { createdAt: 'desc' },
+    take: PAGE_SIZE,
+    skip: (clampedPage - 1) * PAGE_SIZE,
   })
 
   const withState = contracts.map((contract) => ({
@@ -53,6 +93,9 @@ export default async function ContractsPage(props: {
 
   const canCreateContract = user.role === 'MANAGER'
   const canInitiatePayment = user.role === 'MANAGER' || user.role === 'TENANT'
+  const hasActiveFilters = Boolean(query || status)
+  const basePath = `/${locale}/dashboard/contracts`
+  const buildHref = (targetPage: number) => buildPageHref(basePath, { q: query, status }, targetPage)
 
   const formatDate = (date: Date) =>
     date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -76,72 +119,119 @@ export default async function ContractsPage(props: {
         )}
       </header>
 
+      <Card>
+        <CardContent className="pt-6">
+          <form method="get" className="grid grid-cols-1 gap-4 md:grid-cols-4">
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="contracts-q">Recherche</Label>
+              <Input
+                id="contracts-q"
+                name="q"
+                defaultValue={query}
+                placeholder="Bien, nom locataire, email..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="contracts-status">Statut</Label>
+              <select
+                id="contracts-status"
+                name="status"
+                defaultValue={status || ''}
+                className="h-10 w-full rounded-xl border border-border bg-card px-3 text-sm text-primary outline-none"
+              >
+                <option value="">Tous</option>
+                <option value="ACTIVE">Actif</option>
+                <option value="EXPIRED">Expire</option>
+                <option value="TERMINATED">Termine</option>
+              </select>
+            </div>
+            <div className="flex items-end">
+              <div className="flex items-center gap-2">
+                <Button type="submit" size="sm">
+                  Filtrer
+                </Button>
+                {hasActiveFilters ? (
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={basePath}>Reinitialiser</Link>
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
       {withState.length === 0 ? (
         <EmptyState
-          title="Aucun contrat"
+          title={hasActiveFilters ? 'Aucun resultat' : 'Aucun contrat'}
           description={
-            canCreateContract
-              ? 'Creez votre premier bail pour associer un bien et un locataire.'
-              : 'Aucun contrat visible dans votre perimetre.'
+            hasActiveFilters
+              ? 'Aucun contrat ne correspond a vos filtres actuels.'
+              : canCreateContract
+                ? 'Creez votre premier bail pour associer un bien et un locataire.'
+                : 'Aucun contrat visible dans votre perimetre.'
           }
           actionLabel={canCreateContract ? 'Nouveau contrat' : undefined}
           actionHref={canCreateContract ? `/${locale}/dashboard/contracts/new` : undefined}
           icon={<FileText className="h-6 w-6" />}
         />
       ) : (
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          {withState.map((contract) => (
-            <Card key={contract.id} className="overflow-hidden">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <CardTitle className="line-clamp-1 text-base">Bail - {contract.property.title}</CardTitle>
-                    <p className="line-clamp-1 text-sm text-slate-500 dark:text-slate-400">
-                      Locataire: {contract.tenant.name || contract.tenant.email}
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            {withState.map((contract) => (
+              <Card key={contract.id} className="overflow-hidden">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <CardTitle className="line-clamp-1 text-base">Bail - {contract.property.title}</CardTitle>
+                      <p className="line-clamp-1 text-sm text-slate-500 dark:text-slate-400">
+                        Locataire: {contract.tenant.name || contract.tenant.email}
+                      </p>
+                    </div>
+                    <Badge variant={statusVariant(contract.viewState)}>{contract.viewState}</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <p className="text-xs uppercase tracking-wide text-secondary dark:text-slate-400">Debut</p>
+                      <p className="font-medium text-primary dark:text-slate-100">{formatDate(contract.startDate)}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs uppercase tracking-wide text-secondary dark:text-slate-400">Fin</p>
+                      <p className="font-medium text-primary dark:text-slate-100">{formatDate(contract.endDate)}</p>
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-border bg-surface/80 px-3 py-2 dark:border-slate-800 dark:bg-slate-900/70">
+                    <p className="text-xs uppercase tracking-wide text-secondary dark:text-slate-400">Loyer mensuel</p>
+                    <p className="text-lg font-semibold text-primary tabular-nums dark:text-slate-100">
+                      {contract.rentAmount.toLocaleString('fr-FR')} FCFA
                     </p>
                   </div>
-                  <Badge variant={statusVariant(contract.viewState)}>{contract.viewState}</Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-                  <div className="space-y-1">
-                    <p className="text-xs uppercase tracking-wide text-secondary dark:text-slate-400">Debut</p>
-                    <p className="font-medium text-primary dark:text-slate-100">{formatDate(contract.startDate)}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs uppercase tracking-wide text-secondary dark:text-slate-400">Fin</p>
-                    <p className="font-medium text-primary dark:text-slate-100">{formatDate(contract.endDate)}</p>
-                  </div>
-                </div>
-                <div className="rounded-xl border border-border bg-surface/80 px-3 py-2 dark:border-slate-800 dark:bg-slate-900/70">
-                  <p className="text-xs uppercase tracking-wide text-secondary dark:text-slate-400">Loyer mensuel</p>
-                  <p className="text-lg font-semibold text-primary tabular-nums dark:text-slate-100">
-                    {contract.rentAmount.toLocaleString('fr-FR')} FCFA
-                  </p>
-                </div>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Button asChild variant="outline" size="sm" className="sm:flex-1">
-                    <a
-                      href={`/api/contracts/${contract.id}/download`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <Download className="h-4 w-4" />
-                      Telecharger PDF
-                    </a>
-                  </Button>
-                  {canInitiatePayment && (
-                    <Button asChild size="sm" className="sm:flex-1">
-                      <Link href={`/${locale}/dashboard/payments/new?contractId=${contract.id}`}>
-                        Initier paiement
-                      </Link>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Button asChild variant="outline" size="sm" className="sm:flex-1">
+                      <a
+                        href={`/api/contracts/${contract.id}/download`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Download className="h-4 w-4" />
+                        Telecharger PDF
+                      </a>
                     </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                    {canInitiatePayment && (
+                      <Button asChild size="sm" className="sm:flex-1">
+                        <Link href={`/${locale}/dashboard/payments/new?contractId=${contract.id}`}>
+                          Initier paiement
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <ServerPager page={clampedPage} totalPages={totalPages} buildHref={buildHref} />
         </div>
       )}
     </section>
