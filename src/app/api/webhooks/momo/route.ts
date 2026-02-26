@@ -180,6 +180,31 @@ export async function POST(request: Request) {
                         activatedAt: new Date(),
                     },
                 })
+
+                if (payment.installmentId) {
+                    const installmentUpdate = await tx.contractInstallment.updateMany({
+                        where: {
+                            id: payment.installmentId,
+                            paidAt: null,
+                            status: { in: ['OPEN', 'OVERDUE'] },
+                        },
+                        data: {
+                            status: 'PAID',
+                            paidAt: now,
+                        },
+                    })
+
+                    if (installmentUpdate.count > 0) {
+                        await tx.systemLog.create({
+                            data: {
+                                action: 'INSTALLMENT_PAID',
+                                targetType: 'CONTRACT_INSTALLMENT',
+                                targetId: payment.installmentId,
+                                details: `correlationId=${correlationId};paymentId=${payment.id}`,
+                            },
+                        })
+                    }
+                }
             }
 
             await createFinancialAuditLog(tx, {

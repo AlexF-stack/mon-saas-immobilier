@@ -128,6 +128,23 @@ export async function POST(request: Request) {
                 },
             })
 
+            if (property.offerType === 'RENT') {
+                const firstDueDate = new Date(payload.startDate)
+                firstDueDate.setUTCHours(0, 0, 0, 0)
+
+                await tx.contractInstallment.create({
+                    data: {
+                        contractId: createdContract.id,
+                        sequence: 1,
+                        dueDate: firstDueDate,
+                        baseAmount: payload.rentAmount,
+                        penaltyAmount: 0,
+                        totalDue: payload.rentAmount,
+                        status: 'OPEN',
+                    },
+                })
+            }
+
             if (shouldForceRollback) {
                 throw new Error('FORCED_CONTRACT_ROLLBACK')
             }

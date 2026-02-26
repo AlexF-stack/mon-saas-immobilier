@@ -19,6 +19,7 @@ const PAYMENT_INITIATE_WINDOW_MS = 10 * 60 * 1000
 
 const initiatePaymentSchema = z.object({
     contractId: z.string().trim().min(1),
+    installmentId: z.string().trim().min(1).optional(),
     amount: z.coerce.number().positive(),
     phoneNumber: z.string().trim().min(8).max(20),
     provider: z.enum(['MTN', 'MOOV']),
@@ -196,37 +197,84 @@ export async function POST(request: Request) {
         }
 
         if (contract.contractType === 'RENTAL') {
-            const [completedRentalPayments, pendingRentalPayments] = await Promise.all([
+            if (!payload.installmentId) {
+                return NextResponse.json(
+                    { error: 'installmentId is required for rental payments.' },
+                    { status: 400 }
+                )
+            }
+
+            const installment = await prisma.contractInstallment.findUnique({
+                where: { id: payload.installmentId },
+                select: {
+                    id: true,
+                    contractId: true,
+                    sequence: true,
+                    status: true,
+                    paidAt: true,
+                    totalDue: true,
+                },
+            })
+
+            if (!installment || installment.contractId !== contract.id) {
+                return NextResponse.json(
+                    { error: 'Installment not found for this contract.' },
+                    { status: 404 }
+                )
+            }
+
+            if (installment.status === 'PAID' || installment.paidAt) {
+                return NextResponse.json(
+                    { error: 'Installment already paid.' },
+                    { status: 409 }
+                )
+            }
+
+            const [completedInstallmentPayments, pendingInstallmentPayments] = await Promise.all([
                 prisma.payment.count({
                     where: {
-                        contractId: contract.id,
+                        installmentId: installment.id,
                         status: 'COMPLETED',
                     },
                 }),
                 prisma.payment.count({
                     where: {
-                        contractId: contract.id,
+                        installmentId: installment.id,
                         status: 'PENDING',
                     },
                 }),
             ])
 
-            if (completedRentalPayments > 0) {
+            if (completedInstallmentPayments > 0) {
                 return NextResponse.json(
-                    { error: 'Rental contract payment can be initiated only once.' },
+                    { error: 'Installment already paid.' },
                     { status: 409 }
                 )
             }
 
-            if (pendingRentalPayments > 0) {
+            if (pendingInstallmentPayments > 0) {
                 return NextResponse.json(
-                    { error: 'A payment is already pending for this rental contract.' },
+                    { error: 'A payment is already pending for this installment.' },
                     { status: 409 }
                 )
             }
-        }
 
-        if (!amountsMatch(contract.rentAmount, payload.amount)) {
+            if (!amountsMatch(Number(installment.totalDue), payload.amount)) {
+                await createSystemLog({
+                    actor: user,
+                    action: 'PAYMENT_INITIATION_BLOCKED',
+                    targetType: 'CONTRACT_INSTALLMENT',
+                    targetId: installment.id,
+                    correlationId,
+                    route,
+                    details: `reason=amount_mismatch;expected=${Number(installment.totalDue)};received=${payload.amount};idempotencyKey=${idempotencyKey}`,
+                })
+                return NextResponse.json(
+                    { error: 'Invalid amount for this installment.' },
+                    { status: 400 }
+                )
+            }
+        } else if (!amountsMatch(contract.rentAmount, payload.amount)) {
             await createSystemLog({
                 actor: user,
                 action: 'PAYMENT_INITIATION_BLOCKED',
@@ -275,6 +323,7 @@ export async function POST(request: Request) {
                         contractId: payload.contractId,
                         tenantId: contract.tenantId,
                         propertyId: contract.property.id,
+                        installmentId: contract.contractType === 'RENTAL' ? payload.installmentId ?? null : null,
                         initiatedById: user.id,
                         initiatedByRole: user.role,
                     },
@@ -327,6 +376,7 @@ export async function POST(request: Request) {
             correlationId,
             metadata: {
                 contractId: payload.contractId,
+                installmentId: contract.contractType === 'RENTAL' ? payload.installmentId ?? null : null,
                 amount: payload.amount,
                 provider: payload.provider,
                 idempotencyKey,
