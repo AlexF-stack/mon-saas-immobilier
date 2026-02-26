@@ -29,6 +29,7 @@ function propertyTypeLabel(propertyType: string, locale: string) {
         if (propertyType === 'HOUSE') return 'Maison'
         if (propertyType === 'STUDIO') return 'Studio'
         if (propertyType === 'COMMERCIAL') return 'Commercial'
+        if (propertyType === 'LAND') return 'Terrain'
         return propertyType
     }
 
@@ -36,6 +37,7 @@ function propertyTypeLabel(propertyType: string, locale: string) {
     if (propertyType === 'HOUSE') return 'House'
     if (propertyType === 'STUDIO') return 'Studio'
     if (propertyType === 'COMMERCIAL') return 'Commercial'
+    if (propertyType === 'LAND') return 'Land'
     return propertyType
 }
 

@@ -20,6 +20,7 @@ function propertyTypeLabel(propertyType: string) {
     if (propertyType === 'HOUSE') return 'Maison'
     if (propertyType === 'STUDIO') return 'Studio'
     if (propertyType === 'COMMERCIAL') return 'Commercial'
+    if (propertyType === 'LAND') return 'Terrain'
     return propertyType
 }
 
@@ -141,6 +142,8 @@ export default async function MarketplacePropertyDetailPage(props: {
                 ? 'Apartment'
                 : property.propertyType === 'COMMERCIAL'
                     ? 'Place'
+                    : property.propertyType === 'LAND'
+                        ? 'Place'
                     : 'Apartment'
     const jsonLd = {
         '@context': 'https://schema.org',

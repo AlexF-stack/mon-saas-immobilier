@@ -39,7 +39,7 @@ function normalizeCreationStatus(input?: string): 'AVAILABLE' | 'RENTED' | null 
     return null
 }
 
-function normalizePropertyType(input?: string): 'APARTMENT' | 'HOUSE' | 'STUDIO' | 'COMMERCIAL' | null {
+function normalizePropertyType(input?: string): 'APARTMENT' | 'HOUSE' | 'STUDIO' | 'COMMERCIAL' | 'LAND' | null {
     if (!input) return 'APARTMENT'
 
     const normalized = input
@@ -52,6 +52,7 @@ function normalizePropertyType(input?: string): 'APARTMENT' | 'HOUSE' | 'STUDIO'
     if (normalized === 'HOUSE' || normalized === 'MAISON') return 'HOUSE'
     if (normalized === 'STUDIO') return 'STUDIO'
     if (normalized === 'COMMERCIAL' || normalized === 'COMMERCE') return 'COMMERCIAL'
+    if (normalized === 'LAND' || normalized === 'TERRAIN') return 'LAND'
     return null
 }
 
@@ -125,7 +126,7 @@ export async function POST(request: Request) {
 
         if (!normalizedPropertyType) {
             return NextResponse.json(
-                { error: 'Invalid propertyType. Use APARTMENT, HOUSE, STUDIO or COMMERCIAL.' },
+                { error: 'Invalid propertyType. Use APARTMENT, HOUSE, STUDIO, COMMERCIAL or LAND.' },
                 { status: 400 }
             )
         }

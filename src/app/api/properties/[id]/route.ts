@@ -46,7 +46,7 @@ function normalizeStatus(input?: string): 'AVAILABLE' | 'RENTED' | 'MAINTENANCE'
     return null
 }
 
-function normalizePropertyType(input?: string): 'APARTMENT' | 'HOUSE' | 'STUDIO' | 'COMMERCIAL' | null {
+function normalizePropertyType(input?: string): 'APARTMENT' | 'HOUSE' | 'STUDIO' | 'COMMERCIAL' | 'LAND' | null {
     if (!input) return null
 
     const normalized = input
@@ -59,6 +59,7 @@ function normalizePropertyType(input?: string): 'APARTMENT' | 'HOUSE' | 'STUDIO'
     if (normalized === 'HOUSE' || normalized === 'MAISON') return 'HOUSE'
     if (normalized === 'STUDIO') return 'STUDIO'
     if (normalized === 'COMMERCIAL' || normalized === 'COMMERCE') return 'COMMERCIAL'
+    if (normalized === 'LAND' || normalized === 'TERRAIN') return 'LAND'
     return null
 }
 
@@ -100,7 +101,7 @@ export async function PATCH(
             address?: string
             description?: string | null
             price?: number
-            propertyType?: 'APARTMENT' | 'HOUSE' | 'STUDIO' | 'COMMERCIAL'
+            propertyType?: 'APARTMENT' | 'HOUSE' | 'STUDIO' | 'COMMERCIAL' | 'LAND'
             offerType?: 'RENT' | 'SALE'
             status?: 'AVAILABLE' | 'RENTED' | 'MAINTENANCE'
             isPublished?: boolean

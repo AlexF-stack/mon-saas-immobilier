@@ -193,7 +193,7 @@ export default async function MarketplacePage(props: {
             })
         }
 
-    if (filters.type && ['APARTMENT', 'HOUSE', 'STUDIO', 'COMMERCIAL'].includes(filters.type)) {
+    if (filters.type && ['APARTMENT', 'HOUSE', 'STUDIO', 'COMMERCIAL', 'LAND'].includes(filters.type)) {
         whereClause.propertyType = filters.type
     }
 
@@ -418,6 +418,7 @@ export default async function MarketplacePage(props: {
                                     <SelectItem value="HOUSE">Maison</SelectItem>
                                     <SelectItem value="STUDIO">Studio</SelectItem>
                                     <SelectItem value="COMMERCIAL">Commercial</SelectItem>
+                                    <SelectItem value="LAND">Terrain</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

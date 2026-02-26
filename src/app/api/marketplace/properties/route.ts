@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 
 
 const VALID_STATUSES = new Set(['AVAILABLE', 'RENTED', 'MAINTENANCE'])
-const VALID_TYPES = new Set(['APARTMENT', 'HOUSE', 'STUDIO', 'COMMERCIAL'])
+const VALID_TYPES = new Set(['APARTMENT', 'HOUSE', 'STUDIO', 'COMMERCIAL', 'LAND'])
 const VALID_OFFER_TYPES = new Set(['RENT', 'SALE'])
 
 function parsePositiveInt(value: string | null, fallback: number) {

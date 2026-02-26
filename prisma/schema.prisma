@@ -114,7 +114,7 @@ model Property {
   address     String
   price       Float
   offerType   String   @default("RENT") // RENT, SALE
-  propertyType String  @default("APARTMENT") // APARTMENT, HOUSE, STUDIO, COMMERCIAL
+  propertyType String  @default("APARTMENT") // APARTMENT, HOUSE, STUDIO, COMMERCIAL, LAND
   status      String   @default("AVAILABLE") // AVAILABLE, RENTED, MAINTENANCE
   isPublished Boolean  @default(false)
   isPremium   Boolean  @default(false)

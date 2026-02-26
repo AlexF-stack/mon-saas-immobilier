@@ -140,6 +140,7 @@ export function NewPropertyForm({ locale, dashboardPathPrefix }: NewPropertyForm
                 <SelectItem value="HOUSE">Maison</SelectItem>
                 <SelectItem value="STUDIO">Studio</SelectItem>
                 <SelectItem value="COMMERCIAL">Commercial</SelectItem>
+                <SelectItem value="LAND">Terrain</SelectItem>
               </SelectContent>
             </Select>
           </div>
