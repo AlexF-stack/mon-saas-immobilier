@@ -74,7 +74,7 @@ export function AppHeader({ onMenuClick, userProfile, role }: AppHeaderProps) {
   return (
     <header
       className={cn(
-        'animate-fade-in relative sticky top-0 z-20 flex shrink-0 items-center gap-3 border-b border-border/70 bg-[rgb(var(--card)/0.9)] px-4 py-3 backdrop-blur-xl supports-[backdrop-filter]:bg-[rgb(var(--card)/0.82)] sm:px-6 lg:px-8'
+        'animate-fade-in relative sticky top-0 z-20 flex shrink-0 items-center gap-3 border-b border-amber-200/75 bg-gradient-to-r from-amber-100/92 via-amber-50/88 to-yellow-100/92 px-4 py-3 backdrop-blur-xl supports-[backdrop-filter]:bg-gradient-to-r supports-[backdrop-filter]:from-amber-100/82 supports-[backdrop-filter]:via-amber-50/78 supports-[backdrop-filter]:to-yellow-100/82 dark:border-amber-900/45 dark:bg-gradient-to-r dark:from-amber-950/78 dark:via-amber-900/55 dark:to-yellow-950/72 sm:px-6 lg:px-8'
       )}
     >
       <span
@@ -101,7 +101,7 @@ export function AppHeader({ onMenuClick, userProfile, role }: AppHeaderProps) {
         <div className="flex min-w-0 items-center gap-2">
           <p className="truncate text-lg font-semibold text-primary">{pageTitle}</p>
           {roleLabel ? (
-            <span className="hidden rounded-full border border-border/70 bg-surface/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary sm:inline-flex">
+            <span className="hidden rounded-full border border-amber-300/70 bg-amber-100/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:border-amber-800/60 dark:bg-amber-500/15 dark:text-amber-100 sm:inline-flex">
               {roleLabel}
             </span>
           ) : null}
@@ -114,7 +114,7 @@ export function AppHeader({ onMenuClick, userProfile, role }: AppHeaderProps) {
           <Input
             type="search"
             placeholder="Rechercher..."
-            className="h-9 rounded-full border-border/70 bg-card/85 pl-9 text-primary placeholder:text-secondary/80 backdrop-blur-sm"
+            className="h-9 rounded-full border-amber-300/75 bg-white/75 pl-9 text-primary placeholder:text-secondary/80 backdrop-blur-sm dark:border-amber-900/55 dark:bg-amber-950/30"
             aria-label="Recherche"
           />
         </div>
@@ -125,7 +125,7 @@ export function AppHeader({ onMenuClick, userProfile, role }: AppHeaderProps) {
         <Button
           variant="ghost"
           size="icon"
-          className="relative h-9 w-9 rounded-md border border-border/70 bg-card/85 text-secondary backdrop-blur-sm hover:bg-surface hover:text-primary"
+          className="relative h-9 w-9 rounded-md border border-amber-300/75 bg-white/75 text-secondary backdrop-blur-sm hover:bg-amber-100/80 hover:text-amber-900 dark:border-amber-900/55 dark:bg-amber-950/30 dark:hover:bg-amber-500/15 dark:hover:text-amber-100"
           aria-label="Notifications"
         >
           <Bell className="h-[18px] w-[18px]" />
@@ -136,11 +136,11 @@ export function AppHeader({ onMenuClick, userProfile, role }: AppHeaderProps) {
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              className="flex h-9 items-center gap-2 rounded-md border border-border/70 bg-card/85 pl-2 pr-2 backdrop-blur-sm hover:border-border/80 hover:bg-surface"
+              className="flex h-9 items-center gap-2 rounded-md border border-amber-300/75 bg-white/75 pl-2 pr-2 backdrop-blur-sm hover:border-amber-400/80 hover:bg-amber-100/80 dark:border-amber-900/55 dark:bg-amber-950/30 dark:hover:border-amber-700/70 dark:hover:bg-amber-500/15"
               aria-label="Profil"
             >
               <Avatar className="h-8 w-8 shrink-0 border border-slate-200 dark:border-slate-700">
-                <AvatarFallback className="bg-blue-100 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                <AvatarFallback className="bg-amber-100 text-xs font-medium text-amber-700 dark:bg-amber-900/35 dark:text-amber-200">
                   {initials}
                 </AvatarFallback>
               </Avatar>

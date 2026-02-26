@@ -18,7 +18,7 @@ export function AppLayout({ children, navItems, role, userProfile }: AppLayoutPr
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   return (
-    <div className="bg-grid noise-overlay flex min-h-screen overflow-x-clip bg-background text-primary">
+    <div className="flex min-h-screen overflow-x-clip bg-background text-primary">
       <AppSidebar
         navItems={navItems}
         role={role}
