@@ -24,6 +24,7 @@ export async function GET(
                 description: true,
                 address: true,
                 price: true,
+                offerType: true,
                 status: true,
                 propertyType: true,
                 isPremium: true,

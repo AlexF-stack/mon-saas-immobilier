@@ -22,6 +22,7 @@ type PropertiesSearchParams = {
   q?: string | string[]
   status?: string | string[]
   city?: string | string[]
+  offerType?: string | string[]
 }
 
 function statusVariant(status: string): 'success' | 'warning' | 'destructive' {
@@ -35,6 +36,11 @@ function statusLabel(status: string): string {
   if (status === 'RENTED') return 'Occupe'
   if (status === 'MAINTENANCE') return 'Maintenance'
   return status
+}
+
+function offerTypeLabel(offerType: string): string {
+  if (offerType === 'SALE') return 'Vente'
+  return 'Location'
 }
 
 export default async function PropertiesPage(props: { searchParams: Promise<PropertiesSearchParams> }) {
@@ -55,6 +61,7 @@ export default async function PropertiesPage(props: { searchParams: Promise<Prop
   const query = normalizeText(searchParams.q)
   const city = normalizeText(searchParams.city)
   const status = normalizeEnum(searchParams.status, ['AVAILABLE', 'RENTED', 'MAINTENANCE'])
+  const offerType = normalizeEnum(searchParams.offerType, ['RENT', 'SALE'])
 
   const baseWhere: Prisma.PropertyWhereInput = user.role === 'ADMIN' ? {} : { managerId: user.id }
   const andFilters: Prisma.PropertyWhereInput[] = []
@@ -72,6 +79,7 @@ export default async function PropertiesPage(props: { searchParams: Promise<Prop
 
   if (city) andFilters.push({ city: { contains: city, mode: 'insensitive' } })
   if (status) andFilters.push({ status })
+  if (offerType) andFilters.push({ offerType })
 
   const where: Prisma.PropertyWhereInput =
     andFilters.length > 0 ? { ...baseWhere, AND: andFilters } : baseWhere
@@ -96,10 +104,10 @@ export default async function PropertiesPage(props: { searchParams: Promise<Prop
   })
 
   const isManager = user.role === 'MANAGER'
-  const hasActiveFilters = Boolean(query || city || status)
+  const hasActiveFilters = Boolean(query || city || status || offerType)
   const basePath = '/dashboard/properties'
   const buildHref = (targetPage: number) =>
-    buildPageHref(basePath, { q: query, city, status }, targetPage)
+    buildPageHref(basePath, { q: query, city, status, offerType }, targetPage)
 
   return (
     <section className="space-y-6">
@@ -153,7 +161,7 @@ export default async function PropertiesPage(props: { searchParams: Promise<Prop
 
       <Card>
         <CardContent className="pt-6">
-          <form className="grid grid-cols-1 gap-4 md:grid-cols-4" method="get">
+          <form className="grid grid-cols-1 gap-4 md:grid-cols-5" method="get">
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="properties-q">Recherche</Label>
               <Input
@@ -181,7 +189,20 @@ export default async function PropertiesPage(props: { searchParams: Promise<Prop
                 <option value="MAINTENANCE">Maintenance</option>
               </select>
             </div>
-            <div className="flex flex-wrap items-center gap-2 md:col-span-4">
+            <div className="space-y-2">
+              <Label htmlFor="properties-offerType">Offre</Label>
+              <select
+                id="properties-offerType"
+                name="offerType"
+                defaultValue={offerType || ''}
+                className="h-10 w-full rounded-xl border border-border bg-card px-3 text-sm text-primary outline-none"
+              >
+                <option value="">Toutes</option>
+                <option value="RENT">Location</option>
+                <option value="SALE">Vente</option>
+              </select>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 md:col-span-5">
               <Button type="submit" size="sm">
                 Filtrer
               </Button>
@@ -217,7 +238,10 @@ export default async function PropertiesPage(props: { searchParams: Promise<Prop
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-3">
                     <CardTitle className="line-clamp-1 text-base">{property.title}</CardTitle>
-                    <Badge variant={statusVariant(property.status)}>{statusLabel(property.status)}</Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">{offerTypeLabel(property.offerType)}</Badge>
+                      <Badge variant={statusVariant(property.status)}>{statusLabel(property.status)}</Badge>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">

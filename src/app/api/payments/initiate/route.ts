@@ -19,6 +19,7 @@ const PAYMENT_INITIATE_WINDOW_MS = 10 * 60 * 1000
 
 const initiatePaymentSchema = z.object({
     contractId: z.string().trim().min(1),
+    installmentId: z.string().trim().min(1).optional(),
     amount: z.coerce.number().positive(),
     phoneNumber: z.string().trim().min(8).max(20),
     provider: z.enum(['MTN', 'MOOV']),
@@ -136,6 +137,11 @@ export async function POST(request: Request) {
                 id: true,
                 tenantId: true,
                 status: true,
+                contractType: true,
+                workflowState: true,
+                submittedAt: true,
+                ownerSignedAt: true,
+                tenantSignedAt: true,
                 rentAmount: true,
                 property: {
                     select: {
@@ -175,7 +181,100 @@ export async function POST(request: Request) {
             )
         }
 
-        if (!amountsMatch(contract.rentAmount, payload.amount)) {
+        const readyForPayment =
+            Boolean(contract.submittedAt) &&
+            Boolean(contract.ownerSignedAt) &&
+            Boolean(contract.tenantSignedAt) &&
+            (contract.workflowState === 'SIGNED_BOTH' ||
+                contract.workflowState === 'PAYMENT_INITIATED' ||
+                contract.workflowState === 'ACTIVE')
+
+        if (!readyForPayment) {
+            return NextResponse.json(
+                { error: 'Contract must be submitted and signed by both parties before payment.' },
+                { status: 409 }
+            )
+        }
+
+        if (contract.contractType === 'RENTAL') {
+            if (!payload.installmentId) {
+                return NextResponse.json(
+                    { error: 'installmentId is required for rental payments.' },
+                    { status: 400 }
+                )
+            }
+
+            const installment = await prisma.contractInstallment.findUnique({
+                where: { id: payload.installmentId },
+                select: {
+                    id: true,
+                    contractId: true,
+                    sequence: true,
+                    status: true,
+                    paidAt: true,
+                    totalDue: true,
+                },
+            })
+
+            if (!installment || installment.contractId !== contract.id) {
+                return NextResponse.json(
+                    { error: 'Installment not found for this contract.' },
+                    { status: 404 }
+                )
+            }
+
+            if (installment.status === 'PAID' || installment.paidAt) {
+                return NextResponse.json(
+                    { error: 'Installment already paid.' },
+                    { status: 409 }
+                )
+            }
+
+            const [completedInstallmentPayments, pendingInstallmentPayments] = await Promise.all([
+                prisma.payment.count({
+                    where: {
+                        installmentId: installment.id,
+                        status: 'COMPLETED',
+                    },
+                }),
+                prisma.payment.count({
+                    where: {
+                        installmentId: installment.id,
+                        status: 'PENDING',
+                    },
+                }),
+            ])
+
+            if (completedInstallmentPayments > 0) {
+                return NextResponse.json(
+                    { error: 'Installment already paid.' },
+                    { status: 409 }
+                )
+            }
+
+            if (pendingInstallmentPayments > 0) {
+                return NextResponse.json(
+                    { error: 'A payment is already pending for this installment.' },
+                    { status: 409 }
+                )
+            }
+
+            if (!amountsMatch(Number(installment.totalDue), payload.amount)) {
+                await createSystemLog({
+                    actor: user,
+                    action: 'PAYMENT_INITIATION_BLOCKED',
+                    targetType: 'CONTRACT_INSTALLMENT',
+                    targetId: installment.id,
+                    correlationId,
+                    route,
+                    details: `reason=amount_mismatch;expected=${Number(installment.totalDue)};received=${payload.amount};idempotencyKey=${idempotencyKey}`,
+                })
+                return NextResponse.json(
+                    { error: 'Invalid amount for this installment.' },
+                    { status: 400 }
+                )
+            }
+        } else if (!amountsMatch(contract.rentAmount, payload.amount)) {
             await createSystemLog({
                 actor: user,
                 action: 'PAYMENT_INITIATION_BLOCKED',
@@ -213,19 +312,32 @@ export async function POST(request: Request) {
 
         let payment
         try {
-            payment = await prisma.payment.create({
-                data: {
-                    amount: payload.amount,
-                    method: payload.provider,
-                    transactionId: paymentResponse.transactionId,
-                    idempotencyKey,
-                    status: 'PENDING',
-                    contractId: payload.contractId,
-                    tenantId: contract.tenantId,
-                    propertyId: contract.property.id,
-                    initiatedById: user.id,
-                    initiatedByRole: user.role,
-                },
+            payment = await prisma.$transaction(async (tx) => {
+                const created = await tx.payment.create({
+                    data: {
+                        amount: payload.amount,
+                        method: payload.provider,
+                        transactionId: paymentResponse.transactionId,
+                        idempotencyKey,
+                        status: 'PENDING',
+                        contractId: payload.contractId,
+                        tenantId: contract.tenantId,
+                        propertyId: contract.property.id,
+                        installmentId: contract.contractType === 'RENTAL' ? payload.installmentId ?? null : null,
+                        initiatedById: user.id,
+                        initiatedByRole: user.role,
+                    },
+                })
+
+                await tx.contract.update({
+                    where: { id: contract.id },
+                    data: {
+                        workflowState: 'PAYMENT_INITIATED',
+                        paymentInitiatedAt: new Date(),
+                    },
+                })
+
+                return created
             })
         } catch (error) {
             if (
@@ -264,6 +376,7 @@ export async function POST(request: Request) {
             correlationId,
             metadata: {
                 contractId: payload.contractId,
+                installmentId: contract.contractType === 'RENTAL' ? payload.installmentId ?? null : null,
                 amount: payload.amount,
                 provider: payload.provider,
                 idempotencyKey,

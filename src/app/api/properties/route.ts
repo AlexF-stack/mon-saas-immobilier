@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { verifyAuth, getTokenFromRequest } from '@/lib/auth'
 import { createSystemLog } from '@/lib/audit'
 import { enforceCsrf } from '@/lib/csrf'
+import { normalizePropertyOfferType } from '@/lib/property-offer'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -20,6 +21,7 @@ const createPropertySchema = z.object({
     description: z.string().trim().max(2000).optional(),
     status: z.string().optional(),
     propertyType: z.string().optional(),
+    offerType: z.string().optional(),
     isPublished: z.coerce.boolean().optional(),
 })
 
@@ -37,7 +39,7 @@ function normalizeCreationStatus(input?: string): 'AVAILABLE' | 'RENTED' | null 
     return null
 }
 
-function normalizePropertyType(input?: string): 'APARTMENT' | 'HOUSE' | 'STUDIO' | 'COMMERCIAL' | null {
+function normalizePropertyType(input?: string): 'APARTMENT' | 'HOUSE' | 'STUDIO' | 'COMMERCIAL' | 'LAND' | null {
     if (!input) return 'APARTMENT'
 
     const normalized = input
@@ -50,6 +52,7 @@ function normalizePropertyType(input?: string): 'APARTMENT' | 'HOUSE' | 'STUDIO'
     if (normalized === 'HOUSE' || normalized === 'MAISON') return 'HOUSE'
     if (normalized === 'STUDIO') return 'STUDIO'
     if (normalized === 'COMMERCIAL' || normalized === 'COMMERCE') return 'COMMERCIAL'
+    if (normalized === 'LAND' || normalized === 'TERRAIN') return 'LAND'
     return null
 }
 
@@ -65,7 +68,23 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
-        const whereClause = user.role === 'ADMIN' ? {} : { managerId: user.id }
+        const url = new URL(request.url)
+        const statusQuery = url.searchParams.get('status')?.trim().toUpperCase()
+        const offerTypeQuery = normalizePropertyOfferType(url.searchParams.get('offerType'))
+
+        const whereClause: {
+            managerId?: string
+            status?: 'AVAILABLE' | 'RENTED' | 'MAINTENANCE'
+            offerType?: 'RENT' | 'SALE'
+        } = user.role === 'ADMIN' ? {} : { managerId: user.id }
+
+        if (statusQuery === 'AVAILABLE' || statusQuery === 'RENTED' || statusQuery === 'MAINTENANCE') {
+            whereClause.status = statusQuery
+        }
+        if (offerTypeQuery) {
+            whereClause.offerType = offerTypeQuery
+        }
+
         const properties = await prisma.property.findMany({
             where: whereClause,
             include: { contracts: true },
@@ -96,6 +115,7 @@ export async function POST(request: Request) {
         const parsed = createPropertySchema.parse(body)
         const normalizedStatus = normalizeCreationStatus(parsed.status)
         const normalizedPropertyType = normalizePropertyType(parsed.propertyType)
+        const normalizedOfferType = normalizePropertyOfferType(parsed.offerType, 'RENT')
 
         if (!normalizedStatus) {
             return NextResponse.json(
@@ -106,8 +126,22 @@ export async function POST(request: Request) {
 
         if (!normalizedPropertyType) {
             return NextResponse.json(
-                { error: 'Invalid propertyType. Use APARTMENT, HOUSE, STUDIO or COMMERCIAL.' },
+                { error: 'Invalid propertyType. Use APARTMENT, HOUSE, STUDIO, COMMERCIAL or LAND.' },
                 { status: 400 }
+            )
+        }
+
+        if (!normalizedOfferType) {
+            return NextResponse.json(
+                { error: 'Invalid offerType. Use RENT or SALE.' },
+                { status: 400 }
+            )
+        }
+
+        if (normalizedOfferType === 'SALE' && normalizedStatus === 'RENTED') {
+            return NextResponse.json(
+                { error: 'Sale property cannot be created as rented.' },
+                { status: 409 }
             )
         }
 
@@ -126,6 +160,7 @@ export async function POST(request: Request) {
                 price: parsed.price,
                 description: parsed.description,
                 propertyType: normalizedPropertyType,
+                offerType: normalizedOfferType,
                 status: normalizedStatus,
                 isPublished: parsed.isPublished === true,
                 publishedAt: parsed.isPublished === true ? new Date() : null,
@@ -138,7 +173,7 @@ export async function POST(request: Request) {
             action: 'PROPERTY_CREATED',
             targetType: 'PROPERTY',
             targetId: property.id,
-            details: `title=${property.title};managerId=${property.managerId ?? 'none'};status=${property.status};published=${property.isPublished};type=${property.propertyType}`,
+            details: `title=${property.title};managerId=${property.managerId ?? 'none'};status=${property.status};offerType=${property.offerType};published=${property.isPublished};type=${property.propertyType}`,
         })
 
         return NextResponse.json(property, { status: 201 })

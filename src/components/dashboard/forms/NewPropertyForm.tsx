@@ -42,6 +42,7 @@ export function NewPropertyForm({ locale, dashboardPathPrefix }: NewPropertyForm
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [offerType, setOfferType] = useState<'RENT' | 'SALE'>('RENT')
   const dashboardPath = dashboardPathPrefix ?? (locale ? `/${locale}/dashboard` : '/dashboard')
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -57,6 +58,7 @@ export function NewPropertyForm({ locale, dashboardPathPrefix }: NewPropertyForm
       price: formData.get('price'),
       description: formData.get('description'),
       propertyType: formData.get('propertyType'),
+      offerType: formData.get('offerType'),
     }
 
     try {
@@ -108,8 +110,24 @@ export function NewPropertyForm({ locale, dashboardPathPrefix }: NewPropertyForm
             <Input id="address" name="address" placeholder="123 Rue de la Paix, Cotonou" required />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="price">Loyer mensuel (FCFA)</Label>
+            <Label htmlFor="price">{offerType === 'SALE' ? 'Prix de vente (FCFA)' : 'Loyer mensuel (FCFA)'}</Label>
             <Input id="price" name="price" type="number" min="1" placeholder="150000" required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="offerType">Type d&apos;offre</Label>
+            <Select
+              name="offerType"
+              value={offerType}
+              onValueChange={(value) => setOfferType(value === 'SALE' ? 'SALE' : 'RENT')}
+            >
+              <SelectTrigger id="offerType">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="RENT">Location</SelectItem>
+                <SelectItem value="SALE">Vente</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="propertyType">Type de bien</Label>
@@ -122,6 +140,7 @@ export function NewPropertyForm({ locale, dashboardPathPrefix }: NewPropertyForm
                 <SelectItem value="HOUSE">Maison</SelectItem>
                 <SelectItem value="STUDIO">Studio</SelectItem>
                 <SelectItem value="COMMERCIAL">Commercial</SelectItem>
+                <SelectItem value="LAND">Terrain</SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -65,7 +65,7 @@ export async function generateMetadata(props: {
     const baseUrl = getAppBaseUrl()
     const canonicalPath = `/${locale}/marketplace/city/${citySlug}`
     const title = `Location immobiliere a ${city} | Marketplace ImmoSaaS`
-    const description = `Consultez les biens disponibles a ${city}, comparez les loyers et envoyez une demande de visite.`
+    const description = `Consultez les biens disponibles a ${city}, comparez les prix location/vente et envoyez une demande.`
     const ogImage = `${baseUrl}/api/og/marketplace?title=${encodeURIComponent(title)}&subtitle=${encodeURIComponent(description)}`
 
     return {
@@ -131,6 +131,7 @@ export default async function MarketplaceCityPage(props: {
             address: true,
             description: true,
             price: true,
+            offerType: true,
             status: true,
             propertyType: true,
             isPremium: true,
@@ -185,10 +186,10 @@ export default async function MarketplaceCityPage(props: {
             <main className="container-app space-y-8 py-8">
                 <section className="space-y-3">
                     <h1 className="text-3xl font-semibold tracking-tight text-primary">
-                        Locations disponibles a {city}
+                        Biens disponibles a {city}
                     </h1>
                     <p className="max-w-3xl text-sm text-secondary">
-                        Parcourez les annonces publiees a {city}, comparez les loyers et contactez les proprietaires.
+                        Parcourez les annonces publiees a {city}, comparez les offres location/vente et contactez les proprietaires.
                     </p>
                     <Button asChild size="sm" variant="outline">
                         <Link href={`/${locale}/marketplace`}>Retour a la marketplace</Link>

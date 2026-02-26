@@ -24,6 +24,7 @@ type MarketplaceSearchParams = {
     location?: string | string[]
     type?: string | string[]
     status?: string | string[]
+    offer?: string | string[]
     minPrice?: string | string[]
     maxPrice?: string | string[]
     sort?: string | string[]
@@ -36,6 +37,7 @@ type MarketplaceFilters = {
     location: string
     type: string
     status: string
+    offerType: string
     minPriceValue: string
     maxPriceValue: string
     sort: string
@@ -60,6 +62,7 @@ function parseFilters(searchParams: MarketplaceSearchParams): MarketplaceFilters
         location: firstValue(searchParams.location).trim(),
         type: firstValue(searchParams.type).toUpperCase(),
         status: firstValue(searchParams.status).toUpperCase() || 'AVAILABLE',
+        offerType: firstValue(searchParams.offer).toUpperCase(),
         minPriceValue: firstValue(searchParams.minPrice),
         maxPriceValue: firstValue(searchParams.maxPrice),
         sort: firstValue(searchParams.sort) || 'recommended',
@@ -74,6 +77,7 @@ function buildQueryParams(filters: MarketplaceFilters, targetPage?: number) {
     if (filters.location) params.set('location', filters.location)
     if (filters.type) params.set('type', filters.type)
     if (filters.status) params.set('status', filters.status)
+    if (filters.offerType) params.set('offer', filters.offerType)
     if (filters.minPriceValue) params.set('minPrice', filters.minPriceValue)
     if (filters.maxPriceValue) params.set('maxPrice', filters.maxPriceValue)
     if (filters.sort) params.set('sort', filters.sort)
@@ -97,6 +101,7 @@ export async function generateMetadata(props: {
         filters.city ? `Ville ${filters.city}` : '',
         filters.type && filters.type !== 'ALL' ? `Type ${filters.type}` : '',
         filters.status && filters.status !== 'ALL' ? `Statut ${filters.status}` : '',
+        filters.offerType && filters.offerType !== 'ALL' ? `Offre ${filters.offerType}` : '',
         filters.page > 1 ? `Page ${filters.page}` : '',
     ].filter(Boolean)
 
@@ -104,8 +109,8 @@ export async function generateMetadata(props: {
         ? `${activeLabels.join(' - ')} | Marketplace ImmoSaaS`
         : 'Marketplace immobilier | ImmoSaaS'
     const description = activeLabels.length
-        ? `Biens disponibles a la location avec filtres actifs: ${activeLabels.join(', ')}.`
-        : 'Decouvrez les biens immobiliers disponibles a la location et contactez les proprietaires.'
+        ? `Biens disponibles a la location ou a la vente avec filtres actifs: ${activeLabels.join(', ')}.`
+        : 'Decouvrez les biens immobiliers disponibles a la location et a la vente, puis contactez les proprietaires.'
     const ogParams = new URLSearchParams({
         title,
         subtitle: description,
@@ -160,6 +165,10 @@ export default async function MarketplacePage(props: {
             filters.status === 'RENTED' || filters.status === 'MAINTENANCE' ? filters.status : 'AVAILABLE'
     }
 
+    if (filters.offerType !== 'ALL' && (filters.offerType === 'RENT' || filters.offerType === 'SALE')) {
+        whereClause.offerType = filters.offerType
+    }
+
     if (filters.query) {
         andFilters.push({
                 OR: [
@@ -184,7 +193,7 @@ export default async function MarketplacePage(props: {
             })
         }
 
-    if (filters.type && ['APARTMENT', 'HOUSE', 'STUDIO', 'COMMERCIAL'].includes(filters.type)) {
+    if (filters.type && ['APARTMENT', 'HOUSE', 'STUDIO', 'COMMERCIAL', 'LAND'].includes(filters.type)) {
         whereClause.propertyType = filters.type
     }
 
@@ -215,6 +224,7 @@ export default async function MarketplacePage(props: {
         address: true,
         description: true,
         price: true,
+        offerType: true,
         status: true,
         propertyType: true,
         isPremium: true,
@@ -346,7 +356,7 @@ export default async function MarketplacePage(props: {
                         Marketplace immobilier
                     </h1>
                     <p className="max-w-3xl text-sm text-secondary">
-                        Trouvez des biens disponibles, comparez les offres et envoyez une demande de visite en quelques clics.
+                        Trouvez des biens disponibles en location ou en vente, comparez les offres et envoyez une demande en quelques clics.
                     </p>
                 </section>
 
@@ -408,6 +418,7 @@ export default async function MarketplacePage(props: {
                                     <SelectItem value="HOUSE">Maison</SelectItem>
                                     <SelectItem value="STUDIO">Studio</SelectItem>
                                     <SelectItem value="COMMERCIAL">Commercial</SelectItem>
+                                    <SelectItem value="LAND">Terrain</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -423,6 +434,20 @@ export default async function MarketplacePage(props: {
                                     <SelectItem value="ALL">Tous</SelectItem>
                                     <SelectItem value="RENTED">Loue</SelectItem>
                                     <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="space-y-2 lg:col-span-2">
+                            <Label>Offre</Label>
+                            <Select name="offer" defaultValue={filters.offerType || 'ALL'}>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="ALL">Toutes</SelectItem>
+                                    <SelectItem value="RENT">Location</SelectItem>
+                                    <SelectItem value="SALE">Vente</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

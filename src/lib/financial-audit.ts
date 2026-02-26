@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto'
 import type { Prisma } from '@prisma/client'
 
-type FinancialAuditType = 'PAYMENT' | 'WITHDRAWAL'
+type FinancialAuditType = 'PAYMENT' | 'WITHDRAWAL' | 'INSTALLMENT'
 
 type FinancialAuditPayload = {
   type: FinancialAuditType

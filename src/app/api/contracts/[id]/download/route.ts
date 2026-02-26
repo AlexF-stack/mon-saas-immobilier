@@ -37,6 +37,10 @@ export async function GET(
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
+        if (contract.fileUrl) {
+            return NextResponse.redirect(contract.fileUrl, 302)
+        }
+
         const pdfBytes = await generateContractPdf({
             ownerName: 'Agence Immo SaaS',
             tenantName: contract.tenant.name || contract.tenant.email,
@@ -45,6 +49,10 @@ export async function GET(
             endDate: contract.endDate,
             rentAmount: contract.rentAmount,
             depositAmount: contract.depositAmount,
+            contractType: contract.contractType === 'SALE' ? 'SALE' : 'RENTAL',
+            contractText: contract.contractText,
+            ownerSignedAt: contract.ownerSignedAt,
+            tenantSignedAt: contract.tenantSignedAt,
         })
 
         return new NextResponse(Buffer.from(pdfBytes), {

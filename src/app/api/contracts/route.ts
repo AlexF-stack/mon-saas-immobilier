@@ -43,7 +43,9 @@ export async function GET(request: Request) {
         const contracts = await prisma.contract.findMany({
             where: whereClause,
             include: {
-                property: { select: { id: true, title: true, address: true, managerId: true, status: true } },
+                property: {
+                    select: { id: true, title: true, address: true, managerId: true, status: true, offerType: true },
+                },
                 tenant: { select: { id: true, name: true, email: true } },
             },
             orderBy: { createdAt: 'desc' },
@@ -79,7 +81,7 @@ export async function POST(request: Request) {
         const [property, tenant, existingActiveContract] = await Promise.all([
             prisma.property.findUnique({
                 where: { id: payload.propertyId },
-                select: { id: true, managerId: true, status: true },
+                select: { id: true, managerId: true, status: true, offerType: true },
             }),
             prisma.user.findUnique({
                 where: { id: payload.tenantId },
@@ -120,9 +122,28 @@ export async function POST(request: Request) {
                     endDate: payload.endDate,
                     rentAmount: payload.rentAmount,
                     depositAmount: payload.depositAmount,
+                    contractType: property.offerType === 'SALE' ? 'SALE' : 'RENTAL',
+                    workflowState: 'DRAFT',
                     status: 'ACTIVE',
                 },
             })
+
+            if (property.offerType === 'RENT') {
+                const firstDueDate = new Date(payload.startDate)
+                firstDueDate.setUTCHours(0, 0, 0, 0)
+
+                await tx.contractInstallment.create({
+                    data: {
+                        contractId: createdContract.id,
+                        sequence: 1,
+                        dueDate: firstDueDate,
+                        baseAmount: payload.rentAmount,
+                        penaltyAmount: 0,
+                        totalDue: payload.rentAmount,
+                        status: 'OPEN',
+                    },
+                })
+            }
 
             if (shouldForceRollback) {
                 throw new Error('FORCED_CONTRACT_ROLLBACK')
@@ -130,7 +151,10 @@ export async function POST(request: Request) {
 
             await tx.property.update({
                 where: { id: payload.propertyId },
-                data: { status: 'RENTED', isPublished: false, publishedAt: null },
+                data:
+                    property.offerType === 'RENT'
+                        ? { status: 'RENTED', isPublished: false, publishedAt: null }
+                        : { isPublished: false, publishedAt: null },
             })
 
             return createdContract

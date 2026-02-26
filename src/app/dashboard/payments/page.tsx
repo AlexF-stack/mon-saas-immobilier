@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { AlertTriangle, Clock3, CreditCard, Plus, Wallet } from 'lucide-react'
+import { AlertTriangle, Clock3, CreditCard, Download, Plus, Wallet } from 'lucide-react'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import type { Prisma } from '@prisma/client'
@@ -29,6 +29,34 @@ type PaymentsSearchParams = {
   q?: string | string[]
   status?: string | string[]
   method?: string | string[]
+  from?: string | string[]
+  to?: string | string[]
+}
+
+function normalizeDateInput(value: string | string[] | undefined): string {
+  const raw = Array.isArray(value) ? value[0] : value
+  if (!raw) return ''
+  const trimmed = raw.trim()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return ''
+  return trimmed
+}
+
+function buildPaymentsExportHref(filters: {
+  q?: string
+  status?: string | null
+  method?: string | null
+  from?: string
+  to?: string
+  format: 'csv' | 'xlsx'
+}): string {
+  const params = new URLSearchParams()
+  if (filters.q) params.set('q', filters.q)
+  if (filters.status) params.set('status', filters.status)
+  if (filters.method) params.set('method', filters.method)
+  if (filters.from) params.set('from', filters.from)
+  if (filters.to) params.set('to', filters.to)
+  params.set('format', filters.format)
+  return `/api/payments/export?${params.toString()}`
 }
 
 export default async function PaymentsPage(props: { searchParams: Promise<PaymentsSearchParams> }) {
@@ -48,6 +76,10 @@ export default async function PaymentsPage(props: { searchParams: Promise<Paymen
   const query = normalizeText(searchParams.q)
   const status = normalizeEnum(searchParams.status, ['COMPLETED', 'PENDING', 'FAILED'])
   const method = normalizeEnum(searchParams.method, ['MOMO_MTN', 'MOOV', 'CASH'])
+  const from = normalizeDateInput(searchParams.from)
+  const to = normalizeDateInput(searchParams.to)
+  const fromDate = from ? new Date(`${from}T00:00:00.000Z`) : null
+  const toDate = to ? new Date(`${to}T23:59:59.999Z`) : null
 
   const scopeWhere: Prisma.PaymentWhereInput =
     role === 'MANAGER'
@@ -68,6 +100,14 @@ export default async function PaymentsPage(props: { searchParams: Promise<Paymen
         { contract: { tenant: { name: { contains: query, mode: 'insensitive' } } } },
         { contract: { tenant: { email: { contains: query, mode: 'insensitive' } } } },
       ],
+    })
+  }
+  if (fromDate || toDate) {
+    andFilters.push({
+      createdAt: {
+        ...(fromDate ? { gte: fromDate } : {}),
+        ...(toDate ? { lte: toDate } : {}),
+      },
     })
   }
 
@@ -163,10 +203,12 @@ export default async function PaymentsPage(props: { searchParams: Promise<Paymen
     tenantName: payment.contract.tenant.name || payment.contract.tenant.email,
   }))
 
-  const hasActiveFilters = Boolean(query || status || method)
+  const hasActiveFilters = Boolean(query || status || method || from || to)
   const basePath = '/dashboard/payments'
   const buildHref = (targetPage: number) =>
-    buildPageHref(basePath, { q: query, status, method }, targetPage)
+    buildPageHref(basePath, { q: query, status, method, from, to }, targetPage)
+  const csvExportHref = buildPaymentsExportHref({ q: query, status, method, from, to, format: 'csv' })
+  const xlsxExportHref = buildPaymentsExportHref({ q: query, status, method, from, to, format: 'xlsx' })
 
   return (
     <section className="space-y-6">
@@ -177,14 +219,28 @@ export default async function PaymentsPage(props: { searchParams: Promise<Paymen
             Suivi des encaissements, statuts de transaction et quittances.
           </p>
         </div>
-        {canCreatePayment && (
-          <Button asChild>
-            <Link href="/dashboard/payments/new">
-              <Plus className="h-4 w-4" />
-              Nouveau paiement
-            </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <a href={csvExportHref}>
+              <Download className="h-4 w-4" />
+              Export CSV
+            </a>
           </Button>
-        )}
+          <Button asChild variant="outline" size="sm">
+            <a href={xlsxExportHref}>
+              <Download className="h-4 w-4" />
+              Export XLSX
+            </a>
+          </Button>
+          {canCreatePayment && (
+            <Button asChild>
+              <Link href="/dashboard/payments/new">
+                <Plus className="h-4 w-4" />
+                Nouveau paiement
+              </Link>
+            </Button>
+          )}
+        </div>
       </header>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
@@ -220,7 +276,7 @@ export default async function PaymentsPage(props: { searchParams: Promise<Paymen
 
       <Card>
         <CardContent className="pt-6">
-          <form method="get" className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <form method="get" className="grid grid-cols-1 gap-4 md:grid-cols-6">
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="payments-q">Recherche</Label>
               <Input
@@ -258,7 +314,15 @@ export default async function PaymentsPage(props: { searchParams: Promise<Paymen
                 <option value="CASH">Cash</option>
               </select>
             </div>
-            <div className="flex items-center gap-2 md:col-span-4">
+            <div className="space-y-2">
+              <Label htmlFor="payments-from">Du</Label>
+              <Input id="payments-from" name="from" type="date" defaultValue={from} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="payments-to">Au</Label>
+              <Input id="payments-to" name="to" type="date" defaultValue={to} />
+            </div>
+            <div className="flex items-center gap-2 md:col-span-6">
               <Button type="submit" size="sm">
                 Filtrer
               </Button>
