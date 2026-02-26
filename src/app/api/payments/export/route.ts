@@ -3,6 +3,8 @@ import { z } from 'zod'
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getTokenFromRequest, verifyAuth } from '@/lib/auth'
+import { createSystemLog } from '@/lib/audit'
+import { getLogContextFromRequest } from '@/lib/logger'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -117,6 +119,7 @@ function toExcelXml(rows: ExportRow[]): string {
 
 export async function GET(request: Request) {
   try {
+    const { correlationId, route } = getLogContextFromRequest(request)
     const token = getTokenFromRequest(request)
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const user = await verifyAuth(token)
@@ -207,6 +210,16 @@ export async function GET(request: Request) {
 
     const dayToken = new Date().toISOString().slice(0, 10).replace(/-/g, '')
     const format = formatParsed.data
+
+    await createSystemLog({
+      actor: user,
+      action: 'EXPORT_PAYMENTS',
+      targetType: 'PAYMENT',
+      targetId: null,
+      correlationId,
+      route,
+      details: `format=${format};rowCount=${rows.length};from=${url.searchParams.get('from') ?? 'none'};to=${url.searchParams.get('to') ?? 'none'};status=${statusParsed.success ? statusParsed.data : 'none'};method=${methodParsed.success ? methodParsed.data : 'none'};q=${query || 'none'}`,
+    })
 
     if (format === 'xlsx') {
       const xml = toExcelXml(rows)

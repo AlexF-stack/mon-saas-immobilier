@@ -22,6 +22,10 @@ export type DailyInstallmentRunSummary = {
   graceDays: number
 }
 
+function getRunDayKey(value: Date): string {
+  return toUtcDayStart(value).toISOString().slice(0, 10)
+}
+
 function toUtcDayStart(value: Date): Date {
   const date = new Date(value)
   date.setUTCHours(0, 0, 0, 0)
@@ -300,4 +304,41 @@ export async function runDailyInstallmentMaintenance(
     penaltyRate: INSTALLMENT_PENALTY_RATE,
     graceDays: INSTALLMENT_GRACE_DAYS,
   }
+}
+
+export async function acquireInstallmentDailyRunGuard(input: DailyInstallmentRunInput): Promise<{
+  allowed: boolean
+  runDay: string
+}> {
+  const runDay = getRunDayKey(input.runDate)
+
+  const allowed = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`installment_daily:${runDay}`}))`
+
+    const completed = await tx.systemLog.findFirst({
+      where: {
+        action: 'INSTALLMENT_DAILY_CRON_COMPLETED',
+        targetType: 'CRON_JOB',
+        targetId: runDay,
+      },
+      select: { id: true },
+    })
+
+    if (completed) {
+      return false
+    }
+
+    await tx.systemLog.create({
+      data: {
+        action: 'INSTALLMENT_DAILY_CRON_STARTED',
+        targetType: 'CRON_JOB',
+        targetId: runDay,
+        details: `correlationId=${input.correlationId ?? 'none'};route=${input.route ?? 'none'}`,
+      },
+    })
+
+    return true
+  })
+
+  return { allowed, runDay }
 }

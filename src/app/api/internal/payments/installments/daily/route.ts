@@ -3,7 +3,8 @@ import { NextResponse } from 'next/server'
 import { getLogContextFromRequest, logServerEvent } from '@/lib/logger'
 import { captureServerError } from '@/lib/monitoring'
 import { enforceRateLimit } from '@/lib/security-rate-limit'
-import { runDailyInstallmentMaintenance } from '@/lib/installments'
+import { runDailyInstallmentMaintenance, acquireInstallmentDailyRunGuard } from '@/lib/installments'
+import { createSystemLog } from '@/lib/audit'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -55,10 +56,40 @@ export async function GET(request: Request) {
       route,
     })
 
+    const guard = await acquireInstallmentDailyRunGuard({
+      runDate: new Date(),
+      correlationId,
+      route,
+    })
+
+    if (!guard.allowed) {
+      const skippedSummary = {
+        runDate: guard.runDay,
+        skipped: true,
+        reason: 'already_executed_today',
+      }
+      logServerEvent({
+        event: 'internal.installment.daily.skipped',
+        correlationId,
+        route,
+        details: skippedSummary,
+      })
+      return NextResponse.json(skippedSummary)
+    }
+
     const summary = await runDailyInstallmentMaintenance({
       runDate: new Date(),
       correlationId,
       route,
+    })
+
+    await createSystemLog({
+      action: 'INSTALLMENT_DAILY_CRON_COMPLETED',
+      targetType: 'CRON_JOB',
+      targetId: summary.runDate,
+      correlationId,
+      route,
+      details: `created=${summary.installmentsCreated};overdue=${summary.overdueMarked};penalties=${summary.penaltiesApplied};failures=${summary.failures}`,
     })
 
     logServerEvent({
