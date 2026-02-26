@@ -185,7 +185,7 @@ export default async function LandingPage(props: {
 
     return (
         <div className="animated-bg noise-overlay flex min-h-screen flex-col text-primary">
-            <header className="fixed inset-x-0 top-0 z-40 w-full border-b border-amber-200/75 bg-gradient-to-r from-amber-100/92 via-amber-50/88 to-yellow-100/92 backdrop-blur-xl supports-[backdrop-filter]:bg-gradient-to-r supports-[backdrop-filter]:from-amber-100/82 supports-[backdrop-filter]:via-amber-50/78 supports-[backdrop-filter]:to-yellow-100/82 dark:border-amber-900/45 dark:bg-gradient-to-r dark:from-amber-950/78 dark:via-amber-900/55 dark:to-yellow-950/72">
+            <header className="fixed inset-x-0 top-0 z-40 w-full border-b border-sky-200/75 bg-gradient-to-r from-sky-100/92 via-blue-50/88 to-cyan-100/92 backdrop-blur-xl supports-[backdrop-filter]:bg-gradient-to-r supports-[backdrop-filter]:from-sky-100/82 supports-[backdrop-filter]:via-blue-50/78 supports-[backdrop-filter]:to-cyan-100/82 dark:border-sky-900/45 dark:bg-gradient-to-r dark:from-slate-950/78 dark:via-sky-950/50 dark:to-blue-950/68">
                 <span
                     aria-hidden
                     className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/35 to-transparent"
@@ -195,7 +195,7 @@ export default async function LandingPage(props: {
                         href={`/${locale}`}
                         className="group flex items-center gap-2 text-lg font-bold text-primary"
                     >
-                        <span className="elevation-1 flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-yellow-600 text-sm font-extrabold text-white transition-transform [transition-duration:var(--motion-hover)] [transition-timing-function:var(--ease-standard)] group-hover:-translate-y-px">
+                        <span className="elevation-1 flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-sm font-extrabold text-white transition-transform [transition-duration:var(--motion-hover)] [transition-timing-function:var(--ease-standard)] group-hover:-translate-y-px">
                             I
                         </span>
                         <span>ImmoSaaS</span>
