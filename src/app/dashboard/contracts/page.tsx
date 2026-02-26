@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label'
 import { StatCard } from '@/components/ui/stat-card'
 import { ServerPager } from '@/components/dashboard/ServerPager'
 import { buildPageHref, normalizeEnum, normalizePage, normalizeText } from '@/lib/dashboard-list-query'
+import { ManualReminderButton } from '@/components/dashboard/contracts/ManualReminderButton'
 
 const PAGE_SIZE = 10
 
@@ -108,6 +109,7 @@ export default async function ContractsPage(props: { searchParams: Promise<Contr
 
   const canCreateContract = user.role === 'MANAGER'
   const canInitiatePayment = user.role === 'MANAGER' || user.role === 'TENANT'
+  const canSendManualReminder = user.role === 'MANAGER'
   const hasActiveFilters = Boolean(query || status)
   const basePath = '/dashboard/contracts'
   const buildHref = (targetPage: number) => buildPageHref(basePath, { q: query, status }, targetPage)
@@ -271,6 +273,9 @@ export default async function ContractsPage(props: { searchParams: Promise<Contr
                       </Button>
                     )}
                   </div>
+                  {canSendManualReminder ? (
+                    <ManualReminderButton contractId={contract.id} />
+                  ) : null}
                 </CardContent>
               </Card>
             ))}

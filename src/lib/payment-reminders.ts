@@ -1,10 +1,11 @@
 import { prisma } from '@/lib/prisma'
 import { createSystemLog } from '@/lib/audit'
 
-const REMINDER_DAY_OFFSETS = [7, 5, 3, 1] as const
+export const REMINDER_DAY_OFFSETS = [7, 5, 3, 1] as const
 const REMINDER_WEBHOOK_TIMEOUT_MS = 6000
 
-type ReminderDayOffset = (typeof REMINDER_DAY_OFFSETS)[number]
+export type ReminderDayOffset = (typeof REMINDER_DAY_OFFSETS)[number]
+export type ReminderDeliveryChannel = 'EMAIL' | 'SMS' | 'WHATSAPP'
 
 type Recipient = {
   id: string
@@ -22,6 +23,7 @@ type ReminderCopy = {
   emailSubject: string
   emailBody: string
   smsBody: string
+  whatsappBody: string
 }
 
 type ReminderCandidate = {
@@ -40,6 +42,8 @@ type ReminderChannelMetrics = {
   emailSkipped: number
   smsSent: number
   smsSkipped: number
+  whatsappSent: number
+  whatsappSkipped: number
   failures: number
 }
 
@@ -55,6 +59,22 @@ export type PaymentReminderRunSummary = {
   emailSkipped: number
   smsSent: number
   smsSkipped: number
+  whatsappSent: number
+  whatsappSkipped: number
+  failures: number
+}
+
+export type ManualPaymentReminderResult = {
+  reminderKey: string
+  dueDate: string
+  daysBefore: ReminderDayOffset
+  inAppNotificationSent: boolean
+  emailSent: number
+  emailSkipped: number
+  smsSent: number
+  smsSkipped: number
+  whatsappSent: number
+  whatsappSkipped: number
   failures: number
 }
 
@@ -95,6 +115,15 @@ function resolveDueDateForMonth(anchorStartDate: Date, targetMonthDate: Date): D
   const monthLastDay = getDaysInUtcMonth(year, monthIndex)
   const day = Math.min(anchorDay, monthLastDay)
   return new Date(Date.UTC(year, monthIndex, day, 0, 0, 0, 0))
+}
+
+function resolveNextDueDate(anchorStartDate: Date, fromDate: Date): Date {
+  const currentMonthDue = resolveDueDateForMonth(anchorStartDate, fromDate)
+  const fromDay = toUtcDayStart(fromDate)
+  if (currentMonthDue >= fromDay) {
+    return currentMonthDue
+  }
+  return resolveDueDateForMonth(anchorStartDate, addUtcMonths(fromDate, 1))
 }
 
 function formatUtcDate(date: Date): string {
@@ -146,6 +175,7 @@ function buildTenantReminderCopy(
       emailSubject: `ImmoSaaS - Rappel loyer ${dayBadge}`,
       emailBody: `Bonjour ${displayName},\n\nVotre loyer de ${amountLabel} pour ${payload.propertyTitle} est attendu le ${dueDateLabel} (${dayBadge}).\nMerci d'anticiper votre paiement.\n\nImmoSaaS`,
       smsBody: `ImmoSaaS: Rappel ${dayBadge}, loyer ${amountLabel} pour ${payload.propertyTitle} attendu le ${dueDateLabel}.`,
+      whatsappBody: `ImmoSaaS: Rappel ${dayBadge}, loyer ${amountLabel} pour ${payload.propertyTitle} attendu le ${dueDateLabel}.`,
     }
   }
 
@@ -155,6 +185,7 @@ function buildTenantReminderCopy(
     emailSubject: `ImmoSaaS - Rent reminder ${dayBadge}`,
     emailBody: `Hello ${displayName},\n\nYour rent payment of ${amountLabel} for ${payload.propertyTitle} is due on ${dueDateLabel} (${dayBadge}).\nPlease plan your payment ahead.\n\nImmoSaaS`,
     smsBody: `ImmoSaaS: Reminder ${dayBadge}, rent ${amountLabel} for ${payload.propertyTitle} due on ${dueDateLabel}.`,
+    whatsappBody: `ImmoSaaS: Reminder ${dayBadge}, rent ${amountLabel} for ${payload.propertyTitle} due on ${dueDateLabel}.`,
   }
 }
 
@@ -182,6 +213,7 @@ function buildManagerReminderCopy(
       emailSubject: `ImmoSaaS - Suivi loyer ${dayBadge}`,
       emailBody: `Bonjour ${managerName},\n\nLe loyer de ${tenantName} (${amountLabel}) pour ${payload.propertyTitle} est attendu le ${dueDateLabel} (${dayBadge}).\n\nImmoSaaS`,
       smsBody: `ImmoSaaS: ${tenantName} - loyer ${amountLabel} (${payload.propertyTitle}) attendu le ${dueDateLabel} (${dayBadge}).`,
+      whatsappBody: `ImmoSaaS: ${tenantName} - loyer ${amountLabel} (${payload.propertyTitle}) attendu le ${dueDateLabel} (${dayBadge}).`,
     }
   }
 
@@ -191,6 +223,7 @@ function buildManagerReminderCopy(
     emailSubject: `ImmoSaaS - Rent follow-up ${dayBadge}`,
     emailBody: `Hello ${managerName},\n\n${tenantName}'s rent (${amountLabel}) for ${payload.propertyTitle} is due on ${dueDateLabel} (${dayBadge}).\n\nImmoSaaS`,
     smsBody: `ImmoSaaS: ${tenantName} rent ${amountLabel} (${payload.propertyTitle}) due on ${dueDateLabel} (${dayBadge}).`,
+    whatsappBody: `ImmoSaaS: ${tenantName} rent ${amountLabel} (${payload.propertyTitle}) due on ${dueDateLabel} (${dayBadge}).`,
   }
 }
 
@@ -227,6 +260,8 @@ async function deliverChannels(
     reminderKey: string
     recipient: Recipient
     copy: ReminderCopy
+    channels?: ReminderDeliveryChannel[]
+    ignoreUserPreferences?: boolean
     correlationId?: string
     route?: string
   }
@@ -239,16 +274,27 @@ async function deliverChannels(
     process.env.PAYMENT_REMINDER_SMS_WEBHOOK_URL?.trim() ||
     process.env.NOTIFICATION_SMS_WEBHOOK_URL?.trim() ||
     null
+  const whatsappWebhookUrl =
+    process.env.PAYMENT_REMINDER_WHATSAPP_WEBHOOK_URL?.trim() ||
+    process.env.NOTIFICATION_WHATSAPP_WEBHOOK_URL?.trim() ||
+    null
+  const desiredChannels = new Set<ReminderDeliveryChannel>(input.channels ?? ['EMAIL', 'SMS'])
 
   const metrics: ReminderChannelMetrics = {
     emailSent: 0,
     emailSkipped: 0,
     smsSent: 0,
     smsSkipped: 0,
+    whatsappSent: 0,
+    whatsappSkipped: 0,
     failures: 0,
   }
 
-  if (input.recipient.notifyEmail && input.recipient.email) {
+  const canSendEmail = input.ignoreUserPreferences || input.recipient.notifyEmail
+  const canSendSms = input.ignoreUserPreferences || input.recipient.notifySms
+  const canSendWhatsapp = input.ignoreUserPreferences || input.recipient.notifySms
+
+  if (desiredChannels.has('EMAIL') && canSendEmail && input.recipient.email) {
     if (!emailWebhookUrl) {
       metrics.emailSkipped += 1
     } else {
@@ -274,11 +320,11 @@ async function deliverChannels(
         })
       }
     }
-  } else {
+  } else if (desiredChannels.has('EMAIL')) {
     metrics.emailSkipped += 1
   }
 
-  if (input.recipient.notifySms && input.recipient.phone) {
+  if (desiredChannels.has('SMS') && canSendSms && input.recipient.phone) {
     if (!smsWebhookUrl) {
       metrics.smsSkipped += 1
     } else {
@@ -303,8 +349,37 @@ async function deliverChannels(
         })
       }
     }
-  } else {
+  } else if (desiredChannels.has('SMS')) {
     metrics.smsSkipped += 1
+  }
+
+  if (desiredChannels.has('WHATSAPP') && canSendWhatsapp && input.recipient.phone) {
+    if (!whatsappWebhookUrl) {
+      metrics.whatsappSkipped += 1
+    } else {
+      const whatsappResult = await postReminderWebhook(whatsappWebhookUrl, {
+        channel: 'whatsapp',
+        reminderKey: input.reminderKey,
+        to: input.recipient.phone,
+        message: input.copy.whatsappBody,
+      })
+
+      if (whatsappResult.ok) {
+        metrics.whatsappSent += 1
+      } else {
+        metrics.failures += 1
+        await createSystemLog({
+          action: 'PAYMENT_REMINDER_WHATSAPP_FAILED',
+          targetType: 'USER',
+          targetId: input.recipient.id,
+          correlationId: input.correlationId,
+          route: input.route,
+          details: `reminderKey=${input.reminderKey};reason=${whatsappResult.reason}`,
+        })
+      }
+    }
+  } else if (desiredChannels.has('WHATSAPP')) {
+    metrics.whatsappSkipped += 1
   }
 
   return metrics
@@ -324,6 +399,165 @@ function hasPaymentInDueWindow(
     const timestamp = paymentDate.getTime()
     return timestamp >= rangeStart && timestamp < rangeEndExclusive
   })
+}
+
+export async function sendManualPaymentReminder(input: {
+  contractId: string
+  daysBefore: ReminderDayOffset
+  channels?: ReminderDeliveryChannel[]
+  correlationId?: string
+  route?: string
+}): Promise<ManualPaymentReminderResult> {
+  const now = new Date()
+  const nowDay = toUtcDayStart(now)
+
+  const contract = await prisma.contract.findUnique({
+    where: { id: input.contractId },
+    select: {
+      id: true,
+      status: true,
+      startDate: true,
+      endDate: true,
+      rentAmount: true,
+      tenant: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          preferredLanguage: true,
+          notifyEmail: true,
+          notifySms: true,
+        },
+      },
+      property: {
+        select: {
+          title: true,
+          managerId: true,
+        },
+      },
+    },
+  })
+
+  if (!contract) {
+    throw new Error('CONTRACT_NOT_FOUND')
+  }
+
+  if (contract.status !== 'ACTIVE') {
+    throw new Error('CONTRACT_NOT_ACTIVE')
+  }
+
+  const contractEndDay = toUtcDayStart(contract.endDate)
+  if (contractEndDay < nowDay) {
+    throw new Error('CONTRACT_EXPIRED')
+  }
+
+  const nextDueDate = resolveNextDueDate(contract.startDate, now)
+  if (nextDueDate > contractEndDay) {
+    throw new Error('CONTRACT_EXPIRED')
+  }
+
+  const dueDateKey = formatUtcDate(nextDueDate)
+  const reminderKey = `${contract.id}:${dueDateKey}:MANUAL:J-${input.daysBefore}`
+  const tenantLocale = normalizeLocale(contract.tenant.preferredLanguage)
+
+  const tenantCopy = buildTenantReminderCopy(tenantLocale, {
+    propertyTitle: contract.property.title,
+    dueDate: nextDueDate,
+    amount: contract.rentAmount,
+    daysBefore: input.daysBefore,
+    recipientName: contract.tenant.name,
+  })
+
+  const persisted = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`payment-reminder-manual:${reminderKey}`}))`
+
+    const duplicateWindowStart = new Date(Date.now() - 2 * 60 * 1000)
+    const duplicate = await tx.systemLog.findFirst({
+      where: {
+        action: 'PAYMENT_REMINDER_MANUAL_SENT',
+        targetType: 'PAYMENT_REMINDER',
+        targetId: reminderKey,
+        createdAt: { gte: duplicateWindowStart },
+      },
+      select: { id: true },
+    })
+
+    if (duplicate) {
+      return { created: false }
+    }
+
+    await tx.notification.create({
+      data: {
+        userId: contract.tenant.id,
+        type: 'PAYMENT_REMINDER',
+        title: tenantCopy.title,
+        message: tenantCopy.inAppMessage,
+        paymentId: null,
+      },
+    })
+
+    await tx.systemLog.create({
+      data: {
+        action: 'PAYMENT_REMINDER_MANUAL_SENT',
+        targetType: 'PAYMENT_REMINDER',
+        targetId: reminderKey,
+        details: `contractId=${contract.id};tenantId=${contract.tenant.id};managerId=${contract.property.managerId ?? 'none'};dueDate=${dueDateKey};daysBefore=${input.daysBefore};channels=${(input.channels ?? ['EMAIL', 'SMS', 'WHATSAPP']).join(',')};correlationId=${input.correlationId ?? 'none'};route=${input.route ?? 'none'}`,
+      },
+    })
+
+    return { created: true }
+  })
+
+  if (!persisted.created) {
+    return {
+      reminderKey,
+      dueDate: dueDateKey,
+      daysBefore: input.daysBefore,
+      inAppNotificationSent: false,
+      emailSent: 0,
+      emailSkipped: 0,
+      smsSent: 0,
+      smsSkipped: 0,
+      whatsappSent: 0,
+      whatsappSkipped: 0,
+      failures: 0,
+    }
+  }
+
+  const channels: ReminderDeliveryChannel[] =
+    input.channels && input.channels.length > 0 ? input.channels : ['EMAIL', 'SMS', 'WHATSAPP']
+  const metrics = await deliverChannels({
+    reminderKey,
+    recipient: {
+      id: contract.tenant.id,
+      name: contract.tenant.name,
+      email: contract.tenant.email,
+      phone: contract.tenant.phone,
+      preferredLanguage: contract.tenant.preferredLanguage,
+      notifyEmail: contract.tenant.notifyEmail,
+      notifySms: contract.tenant.notifySms,
+    },
+    copy: tenantCopy,
+    channels,
+    ignoreUserPreferences: true,
+    correlationId: input.correlationId,
+    route: input.route,
+  })
+
+  return {
+    reminderKey,
+    dueDate: dueDateKey,
+    daysBefore: input.daysBefore,
+    inAppNotificationSent: true,
+    emailSent: metrics.emailSent,
+    emailSkipped: metrics.emailSkipped,
+    smsSent: metrics.smsSent,
+    smsSkipped: metrics.smsSkipped,
+    whatsappSent: metrics.whatsappSent,
+    whatsappSkipped: metrics.whatsappSkipped,
+    failures: metrics.failures,
+  }
 }
 
 export async function sendDailyPaymentReminders(input?: {
@@ -347,6 +581,8 @@ export async function sendDailyPaymentReminders(input?: {
     emailSkipped: 0,
     smsSent: 0,
     smsSkipped: 0,
+    whatsappSent: 0,
+    whatsappSkipped: 0,
     failures: 0,
   }
 
@@ -591,6 +827,8 @@ export async function sendDailyPaymentReminders(input?: {
       summary.emailSkipped += tenantMetrics.emailSkipped
       summary.smsSent += tenantMetrics.smsSent
       summary.smsSkipped += tenantMetrics.smsSkipped
+      summary.whatsappSent += tenantMetrics.whatsappSent
+      summary.whatsappSkipped += tenantMetrics.whatsappSkipped
       summary.failures += tenantMetrics.failures
 
       if (candidate.manager && managerCopy && candidate.manager.id !== candidate.tenant.id) {
@@ -606,6 +844,8 @@ export async function sendDailyPaymentReminders(input?: {
         summary.emailSkipped += managerMetrics.emailSkipped
         summary.smsSent += managerMetrics.smsSent
         summary.smsSkipped += managerMetrics.smsSkipped
+        summary.whatsappSent += managerMetrics.whatsappSent
+        summary.whatsappSkipped += managerMetrics.whatsappSkipped
         summary.failures += managerMetrics.failures
       }
     } catch (error) {
