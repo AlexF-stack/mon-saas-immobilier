@@ -14,6 +14,12 @@ enum EventType {
   WITHDRAW_REQUESTED
 }
 
+enum InstallmentStatus {
+  OPEN
+  OVERDUE
+  PAID
+}
+
 model BusinessEvent {
   id        String    @id @default(cuid())
   type      EventType
@@ -176,6 +182,7 @@ model Contract {
   tenant   User   @relation(fields: [tenantId], references: [id])
 
   payments Payment[]
+  installments ContractInstallment[]
 
   @@index([workflowState])
   @@index([contractType])
@@ -196,11 +203,36 @@ model Payment {
   receiptNumber String?  @unique
   receiptIssuedAt DateTime?
   ownerNotifiedAt DateTime?
+  installmentId String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   contractId String
   contract   Contract @relation(fields: [contractId], references: [id])
+  installment ContractInstallment? @relation(fields: [installmentId], references: [id])
+
+  @@index([installmentId])
+}
+
+model ContractInstallment {
+  id            String            @id @default(cuid())
+  contractId    String
+  sequence      Int
+  dueDate       DateTime
+  baseAmount    Decimal
+  penaltyAmount Decimal           @default(0)
+  totalDue      Decimal
+  status        InstallmentStatus @default(OPEN)
+  paidAt        DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  contract      Contract          @relation(fields: [contractId], references: [id])
+  payments      Payment[]
+
+  @@unique([contractId, sequence])
+  @@index([contractId, status])
+  @@index([dueDate, status])
 }
 
 model Notification {
