@@ -16,6 +16,7 @@ import { buildPageHref, normalizeEnum, normalizePage, normalizeText } from '@/li
 import { ManualReminderButton } from '@/components/dashboard/contracts/ManualReminderButton'
 import { ContractLifecycleActions } from '@/components/dashboard/contracts/ContractLifecycleActions'
 import { ContractWorkflowTimeline } from '@/components/dashboard/contracts/ContractWorkflowTimeline'
+import { ContractInstallmentsTable } from '@/components/dashboard/contracts/ContractInstallmentsTable'
 
 const PAGE_SIZE = 10
 
@@ -92,7 +93,14 @@ export default async function ContractsPage(props: {
 
   const contracts = await prisma.contract.findMany({
     where,
-    include: { property: true, tenant: true },
+    include: {
+      property: true,
+      tenant: true,
+      installments: {
+        orderBy: [{ dueDate: 'desc' }, { sequence: 'desc' }],
+        take: 6,
+      },
+    },
     orderBy: { createdAt: 'desc' },
     take: PAGE_SIZE,
     skip: (clampedPage - 1) * PAGE_SIZE,
@@ -256,6 +264,18 @@ export default async function ContractsPage(props: {
                     tenantSignedAt={contract.tenantSignedAt ? contract.tenantSignedAt.toISOString() : null}
                     paymentInitiatedAt={contract.paymentInitiatedAt ? contract.paymentInitiatedAt.toISOString() : null}
                     activatedAt={contract.activatedAt ? contract.activatedAt.toISOString() : null}
+                  />
+                  <ContractInstallmentsTable
+                    installments={contract.installments.map((item) => ({
+                      id: item.id,
+                      sequence: item.sequence,
+                      dueDate: item.dueDate.toISOString(),
+                      baseAmount: Number(item.baseAmount),
+                      penaltyAmount: Number(item.penaltyAmount),
+                      totalDue: Number(item.totalDue),
+                      status: item.status as 'OPEN' | 'OVERDUE' | 'PAID',
+                      paidAt: item.paidAt ? item.paidAt.toISOString() : null,
+                    }))}
                   />
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <Button asChild variant="outline" size="sm" className="sm:flex-1">

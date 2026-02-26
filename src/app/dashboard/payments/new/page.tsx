@@ -1,12 +1,20 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+
+type InstallmentOption = {
+  id: string
+  sequence: number
+  dueDate: string
+  status: string
+  totalDue: number
+}
 
 function toErrorMessage(status: number, errorPayload: unknown, fallback: string): string {
   if (typeof errorPayload === 'string' && errorPayload.trim()) {
@@ -35,9 +43,83 @@ function PaymentForm() {
   const searchParams = useSearchParams()
   const contractIdParam = searchParams.get('contractId')
   const [loading, setLoading] = useState(false)
+  const [loadingInstallments, setLoadingInstallments] = useState(false)
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
   const [provider, setProvider] = useState('MTN')
+  const [contractId, setContractId] = useState(contractIdParam || '')
+  const [contractType, setContractType] = useState<'RENTAL' | 'SALE' | null>(null)
+  const [installments, setInstallments] = useState<InstallmentOption[]>([])
+  const [installmentId, setInstallmentId] = useState('')
+  const [amount, setAmount] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadInstallments() {
+      if (!contractId.trim()) {
+        setContractType(null)
+        setInstallments([])
+        setInstallmentId('')
+        return
+      }
+
+      setLoadingInstallments(true)
+      try {
+        const res = await fetch(`/api/contracts/${contractId.trim()}/installments`, {
+          credentials: 'include',
+        })
+        if (!res.ok) {
+          if (!cancelled) {
+            setContractType(null)
+            setInstallments([])
+            setInstallmentId('')
+          }
+          return
+        }
+
+        const payload = await res.json().catch(() => ({}))
+        if (cancelled) return
+
+        const nextType = payload?.contractType === 'SALE' ? 'SALE' : 'RENTAL'
+        const nextInstallments = Array.isArray(payload?.installments)
+          ? (payload.installments as InstallmentOption[])
+          : []
+
+        setContractType(nextType)
+        setInstallments(nextInstallments)
+        if (nextType === 'RENTAL' && nextInstallments.length > 0) {
+          setInstallmentId(nextInstallments[0].id)
+          setAmount(String(Math.round(nextInstallments[0].totalDue)))
+        } else if (nextType === 'RENTAL') {
+          setInstallmentId('')
+          setAmount('')
+        }
+      } catch {
+        if (!cancelled) {
+          setContractType(null)
+          setInstallments([])
+          setInstallmentId('')
+        }
+      } finally {
+        if (!cancelled) setLoadingInstallments(false)
+      }
+    }
+
+    void loadInstallments()
+
+    return () => {
+      cancelled = true
+    }
+  }, [contractId])
+
+  useEffect(() => {
+    if (contractType !== 'RENTAL') return
+    const selected = installments.find((item) => item.id === installmentId)
+    if (selected) {
+      setAmount(String(Math.round(selected.totalDue)))
+    }
+  }, [contractType, installments, installmentId])
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -48,6 +130,7 @@ function PaymentForm() {
     const formData = new FormData(event.currentTarget)
     const data = {
       contractId: formData.get('contractId'),
+      installmentId: contractType === 'RENTAL' ? formData.get('installmentId') : undefined,
       amount: formData.get('amount'),
       phoneNumber: formData.get('phoneNumber'),
       provider,
@@ -105,12 +188,57 @@ function PaymentForm() {
 
           <div className="space-y-2">
             <Label htmlFor="contractId">ID contrat</Label>
-            <Input id="contractId" name="contractId" defaultValue={contractIdParam || ''} required />
+            <Input
+              id="contractId"
+              name="contractId"
+              value={contractId}
+              onChange={(event) => setContractId(event.target.value)}
+              required
+            />
           </div>
+
+          {contractType === 'RENTAL' ? (
+            <div className="space-y-2">
+              <Label htmlFor="installmentId">Echeance a payer</Label>
+              <Select
+                name="installmentId"
+                value={installmentId}
+                onValueChange={setInstallmentId}
+                disabled={loadingInstallments}
+              >
+                <SelectTrigger id="installmentId">
+                  <SelectValue placeholder={loadingInstallments ? 'Chargement...' : 'Choisir une echeance'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {installments.length > 0 ? (
+                    installments.map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        #{item.sequence} - {new Date(item.dueDate).toLocaleDateString('fr-FR')} -{' '}
+                        {Math.round(item.totalDue).toLocaleString('fr-FR')} FCFA ({item.status})
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="__none__" disabled>
+                      Aucune echeance ouverte
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
 
           <div className="space-y-2">
             <Label htmlFor="amount">Montant (FCFA)</Label>
-            <Input id="amount" name="amount" type="number" min="1" required />
+            <Input
+              id="amount"
+              name="amount"
+              type="number"
+              min="1"
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+              readOnly={contractType === 'RENTAL'}
+              required
+            />
           </div>
 
           <div className="space-y-2">
