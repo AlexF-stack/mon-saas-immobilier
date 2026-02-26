@@ -127,11 +127,16 @@ export async function getLandingPricingPlans(
 ): Promise<LandingPricingPlan[]> {
     const normalizedLocale = normalizeLocale(locale)
     const configKeys = LANDING_PRICING_PLAN_SEEDS.map((plan) => plan.configKey)
-
-    const configRows = await prisma.systemConfig.findMany({
-        where: { key: { in: configKeys } },
-        select: { key: true, value: true },
-    })
+    let configRows: Array<{ key: string; value: string }> = []
+    try {
+        configRows = await prisma.systemConfig.findMany({
+            where: { key: { in: configKeys } },
+            select: { key: true, value: true },
+        })
+    } catch {
+        // Keep default pricing seeds when config table/query is unavailable.
+        configRows = []
+    }
 
     const configMap = new Map(configRows.map((row) => [row.key, row.value]))
 

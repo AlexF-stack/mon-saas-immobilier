@@ -57,41 +57,51 @@ export default async function LandingPage(props: {
     const pricingSectionHref = `/${locale}#${pricingSectionId}`
 
     const [featuredProperties, pricingPlans] = await Promise.all([
-        prisma.property.findMany({
-            where: {
-                isPublished: true,
-                status: 'AVAILABLE',
-            },
-            orderBy: { createdAt: 'desc' },
-            take: 6,
-            select: {
-                id: true,
-                title: true,
-                city: true,
-                address: true,
-                price: true,
-                offerType: true,
-                propertyType: true,
-                images: {
-                    select: { id: true, url: true },
-                    take: 1,
-                    orderBy: { id: 'asc' },
-                },
-            },
-        }),
+        (async () => {
+            try {
+                return await prisma.property.findMany({
+                    where: {
+                        isPublished: true,
+                        status: 'AVAILABLE',
+                    },
+                    orderBy: { createdAt: 'desc' },
+                    take: 6,
+                    select: {
+                        id: true,
+                        title: true,
+                        city: true,
+                        address: true,
+                        price: true,
+                        offerType: true,
+                        propertyType: true,
+                        images: {
+                            select: { id: true, url: true },
+                            take: 1,
+                            orderBy: { id: 'asc' },
+                        },
+                    },
+                })
+            } catch {
+                return []
+            }
+        })(),
         getLandingPricingPlans(locale),
     ])
 
     if (featuredProperties.length > 0) {
-        await prisma.$transaction(
-            featuredProperties.map((property) =>
-                prisma.property.update({
-                    where: { id: property.id },
-                    data: { impressionsCount: { increment: 1 } },
-                    select: { id: true },
-                })
+        try {
+            await prisma.$transaction(
+                featuredProperties.map((property) =>
+                    prisma.property.update({
+                        where: { id: property.id },
+                        data: { impressionsCount: { increment: 1 } },
+                        select: { id: true },
+                    })
+                )
             )
-        )
+        } catch {
+            // Non-blocking: landing remains available even if impression tracking fails.
+        }
     }
 
     const marketplaceTitle = locale === 'fr' ? 'Annonces recentes' : 'Recent listings'
