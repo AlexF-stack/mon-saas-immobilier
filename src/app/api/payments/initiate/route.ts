@@ -136,6 +136,11 @@ export async function POST(request: Request) {
                 id: true,
                 tenantId: true,
                 status: true,
+                contractType: true,
+                workflowState: true,
+                submittedAt: true,
+                ownerSignedAt: true,
+                tenantSignedAt: true,
                 rentAmount: true,
                 property: {
                     select: {
@@ -173,6 +178,52 @@ export async function POST(request: Request) {
                 { error: 'Contract is not active for payment.' },
                 { status: 409 }
             )
+        }
+
+        const readyForPayment =
+            Boolean(contract.submittedAt) &&
+            Boolean(contract.ownerSignedAt) &&
+            Boolean(contract.tenantSignedAt) &&
+            (contract.workflowState === 'SIGNED_BOTH' ||
+                contract.workflowState === 'PAYMENT_INITIATED' ||
+                contract.workflowState === 'ACTIVE')
+
+        if (!readyForPayment) {
+            return NextResponse.json(
+                { error: 'Contract must be submitted and signed by both parties before payment.' },
+                { status: 409 }
+            )
+        }
+
+        if (contract.contractType === 'RENTAL') {
+            const [completedRentalPayments, pendingRentalPayments] = await Promise.all([
+                prisma.payment.count({
+                    where: {
+                        contractId: contract.id,
+                        status: 'COMPLETED',
+                    },
+                }),
+                prisma.payment.count({
+                    where: {
+                        contractId: contract.id,
+                        status: 'PENDING',
+                    },
+                }),
+            ])
+
+            if (completedRentalPayments > 0) {
+                return NextResponse.json(
+                    { error: 'Rental contract payment can be initiated only once.' },
+                    { status: 409 }
+                )
+            }
+
+            if (pendingRentalPayments > 0) {
+                return NextResponse.json(
+                    { error: 'A payment is already pending for this rental contract.' },
+                    { status: 409 }
+                )
+            }
         }
 
         if (!amountsMatch(contract.rentAmount, payload.amount)) {
@@ -213,19 +264,31 @@ export async function POST(request: Request) {
 
         let payment
         try {
-            payment = await prisma.payment.create({
-                data: {
-                    amount: payload.amount,
-                    method: payload.provider,
-                    transactionId: paymentResponse.transactionId,
-                    idempotencyKey,
-                    status: 'PENDING',
-                    contractId: payload.contractId,
-                    tenantId: contract.tenantId,
-                    propertyId: contract.property.id,
-                    initiatedById: user.id,
-                    initiatedByRole: user.role,
-                },
+            payment = await prisma.$transaction(async (tx) => {
+                const created = await tx.payment.create({
+                    data: {
+                        amount: payload.amount,
+                        method: payload.provider,
+                        transactionId: paymentResponse.transactionId,
+                        idempotencyKey,
+                        status: 'PENDING',
+                        contractId: payload.contractId,
+                        tenantId: contract.tenantId,
+                        propertyId: contract.property.id,
+                        initiatedById: user.id,
+                        initiatedByRole: user.role,
+                    },
+                })
+
+                await tx.contract.update({
+                    where: { id: contract.id },
+                    data: {
+                        workflowState: 'PAYMENT_INITIATED',
+                        paymentInitiatedAt: new Date(),
+                    },
+                })
+
+                return created
             })
         } catch (error) {
             if (

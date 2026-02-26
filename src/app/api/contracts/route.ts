@@ -105,10 +105,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Property is in maintenance state' }, { status: 409 })
         }
 
-        if (property.offerType !== 'RENT') {
-            return NextResponse.json({ error: 'Contract creation is only allowed for rental properties' }, { status: 409 })
-        }
-
         if (existingActiveContract) {
             return NextResponse.json({ error: 'Property already has an active contract' }, { status: 409 })
         }
@@ -126,6 +122,8 @@ export async function POST(request: Request) {
                     endDate: payload.endDate,
                     rentAmount: payload.rentAmount,
                     depositAmount: payload.depositAmount,
+                    contractType: property.offerType === 'SALE' ? 'SALE' : 'RENTAL',
+                    workflowState: 'DRAFT',
                     status: 'ACTIVE',
                 },
             })
@@ -136,7 +134,10 @@ export async function POST(request: Request) {
 
             await tx.property.update({
                 where: { id: payload.propertyId },
-                data: { status: 'RENTED', isPublished: false, publishedAt: null },
+                data:
+                    property.offerType === 'RENT'
+                        ? { status: 'RENTED', isPublished: false, publishedAt: null }
+                        : { isPublished: false, publishedAt: null },
             })
 
             return createdContract

@@ -172,6 +172,16 @@ export async function POST(request: Request) {
                 },
             })
 
+            if (updatedPayment.status === 'COMPLETED') {
+                await tx.contract.update({
+                    where: { id: payment.contractId },
+                    data: {
+                        workflowState: 'ACTIVE',
+                        activatedAt: new Date(),
+                    },
+                })
+            }
+
             await createFinancialAuditLog(tx, {
                 type: 'PAYMENT',
                 entityId: payment.id,

@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label'
 import { ServerPager } from '@/components/dashboard/ServerPager'
 import { buildPageHref, normalizeEnum, normalizePage, normalizeText } from '@/lib/dashboard-list-query'
 import { ManualReminderButton } from '@/components/dashboard/contracts/ManualReminderButton'
+import { ContractLifecycleActions } from '@/components/dashboard/contracts/ContractLifecycleActions'
 
 const PAGE_SIZE = 10
 
@@ -33,6 +34,15 @@ function statusVariant(state: string): 'success' | 'warning' | 'outline' {
   if (state === 'ACTIF') return 'success'
   if (state === 'EXPIRE') return 'warning'
   return 'outline'
+}
+
+function workflowBadgeLabel(state: string): string {
+  if (state === 'DRAFT') return 'Brouillon'
+  if (state === 'SUBMITTED') return 'Soumis'
+  if (state === 'SIGNED_BOTH') return 'Signe'
+  if (state === 'PAYMENT_INITIATED') return 'Paiement initie'
+  if (state === 'ACTIVE') return 'Actif'
+  return state
 }
 
 export default async function ContractsPage(props: {
@@ -185,12 +195,18 @@ export default async function ContractsPage(props: {
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1">
-                      <CardTitle className="line-clamp-1 text-base">Bail - {contract.property.title}</CardTitle>
+                      <CardTitle className="line-clamp-1 text-base">
+                        {contract.contractType === 'SALE' ? 'Contrat de vente' : 'Contrat de location'} -{' '}
+                        {contract.property.title}
+                      </CardTitle>
                       <p className="line-clamp-1 text-sm text-slate-500 dark:text-slate-400">
                         Locataire: {contract.tenant.name || contract.tenant.email}
                       </p>
                     </div>
-                    <Badge variant={statusVariant(contract.viewState)}>{contract.viewState}</Badge>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={statusVariant(contract.viewState)}>{contract.viewState}</Badge>
+                      <Badge variant="outline">{workflowBadgeLabel(contract.workflowState)}</Badge>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -205,11 +221,32 @@ export default async function ContractsPage(props: {
                     </div>
                   </div>
                   <div className="rounded-xl border border-border bg-surface/80 px-3 py-2 dark:border-slate-800 dark:bg-slate-900/70">
-                    <p className="text-xs uppercase tracking-wide text-secondary dark:text-slate-400">Loyer mensuel</p>
+                    <p className="text-xs uppercase tracking-wide text-secondary dark:text-slate-400">
+                      {contract.contractType === 'SALE' ? 'Montant contractuel' : 'Loyer mensuel'}
+                    </p>
                     <p className="text-lg font-semibold text-primary tabular-nums dark:text-slate-100">
                       {contract.rentAmount.toLocaleString('fr-FR')} FCFA
                     </p>
                   </div>
+                  <ContractLifecycleActions
+                    contractId={contract.id}
+                    contractType={contract.contractType}
+                    workflowState={contract.workflowState}
+                    documentSource={contract.documentSource}
+                    fileUrl={contract.fileUrl}
+                    contractText={contract.contractText}
+                    receiptFileUrl={contract.receiptFileUrl}
+                    receiptText={contract.receiptText}
+                    submittedAt={contract.submittedAt ? contract.submittedAt.toISOString() : null}
+                    ownerSignedAt={contract.ownerSignedAt ? contract.ownerSignedAt.toISOString() : null}
+                    tenantSignedAt={contract.tenantSignedAt ? contract.tenantSignedAt.toISOString() : null}
+                    canManage={user.role === 'ADMIN' || (user.role === 'MANAGER' && contract.property.managerId === user.id)}
+                    canSign={
+                      (user.role === 'ADMIN' || (user.role === 'MANAGER' && contract.property.managerId === user.id))
+                        ? !contract.ownerSignedAt
+                        : user.role === 'TENANT' && contract.tenantId === user.id && !contract.tenantSignedAt
+                    }
+                  />
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <Button asChild variant="outline" size="sm" className="sm:flex-1">
                       <a
@@ -221,13 +258,16 @@ export default async function ContractsPage(props: {
                         Telecharger PDF
                       </a>
                     </Button>
-                    {canInitiatePayment && (
+                    {canInitiatePayment &&
+                      (contract.workflowState === 'SIGNED_BOTH' ||
+                        contract.workflowState === 'PAYMENT_INITIATED' ||
+                        contract.workflowState === 'ACTIVE') && (
                       <Button asChild size="sm" className="sm:flex-1">
                         <Link href={`/${locale}/dashboard/payments/new?contractId=${contract.id}`}>
                           Initier paiement
                         </Link>
                       </Button>
-                    )}
+                      )}
                   </div>
                   {canSendManualReminder ? (
                     <ManualReminderButton contractId={contract.id} />

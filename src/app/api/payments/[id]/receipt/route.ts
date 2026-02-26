@@ -62,6 +62,10 @@ export async function GET(
             )
         }
 
+        if (payment.contract.receiptFileUrl) {
+            return NextResponse.redirect(payment.contract.receiptFileUrl, 302)
+        }
+
         let receiptNumber = payment.receiptNumber
 
         if (!receiptNumber) {
@@ -92,6 +96,7 @@ export async function GET(
             amount: payment.amount,
             method: payment.method,
             transactionId: payment.transactionId ?? payment.id,
+            receiptText: payment.contract.receiptText,
         })
 
         await createSystemLog({

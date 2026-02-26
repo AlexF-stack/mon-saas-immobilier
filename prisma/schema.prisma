@@ -153,8 +153,19 @@ model Contract {
   endDate       DateTime
   rentAmount    Float
   depositAmount Float
+  contractType  String   @default("RENTAL") // RENTAL, SALE
+  workflowState String   @default("DRAFT") // DRAFT, SUBMITTED, SIGNED_BOTH, PAYMENT_INITIATED, ACTIVE
+  documentSource String? // UPLOAD, DRAFT
   status        String   @default("ACTIVE") // ACTIVE, TERMINATED, EXPIRED
   fileUrl       String?
+  contractText  String?
+  receiptFileUrl String?
+  receiptText   String?
+  submittedAt   DateTime?
+  ownerSignedAt DateTime?
+  tenantSignedAt DateTime?
+  paymentInitiatedAt DateTime?
+  activatedAt   DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -165,6 +176,9 @@ model Contract {
   tenant   User   @relation(fields: [tenantId], references: [id])
 
   payments Payment[]
+
+  @@index([workflowState])
+  @@index([contractType])
 }
 
 model Payment {

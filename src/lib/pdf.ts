@@ -1,145 +1,148 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 
 interface ContractData {
-    ownerName: string
-    tenantName: string
-    propertyAddress: string
-    startDate: Date
-    endDate: Date
-    rentAmount: number
-    depositAmount: number
+  ownerName: string
+  tenantName: string
+  propertyAddress: string
+  startDate: Date
+  endDate: Date
+  rentAmount: number
+  depositAmount: number
+  contractType?: 'RENTAL' | 'SALE'
+  contractText?: string | null
+  ownerSignedAt?: Date | null
+  tenantSignedAt?: Date | null
 }
 
 interface PaymentReceiptData {
-    receiptNumber: string
-    tenantName: string
-    ownerName: string
-    propertyTitle: string
-    propertyAddress: string
-    paymentDate: Date
-    amount: number
-    method: string
-    transactionId: string
+  receiptNumber: string
+  tenantName: string
+  ownerName: string
+  propertyTitle: string
+  propertyAddress: string
+  paymentDate: Date
+  amount: number
+  method: string
+  transactionId: string
+  receiptText?: string | null
+}
+
+function drawLines(page: ReturnType<PDFDocument['addPage']>, lines: string[], font: Awaited<ReturnType<PDFDocument['embedFont']>>, startY: number, margin = 50, fontSize = 12) {
+  let y = startY
+  for (const line of lines) {
+    page.drawText(line, {
+      x: margin,
+      y,
+      size: fontSize,
+      font,
+      color: rgb(0, 0, 0),
+    })
+    y -= 20
+  }
 }
 
 export async function generateContractPdf(data: ContractData) {
-    const pdfDoc = await PDFDocument.create()
-    const page = pdfDoc.addPage()
-    const { height } = page.getSize()
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
+  const pdfDoc = await PDFDocument.create()
+  const page = pdfDoc.addPage()
+  const { height } = page.getSize()
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
 
-    const fontSize = 12
-    const titleSize = 24
-    const margin = 50
+  const margin = 50
+  const titleSize = 20
+  const isSale = data.contractType === 'SALE'
+  const title = isSale ? 'CONTRAT DE VENTE IMMOBILIERE' : 'CONTRAT DE LOCATION'
+  const counterpartLabel = isSale ? "L'ACHETEUR" : 'LE LOCATAIRE'
+  const amountLabel = isSale ? 'Prix de vente' : 'Loyer mensuel'
+  const depositLabel = isSale ? 'Acompte initial' : 'Caution'
 
-    page.drawText('CONTRAT DE BAIL A USAGE D\'HABITATION', {
-        x: margin,
-        y: height - margin,
-        size: titleSize,
-        font,
-        color: rgb(0, 0, 0), // Black
-    })
+  page.drawText(title, {
+    x: margin,
+    y: height - margin,
+    size: titleSize,
+    font,
+    color: rgb(0, 0, 0),
+  })
 
-    const formatedStartDate = data.startDate.toLocaleDateString('fr-FR')
-    const formatedEndDate = data.endDate.toLocaleDateString('fr-FR')
+  const lines: string[] = [
+    '',
+    'ENTRE LES SOUSSIGNES :',
+    '',
+    `LE PROPRIETAIRE / GESTIONNAIRE : ${data.ownerName}`,
+    `${counterpartLabel} : ${data.tenantName}`,
+    '',
+    "IL A ETE CONVENU CE QUI SUIT :",
+    '',
+    `Objet: ${isSale ? 'Vente' : 'Location'} du bien situe a ${data.propertyAddress}`,
+    `Periode contractuelle: du ${data.startDate.toLocaleDateString('fr-FR')} au ${data.endDate.toLocaleDateString('fr-FR')}`,
+    '',
+    `${amountLabel}: ${data.rentAmount.toLocaleString('fr-FR')} FCFA`,
+    `${depositLabel}: ${data.depositAmount.toLocaleString('fr-FR')} FCFA`,
+    '',
+  ]
 
-    const textLines = [
-        '',
-        'ENTRE LES SOUSSIGNÉS :',
-        '',
-        `LE BAILLEUR (Propriétaire/Gérant) : ${data.ownerName}`,
-        `LE LOCATAIRE : ${data.tenantName}`,
-        '',
-        'IL A ÉTÉ CONVENU ET ARRÊTÉ CE QUI SUIT :',
-        '',
-        `OBJET DU CONTRAT : Location d'un bien immobilier situé à :`,
-        `${data.propertyAddress}`,
-        '',
-        `DURÉE DU BAIL :`,
-        `Le présent bail est consenti pour une durée déterminée allant du ${formatedStartDate}`,
-        `au ${formatedEndDate}.`,
-        '',
-        `CONDITIONS FINANCIÈRES :`,
-        `Loyer mensuel : ${data.rentAmount.toLocaleString('fr-FR')} FCFA`,
-        `Caution (Dépôt de garantie) : ${data.depositAmount.toLocaleString('fr-FR')} FCFA`,
-        '',
-        `Fait à Cotonou, le ${new Date().toLocaleDateString('fr-FR')}`,
-        '',
-        'SIGNATURES :',
-        '',
-        '',
-        'Le Bailleur                                          Le Locataire'
-    ]
+  if (data.contractText && data.contractText.trim()) {
+    lines.push('Clauses redigees dans l application :')
+    lines.push(data.contractText.trim())
+    lines.push('')
+  }
 
-    let yPosition = height - margin - 50
+  lines.push(`Fait le ${new Date().toLocaleDateString('fr-FR')}`)
+  lines.push('')
+  lines.push('SIGNATURES :')
+  lines.push(data.ownerSignedAt ? `Signature proprietaire: ${data.ownerSignedAt.toLocaleDateString('fr-FR')}` : 'Signature proprietaire: en attente')
+  lines.push(
+    data.tenantSignedAt
+      ? `Signature ${isSale ? 'acheteur' : 'locataire'}: ${data.tenantSignedAt.toLocaleDateString('fr-FR')}`
+      : `Signature ${isSale ? 'acheteur' : 'locataire'}: en attente`
+  )
 
-    for (const line of textLines) {
-        if (yPosition < 50) {
-            // Add new page if out of space (not handled here simplified)
-        }
-        page.drawText(line, {
-            x: margin,
-            y: yPosition,
-            size: fontSize,
-            font,
-            lineHeight: 15,
-        })
-        yPosition -= 20
-    }
-
-    const pdfBytes = await pdfDoc.save()
-    return pdfBytes
+  drawLines(page, lines, font, height - margin - 40)
+  return await pdfDoc.save()
 }
 
 export async function generatePaymentReceiptPdf(data: PaymentReceiptData) {
-    const pdfDoc = await PDFDocument.create()
-    const page = pdfDoc.addPage()
-    const { height } = page.getSize()
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
+  const pdfDoc = await PDFDocument.create()
+  const page = pdfDoc.addPage()
+  const { height } = page.getSize()
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
 
-    const titleSize = 22
-    const fontSize = 12
-    const margin = 50
+  const margin = 50
+  const titleSize = 20
 
-    page.drawText('QUITTANCE DE LOYER', {
-        x: margin,
-        y: height - margin,
-        size: titleSize,
-        font,
-        color: rgb(0, 0, 0),
-    })
+  page.drawText('QUITTANCE / RECU DE PAIEMENT', {
+    x: margin,
+    y: height - margin,
+    size: titleSize,
+    font,
+    color: rgb(0, 0, 0),
+  })
 
-    const lines = [
-        '',
-        `Reference: ${data.receiptNumber}`,
-        `Date: ${data.paymentDate.toLocaleDateString('fr-FR')}`,
-        '',
-        `Locataire: ${data.tenantName}`,
-        `Proprietaire/Gestionnaire: ${data.ownerName}`,
-        '',
-        `Bien: ${data.propertyTitle}`,
-        `Adresse: ${data.propertyAddress}`,
-        '',
-        `Montant verse: ${data.amount.toLocaleString('fr-FR')} FCFA`,
-        `Methode: ${data.method}`,
-        `Transaction: ${data.transactionId}`,
-        '',
-        'Le present document tient lieu de quittance de paiement.',
-        '',
-        `Emission: ${new Date().toLocaleDateString('fr-FR')}`,
-    ]
+  const lines: string[] = [
+    '',
+    `Reference: ${data.receiptNumber}`,
+    `Date paiement: ${data.paymentDate.toLocaleDateString('fr-FR')}`,
+    '',
+    `Locataire / Acheteur: ${data.tenantName}`,
+    `Proprietaire: ${data.ownerName}`,
+    '',
+    `Bien: ${data.propertyTitle}`,
+    `Adresse: ${data.propertyAddress}`,
+    '',
+    `Montant: ${data.amount.toLocaleString('fr-FR')} FCFA`,
+    `Methode: ${data.method}`,
+    `Transaction: ${data.transactionId}`,
+    '',
+  ]
 
-    let y = height - margin - 45
-    for (const line of lines) {
-        page.drawText(line, {
-            x: margin,
-            y,
-            size: fontSize,
-            font,
-            color: rgb(0, 0, 0),
-        })
-        y -= 20
-    }
+  if (data.receiptText && data.receiptText.trim()) {
+    lines.push('Mentions personnalisees :')
+    lines.push(data.receiptText.trim())
+    lines.push('')
+  }
 
-    return await pdfDoc.save()
+  lines.push("Ce document tient lieu de quittance de paiement.")
+  lines.push(`Emis le ${new Date().toLocaleDateString('fr-FR')}`)
+
+  drawLines(page, lines, font, height - margin - 40)
+  return await pdfDoc.save()
 }

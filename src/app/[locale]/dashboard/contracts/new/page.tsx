@@ -24,7 +24,7 @@ export default async function NewContractPage(props: {
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Nouveau contrat</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          Generez un bail lie a un bien disponible et a un locataire.
+          Generez un contrat de location ou de vente lie a un bien disponible.
         </p>
       </div>
       <NewContractForm locale={locale} />

@@ -64,7 +64,7 @@ export function NewContractForm({ locale, dashboardPathPrefix }: NewContractForm
 
       try {
         const [propertiesRes, tenantsRes] = await Promise.all([
-          fetch('/api/properties?status=AVAILABLE&offerType=RENT', { credentials: 'include' }),
+          fetch('/api/properties?status=AVAILABLE', { credentials: 'include' }),
           fetch('/api/tenants', { credentials: 'include' }),
         ])
 
@@ -86,10 +86,8 @@ export function NewContractForm({ locale, dashboardPathPrefix }: NewContractForm
 
         if (!isCancelled) {
           const rawProperties = Array.isArray(propertiesPayload) ? propertiesPayload as PropertyOption[] : []
-          const rentableProperties = rawProperties.filter(
-            (property) => property.status === 'AVAILABLE' && (property.offerType ?? 'RENT') === 'RENT'
-          )
-          setProperties(rentableProperties)
+          const availableProperties = rawProperties.filter((property) => property.status === 'AVAILABLE')
+          setProperties(availableProperties)
           setTenants(Array.isArray(tenantsPayload) ? tenantsPayload : [])
         }
       } catch {
@@ -154,12 +152,17 @@ export function NewContractForm({ locale, dashboardPathPrefix }: NewContractForm
     }
   }
 
+  const selectedProperty = properties.find((property) => property.id === propertyId)
+  const amountLabel = selectedProperty?.offerType === 'SALE' ? 'Montant de vente' : 'Montant contractuel'
+  const depositLabel = selectedProperty?.offerType === 'SALE' ? 'Acompte initial' : 'Caution'
+  const emptyPropertyLabel = 'Aucun bien disponible'
+
   return (
     <Card>
       <form onSubmit={handleSubmit}>
         <CardHeader>
-          <CardTitle>Nouveau bail</CardTitle>
-          <CardDescription>Associez un bien disponible a un locataire.</CardDescription>
+          <CardTitle>Nouveau contrat</CardTitle>
+          <CardDescription>Associez un bien de location ou de vente a un locataire/acheteur.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           {error && (
@@ -190,12 +193,12 @@ export function NewContractForm({ locale, dashboardPathPrefix }: NewContractForm
                   {properties.length > 0 ? (
                     properties.map((property) => (
                       <SelectItem key={property.id} value={property.id}>
-                        {property.title}
+                        {property.title} ({property.offerType === 'SALE' ? 'Vente' : 'Location'})
                       </SelectItem>
                     ))
                   ) : (
                     <SelectItem value="__none__" disabled>
-                      Aucun bien de location disponible
+                      {emptyPropertyLabel}
                     </SelectItem>
                   )}
                 </SelectContent>
@@ -242,11 +245,11 @@ export function NewContractForm({ locale, dashboardPathPrefix }: NewContractForm
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="rentAmount">Loyer mensuel</Label>
+              <Label htmlFor="rentAmount">{amountLabel}</Label>
               <Input id="rentAmount" name="rentAmount" type="number" min="1" required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="depositAmount">Caution</Label>
+              <Label htmlFor="depositAmount">{depositLabel}</Label>
               <Input id="depositAmount" name="depositAmount" type="number" min="0" required />
             </div>
           </div>
