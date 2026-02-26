@@ -15,6 +15,7 @@ import { ServerPager } from '@/components/dashboard/ServerPager'
 import { buildPageHref, normalizeEnum, normalizePage, normalizeText } from '@/lib/dashboard-list-query'
 import { ManualReminderButton } from '@/components/dashboard/contracts/ManualReminderButton'
 import { ContractLifecycleActions } from '@/components/dashboard/contracts/ContractLifecycleActions'
+import { ContractWorkflowTimeline } from '@/components/dashboard/contracts/ContractWorkflowTimeline'
 
 const PAGE_SIZE = 10
 
@@ -246,6 +247,15 @@ export default async function ContractsPage(props: {
                         ? !contract.ownerSignedAt
                         : user.role === 'TENANT' && contract.tenantId === user.id && !contract.tenantSignedAt
                     }
+                  />
+                  <ContractWorkflowTimeline
+                    workflowState={contract.workflowState}
+                    createdAt={contract.createdAt ? contract.createdAt.toISOString() : null}
+                    submittedAt={contract.submittedAt ? contract.submittedAt.toISOString() : null}
+                    ownerSignedAt={contract.ownerSignedAt ? contract.ownerSignedAt.toISOString() : null}
+                    tenantSignedAt={contract.tenantSignedAt ? contract.tenantSignedAt.toISOString() : null}
+                    paymentInitiatedAt={contract.paymentInitiatedAt ? contract.paymentInitiatedAt.toISOString() : null}
+                    activatedAt={contract.activatedAt ? contract.activatedAt.toISOString() : null}
                   />
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <Button asChild variant="outline" size="sm" className="sm:flex-1">
