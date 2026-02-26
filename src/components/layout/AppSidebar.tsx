@@ -80,11 +80,11 @@ export function AppSidebar({
               aria-current={isActive ? 'page' : undefined}
               className={cn(
                 'group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] font-medium transition-colors duration-150',
-                'hover:bg-surface hover:text-primary dark:hover:bg-slate-800/70 dark:hover:text-slate-100',
+                'hover:bg-amber-100/70 hover:text-amber-900 dark:hover:bg-amber-500/15 dark:hover:text-amber-100',
                 compact && 'justify-center px-2',
                 isActive
-                  ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
-                  : 'text-secondary dark:text-slate-300'
+                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100'
+                  : 'text-secondary dark:text-slate-200'
               )}
               title={compact ? item.name : undefined}
             >
@@ -92,7 +92,7 @@ export function AppSidebar({
                 aria-hidden
                 className={cn(
                   'absolute bottom-1.5 left-0 top-1.5 w-0.5 rounded-full transition-opacity',
-                  isActive ? 'bg-blue-500 opacity-100' : 'opacity-0'
+                  isActive ? 'bg-amber-500 opacity-100' : 'opacity-0'
                 )}
               />
               <Icon className="h-[18px] w-[18px] shrink-0" aria-hidden />
@@ -113,10 +113,10 @@ export function AppSidebar({
 
   function renderFooter(compact: boolean) {
     return (
-      <div className="shrink-0 border-t border-border p-3 dark:border-slate-800">
+      <div className="shrink-0 border-t border-amber-200/70 p-3 dark:border-amber-900/40">
         <div
           className={cn(
-            'mb-2 px-3 text-xs text-secondary transition-all duration-200 dark:text-slate-400',
+            'mb-2 px-3 text-xs text-secondary transition-all duration-200 dark:text-slate-300',
             compact && 'max-h-0 overflow-hidden p-0 opacity-0'
           )}
         >
@@ -132,7 +132,7 @@ export function AppSidebar({
           className={cn(
             'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150',
             compact && 'justify-center px-2',
-            'text-secondary hover:bg-surface hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800/70 dark:hover:text-slate-100',
+            'text-secondary hover:bg-amber-100/70 hover:text-amber-900 dark:text-slate-200 dark:hover:bg-amber-500/15 dark:hover:text-amber-100',
             logoutLoading && 'cursor-not-allowed opacity-70'
           )}
           title={compact ? 'Deconnexion' : undefined}
@@ -155,19 +155,19 @@ export function AppSidebar({
     <>
       <aside
         className={cn(
-          'sticky top-0 hidden h-screen shrink-0 flex-col overflow-hidden border-r border-border bg-card transition-[width] duration-200 dark:border-slate-800 dark:bg-slate-900 md:flex',
+          'sticky top-0 hidden h-screen shrink-0 flex-col overflow-hidden border-r border-amber-200/80 bg-gradient-to-b from-amber-100/95 via-amber-50/90 to-white transition-[width] duration-200 dark:border-amber-900/45 dark:bg-gradient-to-b dark:from-amber-950/70 dark:via-amber-900/45 dark:to-slate-950 md:flex',
           collapsed ? 'w-20' : 'w-60'
         )}
       >
-        <div className="flex h-16 items-center border-b border-border px-3 dark:border-slate-800">
+        <div className="flex h-16 items-center border-b border-amber-200/80 px-3 dark:border-amber-900/45">
           <Link
             href={homeHref}
             className={cn(
-              'flex min-w-0 items-center gap-2 overflow-hidden font-semibold text-primary dark:text-slate-100',
+              'flex min-w-0 items-center gap-2 overflow-hidden font-semibold text-primary dark:text-amber-50',
               collapsed && 'gap-0'
             )}
           >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-sm font-bold text-white">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-yellow-600 text-sm font-bold text-white shadow-sm">
               I
             </span>
             <span
@@ -182,7 +182,7 @@ export function AppSidebar({
           <button
             type="button"
             onClick={onToggleCollapse}
-            className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md text-secondary transition-colors hover:bg-surface hover:text-primary dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+            className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md text-secondary transition-colors hover:bg-amber-100/70 hover:text-amber-900 dark:text-slate-300 dark:hover:bg-amber-500/15 dark:hover:text-amber-100"
             aria-label={collapsed ? 'Ouvrir la sidebar' : 'Replier la sidebar'}
             title={collapsed ? 'Ouvrir' : 'Replier'}
           >
@@ -196,10 +196,10 @@ export function AppSidebar({
       <Sheet open={mobileOpen} onOpenChange={(open) => !open && onMobileClose()}>
       <SheetContent
           side="left"
-          className="data-[state=open]:duration-[var(--motion-modal)] data-[state=closed]:duration-[var(--motion-modal)] flex w-[85vw] max-w-xs flex-col border-border bg-card/95 p-0 text-primary backdrop-blur-md sm:max-w-sm dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-100"
+          className="data-[state=open]:duration-[var(--motion-modal)] data-[state=closed]:duration-[var(--motion-modal)] flex w-[85vw] max-w-xs flex-col border-amber-200/80 bg-gradient-to-b from-amber-100/95 via-amber-50/90 to-white p-0 text-primary backdrop-blur-md sm:max-w-sm dark:border-amber-900/45 dark:bg-gradient-to-b dark:from-amber-950/80 dark:via-amber-900/50 dark:to-slate-950 dark:text-slate-100"
         >
-          <SheetHeader className="border-b border-border p-4 text-left dark:border-slate-800">
-            <SheetTitle className="text-lg font-semibold text-primary dark:text-slate-100">
+          <SheetHeader className="border-b border-amber-200/80 p-4 text-left dark:border-amber-900/45">
+            <SheetTitle className="text-lg font-semibold text-primary dark:text-amber-50">
               ImmoSaaS
             </SheetTitle>
             {role && <span className="text-xs text-secondary dark:text-slate-400">Connecte : {role}</span>}
