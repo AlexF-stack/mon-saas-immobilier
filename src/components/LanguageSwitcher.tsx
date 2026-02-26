@@ -28,8 +28,8 @@ export default function LanguageSwitcher({ className }: { className?: string }) 
       <label htmlFor="lang-select" className="sr-only">
         Language
       </label>
-      <div className="inline-flex items-center gap-2">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <div className="inline-flex items-center gap-1 text-secondary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden className="shrink-0">
           <path d="M12 2a10 10 0 100 20 10 10 0 000-20z" stroke="currentColor" strokeWidth="1" />
           <path
             d="M2 12h20M12 2c2 3 2 7 2 10s0 7-2 10"
@@ -43,7 +43,7 @@ export default function LanguageSwitcher({ className }: { className?: string }) 
           value={current}
           onChange={(e) => switchTo(e.target.value)}
           aria-label="Select language"
-          className="w-[102px] rounded-md border border-border bg-transparent px-2 py-1 text-sm text-primary"
+          className="w-[96px] cursor-pointer rounded-md border-0 bg-transparent px-1 py-1 text-sm font-medium text-primary outline-none transition-colors hover:text-primary"
         >
           <option value="en">English</option>
           <option value="fr">Francais</option>
