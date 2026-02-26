@@ -213,19 +213,19 @@ export default async function LandingPage(props: {
                     <nav className="hidden items-center gap-1 md:flex">
                         <Link
                             href={`/${locale}#features`}
-                            className="rounded-full px-3 py-1.5 text-sm font-medium text-secondary transition-colors [transition-duration:var(--motion-hover)] hover:bg-surface/80 hover:text-primary"
+                            className="rounded-full px-3 py-1.5 text-sm font-semibold text-sky-950/90 transition-colors [transition-duration:var(--motion-hover)] hover:bg-white/65 hover:text-sky-950 dark:text-sky-100/90 dark:hover:bg-sky-900/45 dark:hover:text-sky-50"
                         >
                             {t('nav.features')}
                         </Link>
                         <Link
                             href={pricingSectionHref}
-                            className="rounded-full px-3 py-1.5 text-sm font-medium text-secondary transition-colors [transition-duration:var(--motion-hover)] hover:bg-surface/80 hover:text-primary"
+                            className="rounded-full px-3 py-1.5 text-sm font-semibold text-sky-950/90 transition-colors [transition-duration:var(--motion-hover)] hover:bg-white/65 hover:text-sky-950 dark:text-sky-100/90 dark:hover:bg-sky-900/45 dark:hover:text-sky-50"
                         >
                             {t('nav.pricing')}
                         </Link>
                         <Link
                             href={`/${locale}/marketplace`}
-                            className="rounded-full px-3 py-1.5 text-sm font-medium text-secondary transition-colors [transition-duration:var(--motion-hover)] hover:bg-surface/80 hover:text-primary"
+                            className="rounded-full px-3 py-1.5 text-sm font-semibold text-sky-950/90 transition-colors [transition-duration:var(--motion-hover)] hover:bg-white/65 hover:text-sky-950 dark:text-sky-100/90 dark:hover:bg-sky-900/45 dark:hover:text-sky-50"
                         >
                             Marketplace
                         </Link>
@@ -260,19 +260,19 @@ export default async function LandingPage(props: {
                                 <nav className="flex flex-col gap-1 text-sm">
                                     <Link
                                         href={`/${locale}#features`}
-                                        className="rounded-xl px-3 py-2 text-secondary transition-colors hover:bg-surface hover:text-primary"
+                                        className="rounded-xl px-3 py-2 font-medium text-slate-800 transition-colors hover:bg-sky-100/70 hover:text-sky-900 dark:text-slate-100 dark:hover:bg-sky-900/40 dark:hover:text-sky-50"
                                     >
                                         {t('nav.features')}
                                     </Link>
                                     <Link
                                         href={pricingSectionHref}
-                                        className="rounded-xl px-3 py-2 text-secondary transition-colors hover:bg-surface hover:text-primary"
+                                        className="rounded-xl px-3 py-2 font-medium text-slate-800 transition-colors hover:bg-sky-100/70 hover:text-sky-900 dark:text-slate-100 dark:hover:bg-sky-900/40 dark:hover:text-sky-50"
                                     >
                                         {t('nav.pricing')}
                                     </Link>
                                     <Link
                                         href={`/${locale}/marketplace`}
-                                        className="rounded-xl px-3 py-2 text-secondary transition-colors hover:bg-surface hover:text-primary"
+                                        className="rounded-xl px-3 py-2 font-medium text-slate-800 transition-colors hover:bg-sky-100/70 hover:text-sky-900 dark:text-slate-100 dark:hover:bg-sky-900/40 dark:hover:text-sky-50"
                                     >
                                         Marketplace
                                     </Link>
