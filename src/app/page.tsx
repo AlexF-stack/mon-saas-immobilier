@@ -1,5 +1,6 @@
-// Root page - middleware handles redirect to locale-prefixed route
-export default function Page() {
-  return null;
-}
+import { redirect } from 'next/navigation'
 
+// Fallback redirect in case middleware/proxy is bypassed.
+export default function Page() {
+  redirect('/en')
+}
