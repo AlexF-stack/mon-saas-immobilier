@@ -107,6 +107,7 @@ model Property {
   city        String?
   address     String
   price       Float
+  offerType   String   @default("RENT") // RENT, SALE
   propertyType String  @default("APARTMENT") // APARTMENT, HOUSE, STUDIO, COMMERCIAL
   status      String   @default("AVAILABLE") // AVAILABLE, RENTED, MAINTENANCE
   isPublished Boolean  @default(false)
@@ -128,10 +129,12 @@ model Property {
 
   @@index([isPublished])
   @@index([isPublished, status])
+  @@index([isPublished, status, offerType])
   @@index([isPremium])
   @@index([viewsCount])
   @@index([inquiriesCount])
   @@index([status])
+  @@index([offerType])
   @@index([propertyType])
   @@index([city])
   @@index([address])

@@ -6,6 +6,7 @@ import { MapPin } from 'lucide-react'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { getOfferTypeLabel } from '@/lib/property-offer'
 
 type MarketplacePropertyCardProps = {
     locale: string
@@ -16,6 +17,7 @@ type MarketplacePropertyCardProps = {
         address: string
         description: string | null
         price: number
+        offerType: string
         status: string
         propertyType: string
         isPremium?: boolean
@@ -114,7 +116,10 @@ export function MarketplacePropertyCard({ locale, property }: MarketplacePropert
                     <p className="text-2xl font-semibold tracking-tight text-primary tabular-nums">
                         {property.price.toLocaleString('fr-FR')} FCFA
                     </p>
-                    <Badge variant="outline">{propertyTypeLabel(property.propertyType)}</Badge>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline">{getOfferTypeLabel(property.offerType, locale === 'en' ? 'en' : 'fr')}</Badge>
+                        <Badge variant="outline">{propertyTypeLabel(property.propertyType)}</Badge>
+                    </div>
                     <p className="line-clamp-2 text-sm text-secondary">
                         {property.description || 'Aucune description disponible.'}
                     </p>

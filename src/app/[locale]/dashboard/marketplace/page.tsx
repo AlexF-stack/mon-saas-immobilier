@@ -34,6 +34,7 @@ export default async function DashboardMarketplacePage(props: {
             city: true,
             address: true,
             price: true,
+            offerType: true,
             status: true,
             propertyType: true,
             isPublished: true,

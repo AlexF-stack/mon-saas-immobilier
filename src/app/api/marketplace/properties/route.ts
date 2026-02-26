@@ -9,6 +9,7 @@ export const dynamic = 'force-dynamic'
 
 const VALID_STATUSES = new Set(['AVAILABLE', 'RENTED', 'MAINTENANCE'])
 const VALID_TYPES = new Set(['APARTMENT', 'HOUSE', 'STUDIO', 'COMMERCIAL'])
+const VALID_OFFER_TYPES = new Set(['RENT', 'SALE'])
 
 function parsePositiveInt(value: string | null, fallback: number) {
     if (!value) return fallback
@@ -25,6 +26,7 @@ export async function GET(request: Request) {
         const location = url.searchParams.get('location')?.trim() ?? ''
         const type = (url.searchParams.get('type') ?? '').toUpperCase()
         const statusParam = (url.searchParams.get('status') ?? 'AVAILABLE').toUpperCase()
+        const offerTypeParam = (url.searchParams.get('offer') ?? '').toUpperCase()
         const minPrice = url.searchParams.get('minPrice')
         const maxPrice = url.searchParams.get('maxPrice')
         const sort = (url.searchParams.get('sort') ?? 'recommended').toLowerCase()
@@ -39,6 +41,10 @@ export async function GET(request: Request) {
 
         if (statusParam !== 'ALL') {
             whereClause.status = VALID_STATUSES.has(statusParam) ? statusParam : 'AVAILABLE'
+        }
+
+        if (offerTypeParam !== 'ALL' && offerTypeParam.length > 0 && VALID_OFFER_TYPES.has(offerTypeParam)) {
+            whereClause.offerType = offerTypeParam
         }
 
         if (search) {
@@ -95,6 +101,7 @@ export async function GET(request: Request) {
             address: true,
             description: true,
             price: true,
+            offerType: true,
             status: true,
             propertyType: true,
             isPremium: true,

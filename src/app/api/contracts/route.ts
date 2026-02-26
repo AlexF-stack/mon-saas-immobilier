@@ -43,7 +43,9 @@ export async function GET(request: Request) {
         const contracts = await prisma.contract.findMany({
             where: whereClause,
             include: {
-                property: { select: { id: true, title: true, address: true, managerId: true, status: true } },
+                property: {
+                    select: { id: true, title: true, address: true, managerId: true, status: true, offerType: true },
+                },
                 tenant: { select: { id: true, name: true, email: true } },
             },
             orderBy: { createdAt: 'desc' },
@@ -79,7 +81,7 @@ export async function POST(request: Request) {
         const [property, tenant, existingActiveContract] = await Promise.all([
             prisma.property.findUnique({
                 where: { id: payload.propertyId },
-                select: { id: true, managerId: true, status: true },
+                select: { id: true, managerId: true, status: true, offerType: true },
             }),
             prisma.user.findUnique({
                 where: { id: payload.tenantId },
@@ -101,6 +103,10 @@ export async function POST(request: Request) {
 
         if (property.status === 'MAINTENANCE') {
             return NextResponse.json({ error: 'Property is in maintenance state' }, { status: 409 })
+        }
+
+        if (property.offerType !== 'RENT') {
+            return NextResponse.json({ error: 'Contract creation is only allowed for rental properties' }, { status: 409 })
         }
 
         if (existingActiveContract) {

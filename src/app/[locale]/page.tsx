@@ -68,6 +68,7 @@ export default async function LandingPage(props: {
                 city: true,
                 address: true,
                 price: true,
+                offerType: true,
                 propertyType: true,
                 images: {
                     select: { id: true, url: true },
@@ -400,9 +401,20 @@ export default async function LandingPage(props: {
                                                 <p className="text-2xl font-semibold tracking-tight text-primary">
                                                     {property.price.toLocaleString('fr-FR')} FCFA
                                                 </p>
-                                                <Badge variant="outline">
-                                                    {propertyTypeLabel(property.propertyType, locale)}
-                                                </Badge>
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <Badge variant="outline">
+                                                        {property.offerType === 'SALE'
+                                                            ? locale === 'fr'
+                                                                ? 'A vendre'
+                                                                : 'For sale'
+                                                            : locale === 'fr'
+                                                                ? 'A louer'
+                                                                : 'For rent'}
+                                                    </Badge>
+                                                    <Badge variant="outline">
+                                                        {propertyTypeLabel(property.propertyType, locale)}
+                                                    </Badge>
+                                                </div>
                                             </CardContent>
                                             <CardFooter>
                                                 <Button asChild className="w-full">

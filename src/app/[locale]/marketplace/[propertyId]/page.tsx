@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { MarketplaceHeader } from '@/components/marketplace/MarketplaceHeader'
 import { MarketplaceInquiryForm } from '@/components/marketplace/MarketplaceInquiryForm'
+import { getOfferTypeLabel } from '@/lib/property-offer'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -53,6 +54,7 @@ async function getPublishedMarketplaceProperty(propertyId: string) {
             city: true,
             address: true,
             price: true,
+            offerType: true,
             status: true,
             propertyType: true,
             isPremium: true,
@@ -84,11 +86,12 @@ export async function generateMetadata(props: {
     }
 
     const price = `${property.price.toLocaleString('fr-FR')} FCFA`
+    const offerLabel = property.offerType === 'SALE' ? 'Prix de vente' : 'Loyer'
     const location = property.city ? `${property.city}, ${property.address}` : property.address
     const title = `${property.title} - ${price} | Marketplace ImmoSaaS`
     const description = property.description
         ? `${property.description.slice(0, 140)}${property.description.length > 140 ? '...' : ''}`
-        : `${propertyTypeLabel(property.propertyType)} disponible a ${location}. Loyer ${price}.`
+        : `${propertyTypeLabel(property.propertyType)} disponible a ${location}. ${offerLabel} ${price}.`
     const canonicalPath = `/${locale}/marketplace/${property.id}`
     const ogImage = resolveOgImage(property.images[0]?.url, property.title, description)
 
@@ -208,6 +211,7 @@ export default async function MarketplacePropertyDetailPage(props: {
                             <CardHeader className="space-y-3">
                                 <CardTitle className="text-2xl">{property.title}</CardTitle>
                                 <div className="flex flex-wrap items-center gap-2">
+                                    <Badge variant="outline">{getOfferTypeLabel(property.offerType, locale === 'en' ? 'en' : 'fr')}</Badge>
                                     <Badge variant="outline">{propertyTypeLabel(property.propertyType)}</Badge>
                                     <Badge variant="secondary">
                                         <MapPin className="h-3 w-3" />
@@ -218,6 +222,9 @@ export default async function MarketplacePropertyDetailPage(props: {
                             <CardContent className="space-y-4">
                                 <p className="text-3xl font-semibold tracking-tight text-primary tabular-nums">
                                     {property.price.toLocaleString('fr-FR')} FCFA
+                                </p>
+                                <p className="text-sm text-secondary">
+                                    {property.offerType === 'SALE' ? 'Prix de vente' : 'Loyer mensuel'}
                                 </p>
                                 <p className="text-sm leading-relaxed text-secondary">
                                     {property.description || 'Ce bien ne contient pas encore de description detaillee.'}
@@ -255,7 +262,7 @@ export default async function MarketplacePropertyDetailPage(props: {
                     <div className="space-y-4">
                         <Card>
                             <CardHeader>
-                                <CardTitle className="text-lg">Postuler / Demander visite</CardTitle>
+                                <CardTitle className="text-lg">Demander des informations</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <MarketplaceInquiryForm

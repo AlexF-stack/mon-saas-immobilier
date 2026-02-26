@@ -13,6 +13,7 @@ export type MarketplacePropertyRow = {
     city?: string | null
     address: string
     price: number
+    offerType: string
     status: string
     propertyType: string
     isPublished: boolean
@@ -47,6 +48,11 @@ function propertyTypeLabel(propertyType: string) {
     return propertyType
 }
 
+function offerTypeLabel(offerType: string) {
+    if (offerType === 'SALE') return 'Vente'
+    return 'Location'
+}
+
 export function MarketplacePublishingTable({
     rows,
     locale,
@@ -66,7 +72,8 @@ export function MarketplacePublishingTable({
             (row) =>
                 row.title.toLowerCase().includes(query) ||
                 row.address.toLowerCase().includes(query) ||
-                row.propertyType.toLowerCase().includes(query)
+                row.propertyType.toLowerCase().includes(query) ||
+                row.offerType.toLowerCase().includes(query)
         )
     }, [data, search])
 
@@ -198,6 +205,11 @@ export function MarketplacePublishingTable({
                         key: 'title',
                         header: 'Bien',
                         render: (row) => <span className="font-medium">{row.title}</span>,
+                    },
+                    {
+                        key: 'offerType',
+                        header: 'Offre',
+                        render: (row) => offerTypeLabel(row.offerType),
                     },
                     {
                         key: 'propertyType',

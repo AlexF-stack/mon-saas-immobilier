@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 type PropertyOption = {
   id: string
   title: string
+  status?: string
+  offerType?: string
 }
 
 type TenantOption = {
@@ -62,7 +64,7 @@ export function NewContractForm({ locale, dashboardPathPrefix }: NewContractForm
 
       try {
         const [propertiesRes, tenantsRes] = await Promise.all([
-          fetch('/api/properties', { credentials: 'include' }),
+          fetch('/api/properties?status=AVAILABLE&offerType=RENT', { credentials: 'include' }),
           fetch('/api/tenants', { credentials: 'include' }),
         ])
 
@@ -83,7 +85,11 @@ export function NewContractForm({ locale, dashboardPathPrefix }: NewContractForm
         ])
 
         if (!isCancelled) {
-          setProperties(Array.isArray(propertiesPayload) ? propertiesPayload : [])
+          const rawProperties = Array.isArray(propertiesPayload) ? propertiesPayload as PropertyOption[] : []
+          const rentableProperties = rawProperties.filter(
+            (property) => property.status === 'AVAILABLE' && (property.offerType ?? 'RENT') === 'RENT'
+          )
+          setProperties(rentableProperties)
           setTenants(Array.isArray(tenantsPayload) ? tenantsPayload : [])
         }
       } catch {
@@ -189,7 +195,7 @@ export function NewContractForm({ locale, dashboardPathPrefix }: NewContractForm
                     ))
                   ) : (
                     <SelectItem value="__none__" disabled>
-                      Aucun bien disponible
+                      Aucun bien de location disponible
                     </SelectItem>
                   )}
                 </SelectContent>

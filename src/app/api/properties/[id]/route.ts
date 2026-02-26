@@ -5,6 +5,7 @@ import { verifyAuth, getTokenFromRequest } from '@/lib/auth'
 import { canManageProperty } from '@/lib/rbac'
 import { createSystemLog } from '@/lib/audit'
 import { enforceCsrf } from '@/lib/csrf'
+import { normalizePropertyOfferType } from '@/lib/property-offer'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -25,6 +26,7 @@ const patchPropertySchema = z.object({
     price: z.coerce.number().positive().optional(),
     status: z.string().optional(),
     propertyType: z.string().optional(),
+    offerType: z.string().optional(),
     isPublished: z.coerce.boolean().optional(),
     managerId: z.string().trim().nullable().optional(),
 })
@@ -79,7 +81,7 @@ export async function PATCH(
         const { id } = await params
         const property = await prisma.property.findUnique({
             where: { id },
-            select: { id: true, managerId: true, status: true, isPublished: true },
+            select: { id: true, managerId: true, status: true, offerType: true, isPublished: true },
         })
 
         if (!property) {
@@ -99,6 +101,7 @@ export async function PATCH(
             description?: string | null
             price?: number
             propertyType?: 'APARTMENT' | 'HOUSE' | 'STUDIO' | 'COMMERCIAL'
+            offerType?: 'RENT' | 'SALE'
             status?: 'AVAILABLE' | 'RENTED' | 'MAINTENANCE'
             isPublished?: boolean
             publishedAt?: Date | null
@@ -127,18 +130,47 @@ export async function PATCH(
             data.propertyType = normalizedPropertyType
         }
 
+        if (typeof parsed.offerType === 'string') {
+            const normalizedOfferType = normalizePropertyOfferType(parsed.offerType)
+            if (!normalizedOfferType) {
+                return NextResponse.json({ error: 'Invalid offerType' }, { status: 400 })
+            }
+            data.offerType = normalizedOfferType
+        }
+
         if (typeof parsed.isPublished === 'boolean') {
             data.isPublished = parsed.isPublished
             data.publishedAt = parsed.isPublished ? new Date() : null
         }
 
         const nextStatus = data.status ?? property.status
+        const nextOfferType = data.offerType ?? property.offerType
         const nextPublished = data.isPublished ?? property.isPublished
         if (nextPublished && nextStatus !== 'AVAILABLE') {
             return NextResponse.json(
                 { error: 'Only available properties can be published' },
                 { status: 409 }
             )
+        }
+
+        if (nextOfferType === 'SALE' && nextStatus === 'RENTED') {
+            return NextResponse.json(
+                { error: 'Sale property cannot be marked as rented' },
+                { status: 409 }
+            )
+        }
+
+        if (nextOfferType === 'SALE') {
+            const activeContract = await prisma.contract.findFirst({
+                where: { propertyId: id, status: 'ACTIVE' },
+                select: { id: true },
+            })
+            if (activeContract) {
+                return NextResponse.json(
+                    { error: 'Property with active contract cannot switch to sale mode' },
+                    { status: 409 }
+                )
+            }
         }
 
         if (data.status && data.status !== 'AVAILABLE') {
@@ -182,7 +214,7 @@ export async function PATCH(
             action: 'PROPERTY_UPDATED',
             targetType: 'PROPERTY',
             targetId: updated.id,
-            details: `fields=${Object.keys(data).join(',')};published=${updated.isPublished};status=${updated.status}`,
+            details: `fields=${Object.keys(data).join(',')};published=${updated.isPublished};status=${updated.status};offerType=${updated.offerType}`,
         })
 
         return NextResponse.json(updated)
