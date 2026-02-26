@@ -4,7 +4,7 @@ import { hashPassword, generateToken, isUserRole } from '@/lib/auth'
 import {
     getDashboardPathForRole,
     normalizeRequestedRole,
-    validatePasswordComplexity,
+    validateRegistrationPassword,
 } from '@/lib/auth-policy'
 import { enforceCsrf } from '@/lib/csrf'
 import { createSystemLog } from '@/lib/audit'
@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic'
 
 const registerSchema = z.object({
     email: z.string().trim().email(),
-    password: z.string().min(8),
+    password: z.string().min(6),
     name: z.string().optional(),
     role: z.string().optional(),
 })
@@ -34,11 +34,10 @@ export async function POST(request: Request) {
         const password = parsed.password
         const name = parsed.name?.trim()
 
-        if (!validatePasswordComplexity(password)) {
+        if (!validateRegistrationPassword(password)) {
             return NextResponse.json(
                 {
-                    error:
-                        'Password must contain upper/lower case letters, a number, a special character and be at least 8 characters long',
+                    error: 'Password must be at least 6 characters long',
                 },
                 { status: 400 }
             )
