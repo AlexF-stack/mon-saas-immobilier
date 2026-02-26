@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { validatePasswordComplexity } from '@/lib/auth-policy'
+import { validateRegistrationPassword } from '@/lib/auth-policy'
 
 function getErrorMessage(errorPayload: unknown, fallback: string): string {
     if (typeof errorPayload === 'string' && errorPayload.trim()) {
@@ -60,9 +60,9 @@ export default function RegisterPage() {
             return
         }
 
-        if (!validatePasswordComplexity(password)) {
+        if (!validateRegistrationPassword(password)) {
             setLoading(false)
-            setError('Mot de passe trop faible: 8+ caractères, majuscule, minuscule, chiffre et caractère spécial.')
+            setError('Mot de passe trop court (minimum 6 caracteres).')
             return
         }
 
@@ -112,7 +112,7 @@ export default function RegisterPage() {
                             <Label htmlFor="password">{t('auth.password')}</Label>
                             <Input id="password" name="password" type="password" required />
                             <p className="text-xs text-secondary">
-                                8+ chars, upper/lower case, number, special char.
+                                Minimum 6 caracteres.
                             </p>
                         </div>
                         <div className="space-y-2">
@@ -149,3 +149,4 @@ export default function RegisterPage() {
         </div>
     )
 }
+
