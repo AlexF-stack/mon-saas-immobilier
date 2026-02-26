@@ -215,7 +215,7 @@ export async function GET(request: Request) {
       actor: user,
       action: 'EXPORT_PAYMENTS',
       targetType: 'PAYMENT',
-      targetId: null,
+      targetId: undefined,
       correlationId,
       route,
       details: `format=${format};rowCount=${rows.length};from=${url.searchParams.get('from') ?? 'none'};to=${url.searchParams.get('to') ?? 'none'};status=${statusParsed.success ? statusParsed.data : 'none'};method=${methodParsed.success ? methodParsed.data : 'none'};q=${query || 'none'}`,
