@@ -278,7 +278,7 @@ async function deliverChannels(
     process.env.PAYMENT_REMINDER_WHATSAPP_WEBHOOK_URL?.trim() ||
     process.env.NOTIFICATION_WHATSAPP_WEBHOOK_URL?.trim() ||
     null
-  const desiredChannels = new Set<ReminderDeliveryChannel>(input.channels ?? ['EMAIL', 'SMS'])
+  const desiredChannels = new Set<ReminderDeliveryChannel>(input.channels ?? ['EMAIL', 'SMS', 'WHATSAPP'])
 
   const metrics: ReminderChannelMetrics = {
     emailSent: 0,
@@ -416,6 +416,7 @@ export async function sendManualPaymentReminder(input: {
     select: {
       id: true,
       status: true,
+      contractType: true,
       startDate: true,
       endDate: true,
       rentAmount: true,
@@ -455,6 +456,25 @@ export async function sendManualPaymentReminder(input: {
   const nextDueDate = resolveNextDueDate(contract.startDate, now)
   if (nextDueDate > contractEndDay) {
     throw new Error('CONTRACT_EXPIRED')
+  }
+
+  if (contract.contractType === 'RENTAL') {
+    const nextDueDateEnd = addUtcDays(nextDueDate, 1)
+    const paidInstallment = await prisma.contractInstallment.findFirst({
+      where: {
+        contractId: contract.id,
+        dueDate: {
+          gte: nextDueDate,
+          lt: nextDueDateEnd,
+        },
+        OR: [{ status: 'PAID' }, { paidAt: { not: null } }],
+      },
+      select: { id: true },
+    })
+
+    if (paidInstallment) {
+      throw new Error('CONTRACT_DUE_ALREADY_PAID')
+    }
   }
 
   const dueDateKey = formatUtcDate(nextDueDate)
@@ -714,6 +734,21 @@ export async function sendDailyPaymentReminders(input?: {
     },
   })
 
+  const paidInstallments = await prisma.contractInstallment.findMany({
+    where: {
+      contractId: { in: contractIds },
+      dueDate: {
+        gte: paymentWindowStart,
+        lt: paymentWindowEnd,
+      },
+      OR: [{ status: 'PAID' }, { paidAt: { not: null } }],
+    },
+    select: {
+      contractId: true,
+      dueDate: true,
+    },
+  })
+
   const paymentsByContract = new Map<string, Date[]>()
   for (const payment of completedPayments) {
     const entries = paymentsByContract.get(payment.contractId) ?? []
@@ -721,7 +756,17 @@ export async function sendDailyPaymentReminders(input?: {
     paymentsByContract.set(payment.contractId, entries)
   }
 
+  const paidInstallmentKeys = new Set(
+    paidInstallments.map((item) => `${item.contractId}:${formatUtcDate(item.dueDate)}`)
+  )
+
   for (const candidate of candidates) {
+    const candidateDueKey = `${candidate.contractId}:${formatUtcDate(candidate.dueDate)}`
+    if (paidInstallmentKeys.has(candidateDueKey)) {
+      summary.paidSkipped += 1
+      continue
+    }
+
     if (hasPaymentInDueWindow(candidate, paymentsByContract)) {
       summary.paidSkipped += 1
       continue

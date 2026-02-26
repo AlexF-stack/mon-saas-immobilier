@@ -135,7 +135,12 @@ export async function POST(request: Request) {
     if (error instanceof Error && error.message === 'CONTRACT_NOT_FOUND') {
       return NextResponse.json({ error: 'Contract not found' }, { status: 404 })
     }
-    if (error instanceof Error && (error.message === 'CONTRACT_NOT_ACTIVE' || error.message === 'CONTRACT_EXPIRED')) {
+    if (
+      error instanceof Error &&
+      (error.message === 'CONTRACT_NOT_ACTIVE' ||
+        error.message === 'CONTRACT_EXPIRED' ||
+        error.message === 'CONTRACT_DUE_ALREADY_PAID')
+    ) {
       return NextResponse.json({ error: 'Contract is not eligible for reminders' }, { status: 409 })
     }
 

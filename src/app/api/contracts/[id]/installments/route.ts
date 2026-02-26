@@ -6,6 +6,102 @@ import { canAccessContractScope } from '@/lib/rbac'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+const ADVANCE_INSTALLMENT_HORIZON_MONTHS = 6
+
+function toUtcDayStart(value: Date): Date {
+  const date = new Date(value)
+  date.setUTCHours(0, 0, 0, 0)
+  return date
+}
+
+function addUtcMonths(value: Date, months: number): Date {
+  const date = new Date(value)
+  date.setUTCMonth(date.getUTCMonth() + months)
+  return date
+}
+
+function getDaysInUtcMonth(year: number, monthIndex: number): number {
+  return new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate()
+}
+
+function resolveDueDateForMonth(anchorStartDate: Date, targetMonthDate: Date): Date {
+  const year = targetMonthDate.getUTCFullYear()
+  const monthIndex = targetMonthDate.getUTCMonth()
+  const anchorDay = anchorStartDate.getUTCDate()
+  const monthLastDay = getDaysInUtcMonth(year, monthIndex)
+  const day = Math.min(anchorDay, monthLastDay)
+  return new Date(Date.UTC(year, monthIndex, day, 0, 0, 0, 0))
+}
+
+function monthDistance(startDate: Date, targetDate: Date): number {
+  const yearDelta = targetDate.getUTCFullYear() - startDate.getUTCFullYear()
+  const monthDelta = targetDate.getUTCMonth() - startDate.getUTCMonth()
+  return yearDelta * 12 + monthDelta
+}
+
+async function ensureAdvanceInstallments(input: {
+  contractId: string
+  contractType: string
+  status: string
+  startDate: Date
+  endDate: Date
+  rentAmount: number
+}) {
+  if (input.contractType !== 'RENTAL' || input.status !== 'ACTIVE') return
+
+  const start = toUtcDayStart(input.startDate)
+  const end = toUtcDayStart(input.endDate)
+  if (start > end) return
+
+  const today = toUtcDayStart(new Date())
+  const horizon = addUtcMonths(today, ADVANCE_INSTALLMENT_HORIZON_MONTHS)
+  const target = horizon < end ? horizon : end
+  if (target < start) return
+
+  const maxSequence = monthDistance(start, target) + 1
+  if (maxSequence < 1) return
+
+  const existing = await prisma.contractInstallment.findMany({
+    where: { contractId: input.contractId },
+    select: { sequence: true },
+  })
+  const existingSet = new Set(existing.map((item) => item.sequence))
+
+  const rows: Array<{
+    contractId: string
+    sequence: number
+    dueDate: Date
+    baseAmount: number
+    penaltyAmount: number
+    totalDue: number
+    status: 'OPEN'
+  }> = []
+
+  for (let sequence = 1; sequence <= maxSequence; sequence += 1) {
+    if (existingSet.has(sequence)) continue
+
+    const dueDate = resolveDueDateForMonth(start, addUtcMonths(start, sequence - 1))
+    if (dueDate < start || dueDate > end) continue
+
+    rows.push({
+      contractId: input.contractId,
+      sequence,
+      dueDate,
+      baseAmount: input.rentAmount,
+      penaltyAmount: 0,
+      totalDue: input.rentAmount,
+      status: 'OPEN',
+    })
+  }
+
+  if (rows.length > 0) {
+    await prisma.contractInstallment.createMany({
+      data: rows,
+      skipDuplicates: true,
+    })
+  }
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -20,7 +116,14 @@ export async function GET(
     const { id } = await params
     const contract = await prisma.contract.findUnique({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        tenantId: true,
+        status: true,
+        contractType: true,
+        startDate: true,
+        endDate: true,
+        rentAmount: true,
         property: {
           select: { managerId: true },
         },
@@ -34,6 +137,15 @@ export async function GET(
     if (!canAccessContractScope(user, contract)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
+
+    await ensureAdvanceInstallments({
+      contractId: contract.id,
+      contractType: contract.contractType,
+      status: contract.status,
+      startDate: contract.startDate,
+      endDate: contract.endDate,
+      rentAmount: contract.rentAmount,
+    })
 
     const installments = await prisma.contractInstallment.findMany({
       where: {
