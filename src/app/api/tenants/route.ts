@@ -29,14 +29,9 @@ export async function GET(request: Request) {
         if (user.role === 'ADMIN') {
             whereClause = { role: 'TENANT' }
         } else if (user.role === 'MANAGER') {
-            whereClause = {
-                role: 'TENANT',
-                contracts: {
-                    some: {
-                        property: { managerId: user.id },
-                    },
-                },
-            }
+            // Managers need to create and pick tenants before contracts exist.
+            // Keep this broad until tenant-to-manager ownership is explicitly modeled.
+            whereClause = { role: 'TENANT' }
         } else {
             whereClause = { id: user.id, role: 'TENANT' }
         }

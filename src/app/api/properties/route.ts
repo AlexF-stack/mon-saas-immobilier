@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { mkdirSync, writeFileSync } from 'fs'
+import { join } from 'path'
 import { prisma } from '@/lib/prisma'
 import { verifyAuth, getTokenFromRequest } from '@/lib/auth'
 import { createSystemLog } from '@/lib/audit'
@@ -8,6 +10,9 @@ import { normalizePropertyOfferType } from '@/lib/property-offer'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+
+const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024
+const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
 
 const createPropertySchema = z.object({
@@ -111,11 +116,34 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Forbidden: owner role required' }, { status: 403 })
         }
 
-        const body = await request.json()
-        const parsed = createPropertySchema.parse(body)
-        const normalizedStatus = normalizeCreationStatus(parsed.status)
-        const normalizedPropertyType = normalizePropertyType(parsed.propertyType)
-        const normalizedOfferType = normalizePropertyOfferType(parsed.offerType, 'RENT')
+        const formData = await request.formData()
+        const title = formData.get('title')
+        const city = formData.get('city')
+        const address = formData.get('address')
+        const price = formData.get('price')
+        const description = formData.get('description')
+        const propertyType = formData.get('propertyType')
+        const offerType = formData.get('offerType')
+        const isPublished = formData.get('isPublished')
+        const status = formData.get('status')
+        const image = formData.get('image') as File | null
+
+        const data = {
+            title,
+            city,
+            address,
+            price,
+            description,
+            propertyType,
+            offerType,
+            status,
+            isPublished: isPublished === 'true',
+        }
+
+        const parsed = createPropertySchema.parse(data)
+        const normalizedStatus = normalizeCreationStatus(parsed.status as string | undefined)
+        const normalizedPropertyType = normalizePropertyType(parsed.propertyType as string | undefined)
+        const normalizedOfferType = normalizePropertyOfferType(parsed.offerType as string | undefined, 'RENT')
 
         if (!normalizedStatus) {
             return NextResponse.json(
@@ -152,28 +180,87 @@ export async function POST(request: Request) {
             )
         }
 
-        const property = await prisma.property.create({
-            data: {
-                title: parsed.title,
-                city: parsed.city,
-                address: parsed.address,
-                price: parsed.price,
-                description: parsed.description,
-                propertyType: normalizedPropertyType,
-                offerType: normalizedOfferType,
-                status: normalizedStatus,
-                isPublished: parsed.isPublished === true,
-                publishedAt: parsed.isPublished === true ? new Date() : null,
-                managerId: user.id,
-            },
-        })
+        let imageUrl: string | null = null
+        if (image && image.size > 0) {
+            if (image.size > MAX_IMAGE_SIZE_BYTES) {
+                return NextResponse.json(
+                    { error: 'Image too large. Max size is 2MB.' },
+                    { status: 413 }
+                )
+            }
+
+            if (!ALLOWED_IMAGE_TYPES.has(image.type)) {
+                return NextResponse.json(
+                    { error: 'Unsupported image format. Use JPG, PNG or WEBP.' },
+                    { status: 400 }
+                )
+            }
+
+            const buffer = Buffer.from(await image.arrayBuffer())
+            const base64 = buffer.toString('base64')
+            const dataUri = `data:${image.type};base64,${base64}`
+
+            if (process.env.VERCEL === '1') {
+                // Vercel serverless runtime cannot persist files under public/.
+                imageUrl = dataUri
+            } else {
+                try {
+                    // Local/dev fallback: store to public/uploads.
+                    const uploadsDir = join(process.cwd(), 'public', 'uploads')
+                    try {
+                        mkdirSync(uploadsDir, { recursive: true })
+                    } catch {}
+
+                    const filename = `${Date.now()}-${image.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
+                    const filepath = join(uploadsDir, filename)
+                    writeFileSync(filepath, buffer)
+                    imageUrl = `/uploads/${filename}`
+                } catch {
+                    // If local file save fails, still persist image via data URI to avoid blocking creation.
+                    imageUrl = dataUri
+                }
+            }
+        }
+
+        const propertyInfo = {
+            title: parsed.title,
+            city: parsed.city,
+            address: parsed.address,
+            price: parsed.price,
+            description: parsed.description,
+            propertyType: normalizedPropertyType,
+            offerType: normalizedOfferType,
+            status: normalizedStatus,
+            isPublished: parsed.isPublished === true,
+            publishedAt: parsed.isPublished === true ? new Date() : null,
+            managerId: user.id,
+        }
+
+        let property;
+
+        if (imageUrl) {
+            property = await prisma.property.create({
+                data: {
+                    ...propertyInfo,
+                    images: {
+                        create: {
+                            url: imageUrl
+                        }
+                    }
+                },
+            })
+        } else {
+            property = await prisma.property.create({
+                data: propertyInfo,
+            })
+        }
 
         await createSystemLog({
             actor: user,
             action: 'PROPERTY_CREATED',
             targetType: 'PROPERTY',
             targetId: property.id,
-            details: `title=${property.title};managerId=${property.managerId ?? 'none'};status=${property.status};offerType=${property.offerType};published=${property.isPublished};type=${property.propertyType}`,
+            details: `title=${property.title};managerId=${property.managerId ?? 'none'};status=${property.status};published=${property.isPublished};type=${property.propertyType};image=${imageUrl ? 'yes' : 'no'}`,
         })
 
         return NextResponse.json(property, { status: 201 })
