@@ -142,14 +142,30 @@ export async function POST(request: Request) {
             }),
         ])
 
+        const recipientIds = new Set<string>()
         if (property.managerId) {
-            await prisma.notification.create({
-                data: {
-                    userId: property.managerId,
+            recipientIds.add(property.managerId)
+        } else {
+            const admins = await prisma.user.findMany({
+                where: { role: 'ADMIN', isSuspended: false },
+                select: { id: true },
+                take: 10,
+            })
+            for (const admin of admins) recipientIds.add(admin.id)
+        }
+
+        if (recipientIds.size > 0) {
+            const preferredVisitSuffix = parsed.preferredVisitDate
+                ? ` Visite souhaitee: ${parsed.preferredVisitDate.toISOString().slice(0, 10)}.`
+                : ''
+
+            await prisma.notification.createMany({
+                data: [...recipientIds].map((recipientId) => ({
+                    userId: recipientId,
                     type: 'MARKETPLACE_INQUIRY',
                     title: 'Nouvelle demande marketplace',
-                    message: `${requesterName} a envoye une demande pour ${property.title}.`,
-                },
+                    message: `${requesterName} a envoye une demande pour ${property.title}.${preferredVisitSuffix}`,
+                })),
             })
         }
 

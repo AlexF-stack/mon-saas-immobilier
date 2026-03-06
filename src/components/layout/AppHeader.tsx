@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useEffect, useMemo, useState } from 'react'
 import { Bell, ChevronDown, LogOut, Search, User } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -26,9 +27,21 @@ interface AppHeaderProps {
   role?: string
 }
 
+type AppNotification = {
+  id: string
+  title: string
+  message: string
+  isRead: boolean
+  createdAt: string
+}
+
 export function AppHeader({ onMenuClick, userProfile, role }: AppHeaderProps) {
   const pathname = usePathname()
   const { logout, loading: logoutLoading } = useLogout()
+  const [notificationOpen, setNotificationOpen] = useState(false)
+  const [notificationLoading, setNotificationLoading] = useState(false)
+  const [notificationError, setNotificationError] = useState('')
+  const [notifications, setNotifications] = useState<AppNotification[]>([])
   const firstSegment = pathname?.split('/')[1] ?? ''
   const localePrefix = supportedLocales.has(firstSegment) ? `/${firstSegment}` : ''
   const settingsHref = `${localePrefix}/dashboard/settings`
@@ -70,6 +83,46 @@ export function AppHeader({ onMenuClick, userProfile, role }: AppHeaderProps) {
         .slice(0, 2)
         .toUpperCase()
     : userProfile?.email?.slice(0, 2).toUpperCase() ?? 'U'
+
+  useEffect(() => {
+    if (!notificationOpen) return
+
+    let cancelled = false
+    async function loadNotifications() {
+      try {
+        setNotificationLoading(true)
+        setNotificationError('')
+        const response = await fetch('/api/notifications?limit=8', {
+          credentials: 'include',
+        })
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`)
+        }
+        const payload = (await response.json()) as AppNotification[]
+        if (!cancelled) {
+          setNotifications(Array.isArray(payload) ? payload : [])
+        }
+      } catch {
+        if (!cancelled) {
+          setNotificationError('Impossible de charger les notifications.')
+        }
+      } finally {
+        if (!cancelled) {
+          setNotificationLoading(false)
+        }
+      }
+    }
+
+    void loadNotifications()
+    return () => {
+      cancelled = true
+    }
+  }, [notificationOpen])
+
+  const unreadCount = useMemo(
+    () => notifications.reduce((count, notification) => count + (notification.isRead ? 0 : 1), 0),
+    [notifications]
+  )
 
   return (
     <header
@@ -122,15 +175,47 @@ export function AppHeader({ onMenuClick, userProfile, role }: AppHeaderProps) {
 
       <div className="flex shrink-0 items-center gap-2">
         <ThemeToggle />
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative h-9 w-9 rounded-md border border-sky-300/75 bg-white/75 text-secondary backdrop-blur-sm hover:bg-sky-100/80 hover:text-sky-900 dark:border-sky-900/55 dark:bg-sky-950/25 dark:hover:bg-sky-500/15 dark:hover:text-sky-100"
-          aria-label="Notifications"
-        >
-          <Bell className="h-[18px] w-[18px]" />
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-blue-500" aria-hidden />
-        </Button>
+        <DropdownMenu open={notificationOpen} onOpenChange={setNotificationOpen}>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative h-9 w-9 rounded-md border border-sky-300/75 bg-white/75 text-secondary backdrop-blur-sm hover:bg-sky-100/80 hover:text-sky-900 dark:border-sky-900/55 dark:bg-sky-950/25 dark:hover:bg-sky-500/15 dark:hover:text-sky-100"
+              aria-label="Notifications"
+            >
+              <Bell className="h-[18px] w-[18px]" />
+              <span
+                className="absolute right-1 top-1 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-semibold text-white"
+                aria-hidden
+              >
+                {Math.min(unreadCount, 9)}
+              </span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-80 border-border bg-card backdrop-blur-md">
+            <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {notificationLoading ? (
+              <p className="px-2 py-2 text-xs text-secondary">Chargement...</p>
+            ) : notificationError ? (
+              <p className="px-2 py-2 text-xs text-destructive">{notificationError}</p>
+            ) : notifications.length === 0 ? (
+              <p className="px-2 py-2 text-xs text-secondary">Aucune notification recente.</p>
+            ) : (
+              <div className="max-h-72 space-y-1 overflow-y-auto">
+                {notifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className="rounded-md px-2 py-2 text-xs hover:bg-surface/70"
+                  >
+                    <p className="font-medium text-primary">{notification.title}</p>
+                    <p className="mt-1 line-clamp-2 text-secondary">{notification.message}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
