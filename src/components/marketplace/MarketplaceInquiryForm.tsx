@@ -136,7 +136,8 @@ export function MarketplaceInquiryForm({
                         id="requesterPhone"
                         name="requesterPhone"
                         placeholder="+22997000000"
-                        pattern="^\+?[0-9\s().-]{8,25}$"
+                        inputMode="tel"
+                        pattern="^\\+?[0-9 ()\\.-]{8,25}$"
                     />
                 </div>
                 <div className="space-y-2">

@@ -10,7 +10,8 @@ export const dynamic = 'force-dynamic'
 
 
 const RATE_LIMIT_WINDOW_MINUTES = 15
-const RATE_LIMIT_MAX_REQUESTS = 5
+const RATE_LIMIT_MAX_REQUESTS_ANON = 5
+const RATE_LIMIT_MAX_REQUESTS_AUTH = 10
 
 const createInquirySchema = z
     .object({
@@ -110,7 +111,8 @@ export async function POST(request: Request) {
             },
         })
 
-        if (recentInquiries >= RATE_LIMIT_MAX_REQUESTS) {
+        const maxRequests = user?.id ? RATE_LIMIT_MAX_REQUESTS_AUTH : RATE_LIMIT_MAX_REQUESTS_ANON
+        if (recentInquiries >= maxRequests) {
             return NextResponse.json(
                 { error: 'Too many requests. Please try again later.' },
                 { status: 429 }
