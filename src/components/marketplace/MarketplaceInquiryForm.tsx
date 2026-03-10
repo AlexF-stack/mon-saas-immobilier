@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -29,9 +29,12 @@ export function MarketplaceInquiryForm({
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
     const [success, setSuccess] = useState('')
+    const pendingRef = useRef(false)
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault()
+        if (pendingRef.current) return
+        pendingRef.current = true
         setLoading(true)
         setError('')
         setSuccess('')
@@ -63,6 +66,7 @@ export function MarketplaceInquiryForm({
 
             const result = await response.json().catch(() => ({}))
             if (response.ok) {
+                setError('')
                 setSuccess(result.message ?? 'Demande envoyee avec succes.')
                 event.currentTarget.reset()
                 return
@@ -73,6 +77,7 @@ export function MarketplaceInquiryForm({
             setError('Erreur reseau. Verifiez votre connexion.')
         } finally {
             setLoading(false)
+            pendingRef.current = false
         }
     }
 
