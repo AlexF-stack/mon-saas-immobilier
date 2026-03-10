@@ -51,22 +51,12 @@ export function NewPropertyForm({ locale, dashboardPathPrefix }: NewPropertyForm
     setError('')
 
     const formData = new FormData(event.currentTarget)
-    const data = {
-      title: formData.get('title'),
-      city: formData.get('city'),
-      address: formData.get('address'),
-      price: formData.get('price'),
-      description: formData.get('description'),
-      propertyType: formData.get('propertyType'),
-      offerType: formData.get('offerType'),
-    }
 
     try {
       const res = await fetch('/api/properties', {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: formData,
       })
 
       if (res.ok) {
@@ -151,6 +141,30 @@ export function NewPropertyForm({ locale, dashboardPathPrefix }: NewPropertyForm
               name="description"
               placeholder="Description detaillee du bien..."
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="image">Image principale (optionnel)</Label>
+            <Input
+              id="image"
+              name="image"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+            />
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Formats acceptes: JPG, PNG, WEBP. Taille max 2MB.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="imageUrls">Images (URLs)</Label>
+            <Textarea
+              id="imageUrls"
+              name="imageUrls"
+              placeholder="https://... (une URL par ligne)"
+              rows={3}
+            />
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Ajoutez une URL par ligne pour afficher les photos dans la marketplace.
+            </p>
           </div>
         </CardContent>
         <CardFooter className="justify-end gap-2 border-t border-slate-200/70 dark:border-slate-800">

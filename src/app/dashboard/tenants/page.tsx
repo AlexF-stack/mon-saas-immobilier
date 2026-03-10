@@ -29,11 +29,16 @@ export default async function TenantsPage() {
       ? { role: 'TENANT' as const }
       : {
           role: 'TENANT' as const,
-          contracts: {
-            some: {
-              property: { managerId: user.id },
+          OR: [
+            {
+              contracts: {
+                some: {
+                  property: { managerId: user.id },
+                },
+              },
             },
-          },
+            { createdById: user.id },
+          ],
         }
 
   const tenants = await prisma.user.findMany({

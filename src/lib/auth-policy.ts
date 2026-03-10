@@ -15,13 +15,13 @@ const ROLE_ALIASES: Record<string, PublicRegistrationRole | 'ADMIN'> = {
     ADMIN: 'ADMIN',
 }
 
-// At least 8 chars with upper/lower case, digit and special char.
-const PASSWORD_COMPLEXITY_REGEX =
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d])[^\s]{8,}$/
+const MIN_PASSWORD_LENGTH = 6
 const REGISTRATION_MIN_PASSWORD_LENGTH = 6
 
 export function validatePasswordComplexity(password: string): boolean {
-    return PASSWORD_COMPLEXITY_REGEX.test(password)
+    if (typeof password !== 'string') return false
+    const trimmed = password.trim()
+    return trimmed.length >= MIN_PASSWORD_LENGTH
 }
 
 export function validateRegistrationPassword(password: string): boolean {

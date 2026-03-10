@@ -30,7 +30,8 @@ export async function requestPayment({ amount, phoneNumber, provider, contractId
         }
     }
 
-    if (!phoneNumber.match(/^[0-9]{8,15}$/)) {
+    const normalizedPhone = phoneNumber.replace(/\D/g, '')
+    if (!normalizedPhone.match(/^[0-9]{8,15}$/)) {
         return {
             transactionId: '',
             status: 'FAILED',

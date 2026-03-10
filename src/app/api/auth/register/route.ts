@@ -37,7 +37,7 @@ export async function POST(request: Request) {
         if (!validateRegistrationPassword(password)) {
             return NextResponse.json(
                 {
-                    error: 'Password must be at least 6 characters long',
+                    error: 'Mot de passe trop court (minimum 6 caracteres).',
                 },
                 { status: 400 }
             )

@@ -29,9 +29,19 @@ export async function GET(request: Request) {
         if (user.role === 'ADMIN') {
             whereClause = { role: 'TENANT' }
         } else if (user.role === 'MANAGER') {
-            // Managers need to create and pick tenants before contracts exist.
-            // Keep this broad until tenant-to-manager ownership is explicitly modeled.
-            whereClause = { role: 'TENANT' }
+            whereClause = {
+                role: 'TENANT',
+                OR: [
+                    {
+                        contracts: {
+                            some: {
+                                property: { managerId: user.id },
+                            },
+                        },
+                    },
+                    { createdById: user.id },
+                ],
+            }
         } else {
             whereClause = { id: user.id, role: 'TENANT' }
         }
@@ -80,6 +90,7 @@ export async function POST(request: Request) {
                 name: parsed.name,
                 password: hashedPassword,
                 role: 'TENANT',
+                createdById: user.id,
             },
         })
 
