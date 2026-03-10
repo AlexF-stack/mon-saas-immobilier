@@ -102,7 +102,11 @@ export function MarketplacePropertyCard({ locale, property }: MarketplacePropert
                         <div className="flex items-center gap-1.5">
                             {property.isPremium ? <Badge variant="default">Premium</Badge> : null}
                             <Badge variant={property.status === 'AVAILABLE' ? 'success' : 'warning'}>
-                                {property.status === 'AVAILABLE' ? 'Disponible' : property.status}
+                                {property.status === 'AVAILABLE'
+                                    ? 'Disponible'
+                                    : property.status === 'PENDING_TRANSACTION'
+                                        ? 'Reservation en cours'
+                                        : property.status}
                             </Badge>
                         </div>
                     </div>

@@ -20,6 +20,20 @@ enum InstallmentStatus {
   PAID
 }
 
+enum PurchaseStatus {
+  INITIATED
+  FUNDS_ESCROWED
+  LEGAL_VERIFIED
+  COMPLETED
+  DISPUTED
+  CANCELLED
+}
+
+enum DisputeStatus {
+  OPEN
+  RESOLVED
+}
+
 model BusinessEvent {
   id        String    @id @default(cuid())
   type      EventType
@@ -72,6 +86,8 @@ model User {
   wishlistItems     WishlistItem[]
   loginHistory      LoginHistory[]
   updatedSystemConfigs SystemConfig[] @relation("SystemConfigUpdatedBy")
+  buyerTransactions  PurchaseTransaction[] @relation("PurchaseBuyer")
+  sellerTransactions PurchaseTransaction[] @relation("PurchaseSeller")
 }
 
 model SystemLog {
@@ -115,7 +131,7 @@ model Property {
   price       Float
   offerType   String   @default("RENT") // RENT, SALE
   propertyType String  @default("APARTMENT") // APARTMENT, HOUSE, STUDIO, COMMERCIAL, LAND
-  status      String   @default("AVAILABLE") // AVAILABLE, RENTED, MAINTENANCE
+  status      String   @default("AVAILABLE") // AVAILABLE, PENDING_TRANSACTION, SOLD, RENTED, MAINTENANCE
   isPublished Boolean  @default(false)
   isPremium   Boolean  @default(false)
   viewsCount  Int      @default(0)
@@ -132,6 +148,7 @@ model Property {
   images      PropertyImage[]
   inquiries   MarketplaceInquiry[]
   wishlistedBy WishlistItem[]
+  purchaseTransactions PurchaseTransaction[]
 
   @@index([isPublished])
   @@index([isPublished, status])
@@ -309,4 +326,52 @@ model SystemConfig {
   updatedBy   User?    @relation("SystemConfigUpdatedBy", fields: [updatedById], references: [id])
 
   @@index([updatedAt])
+}
+
+model PurchaseTransaction {
+  id           String         @id @default(cuid())
+  propertyId   String
+  buyerId      String
+  sellerId     String?
+  status       PurchaseStatus @default(INITIATED)
+  escrowAmount Decimal
+  totalAmount  Decimal
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  property     Property       @relation(fields: [propertyId], references: [id])
+  buyer        User           @relation("PurchaseBuyer", fields: [buyerId], references: [id])
+  seller       User?          @relation("PurchaseSeller", fields: [sellerId], references: [id])
+  legalVerification LegalVerification?
+  disputes     Dispute[]
+
+  @@index([propertyId, status])
+  @@index([buyerId, createdAt])
+  @@index([sellerId, createdAt])
+}
+
+model LegalVerification {
+  id              String   @id @default(cuid())
+  transactionId   String   @unique
+  documentUrl     String?
+  buyerConfirmedAt DateTime?
+  sellerUploadedAt DateTime?
+  adminVerifiedAt DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  transaction     PurchaseTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+}
+
+model Dispute {
+  id            String        @id @default(cuid())
+  transactionId String
+  reason        String
+  status        DisputeStatus @default(OPEN)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  transaction   PurchaseTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([transactionId, status])
 }

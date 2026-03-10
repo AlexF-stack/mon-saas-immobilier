@@ -31,7 +31,9 @@ const patchPropertySchema = z.object({
     managerId: z.string().trim().nullable().optional(),
 })
 
-function normalizeStatus(input?: string): 'AVAILABLE' | 'RENTED' | 'MAINTENANCE' | null {
+function normalizeStatus(
+    input?: string
+): 'AVAILABLE' | 'RENTED' | 'MAINTENANCE' | 'PENDING_TRANSACTION' | 'SOLD' | null {
     if (!input) return null
 
     const normalized = input
@@ -43,6 +45,10 @@ function normalizeStatus(input?: string): 'AVAILABLE' | 'RENTED' | 'MAINTENANCE'
     if (normalized === 'AVAILABLE' || normalized === 'DISPONIBLE') return 'AVAILABLE'
     if (normalized === 'RENTED' || normalized === 'OCCUPIED' || normalized === 'OCCUPE') return 'RENTED'
     if (normalized === 'MAINTENANCE') return 'MAINTENANCE'
+    if (normalized === 'PENDING_TRANSACTION' || normalized === 'RESERVE' || normalized === 'RESERVATION') {
+        return 'PENDING_TRANSACTION'
+    }
+    if (normalized === 'SOLD' || normalized === 'VENDU') return 'SOLD'
     return null
 }
 
@@ -103,7 +109,7 @@ export async function PATCH(
             price?: number
             propertyType?: 'APARTMENT' | 'HOUSE' | 'STUDIO' | 'COMMERCIAL' | 'LAND'
             offerType?: 'RENT' | 'SALE'
-            status?: 'AVAILABLE' | 'RENTED' | 'MAINTENANCE'
+            status?: 'AVAILABLE' | 'RENTED' | 'MAINTENANCE' | 'PENDING_TRANSACTION' | 'SOLD'
             isPublished?: boolean
             publishedAt?: Date | null
             managerId?: string | null

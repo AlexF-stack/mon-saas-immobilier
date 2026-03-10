@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import type { Prisma } from '@prisma/client'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { CalendarClock, Home, MapPin } from 'lucide-react'
@@ -10,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { MarketplaceHeader } from '@/components/marketplace/MarketplaceHeader'
 import { MarketplaceInquiryForm } from '@/components/marketplace/MarketplaceInquiryForm'
+import { PurchaseTransactionPanel } from '@/components/marketplace/PurchaseTransactionPanel'
 import { getOfferTypeLabel } from '@/lib/property-offer'
 
 export const runtime = 'nodejs'
@@ -46,7 +48,7 @@ async function getPublishedMarketplaceProperty(propertyId: string) {
         where: {
             id: propertyId,
             isPublished: true,
-            status: 'AVAILABLE',
+            status: { in: ['AVAILABLE', 'PENDING_TRANSACTION'] },
         },
         select: {
             id: true,
@@ -62,6 +64,7 @@ async function getPublishedMarketplaceProperty(propertyId: string) {
             viewsCount: true,
             inquiriesCount: true,
             publishedAt: true,
+            managerId: true,
             images: {
                 select: { id: true, url: true },
                 orderBy: { id: 'asc' },
@@ -145,11 +148,16 @@ export default async function MarketplacePropertyDetailPage(props: {
                     : property.propertyType === 'LAND'
                         ? 'Place'
                     : 'Apartment'
+    const availability =
+        property.status === 'PENDING_TRANSACTION'
+            ? 'https://schema.org/Reserved'
+            : 'https://schema.org/InStock'
+
     const jsonLd = {
         '@context': 'https://schema.org',
         '@type': 'Offer',
         url: canonicalUrl,
-        availability: 'https://schema.org/InStock',
+        availability,
         priceCurrency: 'XOF',
         price: property.price,
         itemOffered: {
@@ -169,6 +177,80 @@ export default async function MarketplacePropertyDetailPage(props: {
         },
     }
 
+    const recommendedEscrowAmount = Math.min(
+        property.price,
+        Number(process.env.ESCROW_RESERVATION_FEE ?? 50000) || 50000
+    )
+
+    const transactionSelect = {
+        id: true,
+        status: true,
+        escrowAmount: true,
+        totalAmount: true,
+        buyerId: true,
+        sellerId: true,
+        legalVerification: {
+            select: {
+                documentUrl: true,
+                buyerConfirmedAt: true,
+                sellerUploadedAt: true,
+                adminVerifiedAt: true,
+            },
+        },
+    } satisfies Prisma.PurchaseTransactionSelect
+
+    type PurchaseTransactionPayload = Prisma.PurchaseTransactionGetPayload<{
+        select: typeof transactionSelect
+    }>
+
+    let transaction: PurchaseTransactionPayload | null = null
+    if (user && property.offerType === 'SALE') {
+        if (user.role === 'ADMIN') {
+            transaction = await prisma.purchaseTransaction.findFirst({
+                where: { propertyId: property.id },
+                orderBy: { createdAt: 'desc' },
+                select: transactionSelect,
+            })
+        } else if (user.role === 'MANAGER' && property.managerId === user.id) {
+            transaction = await prisma.purchaseTransaction.findFirst({
+                where: { propertyId: property.id },
+                orderBy: { createdAt: 'desc' },
+                select: transactionSelect,
+            })
+        } else if (user.role === 'TENANT') {
+            transaction = await prisma.purchaseTransaction.findFirst({
+                where: { propertyId: property.id, buyerId: user.id },
+                orderBy: { createdAt: 'desc' },
+                select: transactionSelect,
+            })
+        }
+    }
+
+    const serializedTransaction = transaction
+        ? {
+            id: transaction.id,
+            status: transaction.status,
+            escrowAmount: Number(transaction.escrowAmount),
+            totalAmount: Number(transaction.totalAmount),
+            buyerId: transaction.buyerId,
+            sellerId: transaction.sellerId ?? null,
+            legalVerification: transaction.legalVerification
+                ? {
+                    documentUrl: transaction.legalVerification.documentUrl ?? null,
+                    buyerConfirmedAt: transaction.legalVerification.buyerConfirmedAt
+                        ? transaction.legalVerification.buyerConfirmedAt.toISOString()
+                        : null,
+                    sellerUploadedAt: transaction.legalVerification.sellerUploadedAt
+                        ? transaction.legalVerification.sellerUploadedAt.toISOString()
+                        : null,
+                    adminVerifiedAt: transaction.legalVerification.adminVerifiedAt
+                        ? transaction.legalVerification.adminVerifiedAt.toISOString()
+                        : null,
+                }
+                : null,
+        }
+        : null
+
     return (
         <div className="min-h-screen bg-background text-primary">
             <script
@@ -184,7 +266,9 @@ export default async function MarketplacePropertyDetailPage(props: {
                     </Button>
                     <div className="flex items-center gap-2">
                         {property.isPremium ? <Badge variant="default">Premium</Badge> : null}
-                        <Badge variant="success">Disponible</Badge>
+                        <Badge variant={property.status === 'AVAILABLE' ? 'success' : 'warning'}>
+                            {property.status === 'AVAILABLE' ? 'Disponible' : 'Reservation en cours'}
+                        </Badge>
                     </div>
                 </div>
 
@@ -263,16 +347,34 @@ export default async function MarketplacePropertyDetailPage(props: {
                     </div>
 
                     <div className="space-y-4">
+                        {property.offerType === 'SALE' ? (
+                            <PurchaseTransactionPanel
+                                propertyId={property.id}
+                                propertyStatus={property.status}
+                                price={property.price}
+                                managerId={property.managerId}
+                                user={user ? { id: user.id, role: user.role } : null}
+                                transaction={serializedTransaction}
+                                recommendedEscrowAmount={recommendedEscrowAmount}
+                            />
+                        ) : null}
+
                         <Card>
                             <CardHeader>
                                 <CardTitle className="text-lg">Demander des informations</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <MarketplaceInquiryForm
-                                    propertyId={property.id}
-                                    defaultName={user?.name ?? undefined}
-                                    defaultEmail={user?.email ?? undefined}
-                                />
+                                {property.status === 'PENDING_TRANSACTION' ? (
+                                    <p className="rounded-xl border border-border bg-surface px-3 py-2 text-sm text-secondary">
+                                        Transaction en cours. Les demandes sont temporairement suspendues.
+                                    </p>
+                                ) : (
+                                    <MarketplaceInquiryForm
+                                        propertyId={property.id}
+                                        defaultName={user?.name ?? undefined}
+                                        defaultEmail={user?.email ?? undefined}
+                                    />
+                                )}
                             </CardContent>
                         </Card>
 
