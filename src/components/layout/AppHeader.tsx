@@ -118,7 +118,6 @@ export function AppHeader({ onMenuClick, userProfile, role }: AppHeaderProps) {
       cancelled = true
     }
   }, [notificationOpen])
-
   const unreadCount = useMemo(
     () => notifications.reduce((count, notification) => count + (notification.isRead ? 0 : 1), 0),
     [notifications]

@@ -67,11 +67,17 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  createdById String?
+  createdBy   User? @relation("UserCreator", fields: [createdById], references: [id])
+  createdUsers User[] @relation("UserCreator")
+
   managedProperties Property[] @relation("PropertyManager")
   contracts         Contract[]
   wishlistItems     WishlistItem[]
   loginHistory      LoginHistory[]
   updatedSystemConfigs SystemConfig[] @relation("SystemConfigUpdatedBy")
+
+  @@index([createdById])
 }
 
 model SystemLog {

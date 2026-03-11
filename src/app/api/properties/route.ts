@@ -28,6 +28,7 @@ const createPropertySchema = z.object({
     propertyType: z.string().optional(),
     offerType: z.string().optional(),
     isPublished: z.coerce.boolean().optional(),
+    imageUrls: z.array(z.string().trim().min(5)).optional(),
 })
 
 function normalizeCreationStatus(input?: string): 'AVAILABLE' | 'RENTED' | null {
@@ -127,6 +128,13 @@ export async function POST(request: Request) {
         const isPublished = formData.get('isPublished')
         const status = formData.get('status')
         const image = formData.get('image') as File | null
+        const imageUrlsRaw = typeof formData.get('imageUrls') === 'string' ? String(formData.get('imageUrls')) : ''
+        const imageUrls = imageUrlsRaw
+            ? imageUrlsRaw
+                  .split(/\r?\n|,/)
+                  .map((value) => value.trim())
+                  .filter(Boolean)
+            : []
 
         const data = {
             title,
@@ -138,6 +146,7 @@ export async function POST(request: Request) {
             offerType,
             status,
             isPublished: isPublished === 'true',
+            imageUrls,
         }
 
         const parsed = createPropertySchema.parse(data)
@@ -235,32 +244,34 @@ export async function POST(request: Request) {
             publishedAt: parsed.isPublished === true ? new Date() : null,
             managerId: user.id,
         }
-
-        let property;
-
+        const allImageUrls = [...(parsed.imageUrls ?? [])]
         if (imageUrl) {
-            property = await prisma.property.create({
-                data: {
-                    ...propertyInfo,
-                    images: {
-                        create: {
-                            url: imageUrl
-                        }
-                    }
-                },
-            })
-        } else {
-            property = await prisma.property.create({
+            allImageUrls.unshift(imageUrl)
+        }
+
+        const property = await prisma.$transaction(async (tx) => {
+            const created = await tx.property.create({
                 data: propertyInfo,
             })
-        }
+
+            if (allImageUrls.length > 0) {
+                await tx.propertyImage.createMany({
+                    data: allImageUrls.map((url) => ({
+                        url,
+                        propertyId: created.id,
+                    })),
+                })
+            }
+
+            return created
+        })
 
         await createSystemLog({
             actor: user,
             action: 'PROPERTY_CREATED',
             targetType: 'PROPERTY',
             targetId: property.id,
-            details: `title=${property.title};managerId=${property.managerId ?? 'none'};status=${property.status};published=${property.isPublished};type=${property.propertyType};image=${imageUrl ? 'yes' : 'no'}`,
+            details: `title=${property.title};managerId=${property.managerId ?? 'none'};status=${property.status};published=${property.isPublished};type=${property.propertyType};imageCount=${allImageUrls.length}`,
         })
 
         return NextResponse.json(property, { status: 201 })

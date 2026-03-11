@@ -10,8 +10,19 @@ export const dynamic = 'force-dynamic'
 
 
 const RATE_LIMIT_WINDOW_MINUTES = 15
-const RATE_LIMIT_MAX_REQUESTS_ANON = 5
-const RATE_LIMIT_MAX_REQUESTS_AUTH = 10
+const RATE_LIMIT_MAX_REQUESTS_ANON = Number.isFinite(Number(process.env.MARKETPLACE_INQUIRY_RATE_LIMIT_ANON))
+    ? Math.max(1, Number(process.env.MARKETPLACE_INQUIRY_RATE_LIMIT_ANON))
+    : 5
+const RATE_LIMIT_MAX_REQUESTS_AUTH = Number.isFinite(Number(process.env.MARKETPLACE_INQUIRY_RATE_LIMIT_AUTH))
+    ? Math.max(1, Number(process.env.MARKETPLACE_INQUIRY_RATE_LIMIT_AUTH))
+    : 10
+
+function isRateLimitDisabled(): boolean {
+    return (
+        process.env.DEMO_MODE === 'true' ||
+        process.env.DISABLE_MARKETPLACE_INQUIRY_RATE_LIMIT === 'true'
+    )
+}
 
 const createInquirySchema = z
     .object({
@@ -99,24 +110,26 @@ export async function POST(request: Request) {
             )
         }
 
-        const rateLimitWindowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MINUTES * 60 * 1000)
-        const rateLimitIdentifiers: Array<Record<string, string>> = [{ requesterEmail }]
-        if (user?.id) rateLimitIdentifiers.push({ requesterUserId: user.id })
-        if (requesterIp) rateLimitIdentifiers.push({ requesterIp })
+        if (!isRateLimitDisabled()) {
+            const rateLimitWindowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MINUTES * 60 * 1000)
+            const rateLimitIdentifiers: Array<Record<string, string>> = [{ requesterEmail }]
+            if (user?.id) rateLimitIdentifiers.push({ requesterUserId: user.id })
+            if (requesterIp) rateLimitIdentifiers.push({ requesterIp })
 
-        const recentInquiries = await prisma.marketplaceInquiry.count({
-            where: {
-                createdAt: { gte: rateLimitWindowStart },
-                OR: rateLimitIdentifiers,
-            },
-        })
+            const recentInquiries = await prisma.marketplaceInquiry.count({
+                where: {
+                    createdAt: { gte: rateLimitWindowStart },
+                    OR: rateLimitIdentifiers,
+                },
+            })
 
-        const maxRequests = user?.id ? RATE_LIMIT_MAX_REQUESTS_AUTH : RATE_LIMIT_MAX_REQUESTS_ANON
-        if (recentInquiries >= maxRequests) {
-            return NextResponse.json(
-                { error: 'Too many requests. Please try again later.' },
-                { status: 429 }
-            )
+            const maxRequests = user?.id ? RATE_LIMIT_MAX_REQUESTS_AUTH : RATE_LIMIT_MAX_REQUESTS_ANON
+            if (recentInquiries >= maxRequests) {
+                return NextResponse.json(
+                    { error: 'Too many requests. Please try again later.' },
+                    { status: 429 }
+                )
+            }
         }
 
         const [inquiry] = await prisma.$transaction([

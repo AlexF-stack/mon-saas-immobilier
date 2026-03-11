@@ -72,8 +72,10 @@ export function MarketplaceInquiryForm({
                 return
             }
 
+            setSuccess('')
             setError(toErrorMessage(response.status, result.error))
         } catch {
+            setSuccess('')
             setError('Erreur reseau. Verifiez votre connexion.')
         } finally {
             setLoading(false)
