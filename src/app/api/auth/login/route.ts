@@ -120,11 +120,17 @@ export async function POST(request: Request) {
             )
         }
 
-        let isValidPassword = await comparePassword(password, user.password)
+        let isValidPassword = false
         let upgradedPasswordHash: string | null = null
 
-        // Backward compatibility: migrate legacy plain-text passwords on first successful login.
-        if (!isValidPassword && !looksLikeBcryptHash(user.password) && user.password === password) {
+        if (looksLikeBcryptHash(user.password)) {
+            try {
+                isValidPassword = await comparePassword(password, user.password)
+            } catch {
+                isValidPassword = false
+            }
+        } else if (user.password === password) {
+            // Backward compatibility: migrate legacy plain-text passwords on first successful login.
             isValidPassword = true
             upgradedPasswordHash = await hashPassword(password)
         }
