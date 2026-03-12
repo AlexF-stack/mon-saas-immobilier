@@ -29,6 +29,7 @@ const LOGIN_GLOBAL_LIMIT = 30
 const LOGIN_GLOBAL_WINDOW_MS = 10 * 60 * 1000
 const LOGIN_BRUTE_FORCE_LIMIT = 6
 const LOGIN_BRUTE_FORCE_WINDOW_MS = 15 * 60 * 1000
+const MIN_JWT_SECRET_LENGTH = 32
 
 function looksLikeBcryptHash(value: string) {
     return /^\$2[aby]\$\d{2}\$/.test(value)
@@ -38,6 +39,16 @@ export async function POST(request: Request) {
     try {
         const csrfError = enforceCsrf(request)
         if (csrfError) return csrfError
+
+        if (process.env.NODE_ENV === 'production') {
+            const jwtSecret = process.env.JWT_SECRET
+            if (!jwtSecret || jwtSecret.length < MIN_JWT_SECRET_LENGTH) {
+                return NextResponse.json(
+                    { error: 'Configuration serveur incomplete. Contactez un administrateur.' },
+                    { status: 503 }
+                )
+            }
+        }
 
         const body = await request.json()
         const parsed = loginSchema.parse(body)
