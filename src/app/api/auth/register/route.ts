@@ -10,6 +10,7 @@ import { enforceCsrf } from '@/lib/csrf'
 import { createSystemLog } from '@/lib/audit'
 import { getCorrelationIdFromRequest } from '@/lib/correlation-id'
 import { trackEvent } from '@/lib/analytics/track-event'
+import { captureServerError } from '@/lib/monitoring'
 import { z } from 'zod'
 
 export const runtime = 'nodejs'
@@ -22,11 +23,23 @@ const registerSchema = z.object({
     role: z.string().optional(),
 })
 
+const MIN_JWT_SECRET_LENGTH = 32
+
 export async function POST(request: Request) {
     try {
         const correlationId = getCorrelationIdFromRequest(request)
         const csrfError = enforceCsrf(request)
         if (csrfError) return csrfError
+
+        if (process.env.NODE_ENV === 'production') {
+            const jwtSecret = process.env.JWT_SECRET
+            if (!jwtSecret || jwtSecret.length < MIN_JWT_SECRET_LENGTH) {
+                return NextResponse.json(
+                    { error: 'Configuration serveur incomplete. Contactez un administrateur.' },
+                    { status: 503 }
+                )
+            }
+        }
 
         const body = await request.json()
         const parsed = registerSchema.parse(body)
@@ -130,6 +143,13 @@ export async function POST(request: Request) {
         if (error instanceof z.ZodError) {
             return NextResponse.json({ error: error.issues }, { status: 400 })
         }
+        const correlationId = getCorrelationIdFromRequest(request)
+        await captureServerError(error, {
+            scope: 'auth_register',
+            targetType: 'AUTH',
+            correlationId,
+            route: '/api/auth/register',
+        })
         return NextResponse.json(
             { error: 'Internal Server Error' },
             { status: 500 }
