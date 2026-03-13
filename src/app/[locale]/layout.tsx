@@ -33,7 +33,7 @@ export default async function LocaleLayout({
 
   return (
     <>
-      <LanguageProvider locale={locale} messages={messages}>
+      <LanguageProvider locale={locale} messages={messages} timeZone="UTC">
         {children}
       </LanguageProvider>
     </>
