@@ -9,7 +9,7 @@
     "start": "next start",
     "db:seed": "prisma db seed",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "prisma generate && tsc --noEmit",
     "check": "npm run lint && npm run typecheck",
     "test:integration": "node tests/integration/run-integration.mjs",
     "test:integration:run": "node --test tests/integration/security-rbac.integration.test.mjs",

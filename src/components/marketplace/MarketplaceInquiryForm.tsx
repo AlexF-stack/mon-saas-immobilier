@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { getErrorMessageFromPayload } from '@/lib/utils'
+import { useToast } from '@/components/ui/toast'
 
 type MarketplaceInquiryFormProps = {
     propertyId: string
@@ -13,12 +15,16 @@ type MarketplaceInquiryFormProps = {
 }
 
 function toErrorMessage(status: number, payload: unknown) {
-    if (typeof payload === 'string' && payload.trim()) return payload
-    if (Array.isArray(payload) && typeof payload[0]?.message === 'string') return payload[0].message
     if (status === 404) return 'Annonce introuvable ou non disponible.'
     if (status === 403) return 'Action refusee.'
     if (status === 429) return 'Trop de demandes. Merci de reessayer plus tard.'
-    return 'Impossible d envoyer la demande pour le moment.'
+    return getErrorMessageFromPayload(
+        // les routes renvoient generalement { error: ... }
+        (typeof payload === 'object' && payload !== null
+            ? ((payload as { error?: unknown }).error ?? payload)
+            : payload) as never,
+        'Impossible d envoyer la demande pour le moment.'
+    )
 }
 
 export function MarketplaceInquiryForm({
@@ -30,6 +36,7 @@ export function MarketplaceInquiryForm({
     const [error, setError] = useState('')
     const [success, setSuccess] = useState('')
     const pendingRef = useRef(false)
+    const { show } = useToast()
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault()
@@ -68,15 +75,30 @@ export function MarketplaceInquiryForm({
             if (response.ok) {
                 setError('')
                 setSuccess(result.message ?? 'Demande envoyee avec succes.')
+                show({
+                    variant: 'success',
+                    title: 'Demande envoyee',
+                    description: 'Votre message a bien ete transmis au proprietaire.',
+                })
                 event.currentTarget.reset()
                 return
             }
 
             setSuccess('')
             setError(toErrorMessage(response.status, result.error))
+            show({
+                variant: response.status >= 500 ? 'error' : 'warning',
+                title: 'Echec de la demande',
+                description: toErrorMessage(response.status, result.error),
+            })
         } catch {
             setSuccess('')
             setError('Erreur reseau. Verifiez votre connexion.')
+            show({
+                variant: 'error',
+                title: 'Erreur reseau',
+                description: 'Impossible de joindre le serveur. Verifiez votre connexion.',
+            })
         } finally {
             setLoading(false)
             pendingRef.current = false

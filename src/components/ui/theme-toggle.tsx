@@ -11,17 +11,34 @@ export default function ThemeToggle() {
 
   if (!mounted) return <button aria-hidden className="h-9 w-9 rounded-md" />;
 
-  const current = theme === "system" ? systemTheme : theme;
+  const effectiveTheme = theme === "system" ? systemTheme : theme;
+  const current = effectiveTheme ?? "light";
+
+  const selectedTheme = theme ?? "system";
 
   const toggle = () => {
-    const next = current === "dark" ? "light" : "dark";
+    // Cycle explicite: system -> light -> dark -> system
+    const order = ["system", "light", "dark"] as const;
+    const currentIndex = order.indexOf(selectedTheme as (typeof order)[number]);
+    const next = order[(currentIndex + 1) % order.length];
     setTheme(next);
   };
 
+  const labelByTheme: Record<string, string> = {
+    light: "Mode clair",
+    dark: "Mode sombre",
+    system: "Mode système",
+  };
+
+  const ariaLabel = `Changer le thème (actuel : ${
+    labelByTheme[selectedTheme] ?? "Mode clair"
+  })`;
+  const title = ariaLabel;
+
   return (
     <button
-      aria-label="Toggle theme"
-      title="Toggle theme"
+      aria-label={ariaLabel}
+      title={title}
       onClick={toggle}
       className="group inline-flex h-9 w-9 items-center justify-center rounded-md text-primary transition-all [transition-duration:var(--motion-standard)] hover:bg-[rgb(var(--surface)/0.75)] hover:text-accent"
     >
@@ -33,7 +50,11 @@ export default function ThemeToggle() {
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          className={`absolute inset-0 transition-all [transition-duration:var(--motion-standard)] ${current === "dark" ? "rotate-0 scale-100 opacity-100" : "rotate-90 scale-75 opacity-0"}`}
+          className={`absolute inset-0 transition-all [transition-duration:var(--motion-standard)] ${
+            current === "dark"
+              ? "rotate-0 scale-100 opacity-100"
+              : "rotate-90 scale-75 opacity-0"
+          }`}
         >
           <circle cx="12" cy="12" r="4" strokeWidth="2" />
           <path strokeWidth="2" d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
@@ -45,7 +66,11 @@ export default function ThemeToggle() {
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          className={`absolute inset-0 transition-all [transition-duration:var(--motion-standard)] ${current === "dark" ? "-rotate-90 scale-75 opacity-0" : "rotate-0 scale-100 opacity-100"}`}
+          className={`absolute inset-0 transition-all [transition-duration:var(--motion-standard)] ${
+            current === "dark"
+              ? "-rotate-90 scale-75 opacity-0"
+              : "rotate-0 scale-100 opacity-100"
+          }`}
         >
           <path strokeWidth="2" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
         </svg>
