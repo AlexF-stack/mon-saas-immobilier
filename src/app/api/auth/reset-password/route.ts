@@ -10,17 +10,21 @@ import {
 import { validatePasswordComplexity } from '@/lib/auth-policy'
 import { captureServerError } from '@/lib/monitoring'
 import { enforceRateLimit } from '@/lib/security-rate-limit'
+import { getCorrelationIdFromRequest } from '@/lib/correlation-id'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const resetPasswordSchema = z.object({
     token: z.string().trim().min(1),
-    password: z.string().min(8),
+    password: z.string().min(6),
 })
+
+const MIN_JWT_SECRET_LENGTH = 32
 
 export async function POST(request: Request) {
     try {
+        const correlationId = getCorrelationIdFromRequest(request)
         const csrfError = enforceCsrf(request)
         if (csrfError) return csrfError
 
@@ -35,14 +39,23 @@ export async function POST(request: Request) {
             return rateLimitError
         }
 
+        if (process.env.NODE_ENV === 'production') {
+            const resetSecret = process.env.PASSWORD_RESET_JWT_SECRET
+            if (!resetSecret || resetSecret.length < MIN_JWT_SECRET_LENGTH) {
+                return NextResponse.json(
+                    { error: 'Configuration serveur incomplete. Contactez un administrateur.' },
+                    { status: 503 }
+                )
+            }
+        }
+
         const body = await request.json()
         const parsed = resetPasswordSchema.parse(body)
 
         if (!validatePasswordComplexity(parsed.password)) {
             return NextResponse.json(
                 {
-                    error:
-                        'Password must contain upper/lower case letters, a number, a special character and be at least 8 characters long',
+                    error: 'Mot de passe trop court (minimum 6 caracteres).',
                 },
                 { status: 400 }
             )
@@ -178,6 +191,8 @@ export async function POST(request: Request) {
         await captureServerError(error, {
             scope: 'reset_password',
             targetType: 'AUTH',
+            correlationId: getCorrelationIdFromRequest(request),
+            route: '/api/auth/reset-password',
         })
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }

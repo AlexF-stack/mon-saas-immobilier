@@ -4,6 +4,7 @@ import { comparePassword, generateToken, hashPassword, normalizeUserRole } from 
 import { getDashboardPathForRole } from '@/lib/auth-policy'
 import { enforceCsrf } from '@/lib/csrf'
 import { createSystemLog } from '@/lib/audit'
+import { getCorrelationIdFromRequest } from '@/lib/correlation-id'
 import { getClientIpFromHeaders } from '@/lib/request-metadata'
 import {
     buildRateLimitFingerprint,
@@ -37,6 +38,7 @@ function looksLikeBcryptHash(value: string) {
 
 export async function POST(request: Request) {
     try {
+        const correlationId = getCorrelationIdFromRequest(request)
         const csrfError = enforceCsrf(request)
         if (csrfError) return csrfError
 
@@ -83,6 +85,7 @@ export async function POST(request: Request) {
             await createSystemLog({
                 action: 'LOGIN_BRUTE_FORCE_BLOCKED',
                 targetType: 'AUTH',
+                correlationId,
                 details: `email=${email};ip=${ipAddress ?? 'none'}`,
             })
             return NextResponse.json(
@@ -112,6 +115,7 @@ export async function POST(request: Request) {
             await createSystemLog({
                 action: 'LOGIN_FAILED_UNKNOWN_EMAIL',
                 targetType: 'AUTH',
+                correlationId,
                 details: `email=${email};ip=${ipAddress ?? 'none'}`,
             })
             return NextResponse.json(
@@ -140,14 +144,23 @@ export async function POST(request: Request) {
                 LOGIN_BRUTE_FORCE_BUCKET,
                 bruteForceFingerprint
             )
-            await prisma.loginHistory.create({
-                data: {
-                    userId: user.id,
-                    ipAddress,
-                    userAgent,
-                    success: false,
-                },
-            })
+            try {
+                await prisma.loginHistory.create({
+                    data: {
+                        userId: user.id,
+                        ipAddress,
+                        userAgent,
+                        success: false,
+                    },
+                })
+            } catch (error) {
+                await captureServerError(error, {
+                    scope: 'auth_login_history',
+                    targetType: 'AUTH',
+                    correlationId,
+                    route: '/api/auth/login',
+                })
+            }
             await createSystemLog({
                 actor: {
                     id: user.id,
@@ -157,6 +170,7 @@ export async function POST(request: Request) {
                 action: 'LOGIN_FAILED_BAD_PASSWORD',
                 targetType: 'USER',
                 targetId: user.id,
+                correlationId,
                 details: `ip=${ipAddress ?? 'none'}`,
             })
             return NextResponse.json(
@@ -166,18 +180,28 @@ export async function POST(request: Request) {
         }
 
         if (user.isSuspended) {
-            await prisma.loginHistory.create({
-                data: {
-                    userId: user.id,
-                    ipAddress,
-                    userAgent,
-                    success: false,
-                },
-            })
+            try {
+                await prisma.loginHistory.create({
+                    data: {
+                        userId: user.id,
+                        ipAddress,
+                        userAgent,
+                        success: false,
+                    },
+                })
+            } catch (error) {
+                await captureServerError(error, {
+                    scope: 'auth_login_history',
+                    targetType: 'AUTH',
+                    correlationId,
+                    route: '/api/auth/login',
+                })
+            }
             await createSystemLog({
                 action: 'LOGIN_BLOCKED_SUSPENDED',
                 targetType: 'USER',
                 targetId: user.id,
+                correlationId,
                 details: `email=${user.email};ip=${ipAddress ?? 'none'}`,
             })
 
@@ -238,20 +262,43 @@ export async function POST(request: Request) {
             userUpdateData.password = upgradedPasswordHash
         }
 
-        await prisma.$transaction([
-            prisma.user.update({
-                where: { id: user.id },
-                data: userUpdateData,
-            }),
-            prisma.loginHistory.create({
-                data: {
-                    userId: user.id,
-                    ipAddress,
-                    userAgent,
-                    success: true,
-                },
-            }),
-        ])
+        try {
+            await prisma.$transaction([
+                prisma.user.update({
+                    where: { id: user.id },
+                    data: userUpdateData,
+                }),
+                prisma.loginHistory.create({
+                    data: {
+                        userId: user.id,
+                        ipAddress,
+                        userAgent,
+                        success: true,
+                    },
+                }),
+            ])
+        } catch (error) {
+            await captureServerError(error, {
+                scope: 'auth_login_persist',
+                targetType: 'AUTH',
+                correlationId,
+                route: '/api/auth/login',
+            })
+
+            try {
+                await prisma.user.update({
+                    where: { id: user.id },
+                    data: userUpdateData,
+                })
+            } catch (fallbackError) {
+                await captureServerError(fallbackError, {
+                    scope: 'auth_login_persist_fallback',
+                    targetType: 'AUTH',
+                    correlationId,
+                    route: '/api/auth/login',
+                })
+            }
+        }
 
         await createSystemLog({
             actor: {
@@ -262,6 +309,7 @@ export async function POST(request: Request) {
             action: 'LOGIN_SUCCESS',
             targetType: 'USER',
             targetId: user.id,
+            correlationId,
             details: `ip=${ipAddress ?? 'none'}`,
         })
 
@@ -270,9 +318,12 @@ export async function POST(request: Request) {
         if (error instanceof z.ZodError) {
             return NextResponse.json({ error: error.issues }, { status: 400 })
         }
+        const correlationId = getCorrelationIdFromRequest(request)
         await captureServerError(error, {
             scope: 'auth_login',
             targetType: 'AUTH',
+            correlationId,
+            route: '/api/auth/login',
         })
         return NextResponse.json(
             { error: 'Internal Server Error' },
