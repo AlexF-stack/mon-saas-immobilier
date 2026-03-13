@@ -10,15 +10,17 @@ interface LanguageProviderProps {
   children: ReactNode;
   locale: IntlLocale;
   messages: IntlMessages;
+  timeZone?: string;
 }
 
 export default function LanguageProvider({
   children,
   locale,
   messages,
+  timeZone,
 }: LanguageProviderProps) {
   return (
-    <NextIntlClientProvider messages={messages} locale={locale}>
+    <NextIntlClientProvider messages={messages} locale={locale} timeZone={timeZone}>
       {children}
     </NextIntlClientProvider>
   );
