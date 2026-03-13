@@ -174,15 +174,11 @@ export async function GET(request: Request) {
         }
 
         if (properties.length > 0) {
-            await prisma.$transaction(
-                properties.map((property) =>
-                    prisma.property.update({
-                        where: { id: property.id },
-                        data: { impressionsCount: { increment: 1 } },
-                        select: { id: true },
-                    })
-                )
-            )
+            const propertyIds = properties.map((property) => property.id)
+            await prisma.property.updateMany({
+                where: { id: { in: propertyIds } },
+                data: { impressionsCount: { increment: 1 } },
+            })
         }
 
         return NextResponse.json({

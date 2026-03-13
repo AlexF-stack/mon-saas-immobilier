@@ -93,7 +93,25 @@ export async function GET(request: Request) {
 
         const properties = await prisma.property.findMany({
             where: whereClause,
-            include: { contracts: true },
+            select: {
+                id: true,
+                title: true,
+                city: true,
+                address: true,
+                price: true,
+                description: true,
+                status: true,
+                propertyType: true,
+                offerType: true,
+                isPublished: true,
+                isPremium: true,
+                viewsCount: true,
+                impressionsCount: true,
+                inquiriesCount: true,
+                createdAt: true,
+                publishedAt: true,
+                managerId: true,
+            },
             orderBy: { createdAt: 'desc' },
         })
 

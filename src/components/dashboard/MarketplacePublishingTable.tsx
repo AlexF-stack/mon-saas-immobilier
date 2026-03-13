@@ -6,6 +6,8 @@ import { ExternalLink } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { CustomTable } from '@/components/ui/custom-table'
+import { getErrorMessageFromPayload } from '@/lib/utils'
+import { useToast } from '@/components/ui/toast'
 
 export type MarketplacePropertyRow = {
     id: string
@@ -65,6 +67,7 @@ export function MarketplacePublishingTable({
     const [data, setData] = useState(rows)
     const [pendingId, setPendingId] = useState<string | null>(null)
     const [error, setError] = useState('')
+    const { show } = useToast()
 
     const filtered = useMemo(() => {
         if (!search.trim()) return data
@@ -99,9 +102,18 @@ export function MarketplacePublishingTable({
                 body: JSON.stringify({ isPublished: !row.isPublished }),
             })
 
-            const result = await response.json().catch(() => ({}))
+            const result = await response.json().catch(() => ({} as { error?: unknown }))
             if (!response.ok) {
-                setError(typeof result.error === 'string' ? result.error : 'Impossible de modifier la publication.')
+                const message = getErrorMessageFromPayload(
+                    typeof result === 'object' && result !== null ? result.error ?? result : result,
+                    'Impossible de modifier la publication.'
+                )
+                setError(message)
+                show({
+                    variant: response.status >= 500 ? 'error' : 'warning',
+                    title: 'Echec de la mise a jour',
+                    description: message,
+                })
                 return
             }
 
@@ -117,8 +129,21 @@ export function MarketplacePublishingTable({
                         : item
                 )
             )
+            show({
+                variant: 'success',
+                title: row.isPublished ? 'Annonce retiree' : 'Annonce publiee',
+                description: row.isPublished
+                    ? 'L annonce n est plus visible dans la marketplace.'
+                    : 'L annonce est maintenant visible dans la marketplace.',
+            })
         } catch {
-            setError('Erreur reseau lors de la mise a jour.')
+            const message = 'Erreur reseau lors de la mise a jour.'
+            setError(message)
+            show({
+                variant: 'error',
+                title: 'Erreur reseau',
+                description: message,
+            })
         } finally {
             setPendingId(null)
         }
@@ -139,9 +164,18 @@ export function MarketplacePublishingTable({
                 }),
             })
 
-            const result = await response.json().catch(() => ({}))
+            const result = await response.json().catch(() => ({} as { error?: unknown }))
             if (!response.ok) {
-                setError(typeof result.error === 'string' ? result.error : 'Impossible de modifier le mode premium.')
+                const message = getErrorMessageFromPayload(
+                    typeof result === 'object' && result !== null ? result.error ?? result : result,
+                    'Impossible de modifier le mode premium.'
+                )
+                setError(message)
+                show({
+                    variant: response.status >= 500 ? 'error' : 'warning',
+                    title: 'Echec de la mise a jour premium',
+                    description: message,
+                })
                 return
             }
 
@@ -157,8 +191,21 @@ export function MarketplacePublishingTable({
                         : item
                 )
             )
+            show({
+                variant: 'success',
+                title: row.isPremium ? 'Mode standard active' : 'Mode premium active',
+                description: row.isPremium
+                    ? 'L annonce repasse en mode standard.'
+                    : 'L annonce est maintenant mise en avant.',
+            })
         } catch {
-            setError('Erreur reseau lors de la mise a jour premium.')
+            const message = 'Erreur reseau lors de la mise a jour premium.'
+            setError(message)
+            show({
+                variant: 'error',
+                title: 'Erreur reseau',
+                description: message,
+            })
         } finally {
             setPendingId(null)
         }
@@ -178,15 +225,35 @@ export function MarketplacePublishingTable({
                 credentials: 'include',
             })
 
-            const result = await response.json().catch(() => ({}))
+            const result = await response.json().catch(() => ({} as { error?: unknown }))
             if (!response.ok) {
-                setError(typeof result.error === 'string' ? result.error : 'Suppression impossible.')
+                const message = getErrorMessageFromPayload(
+                    typeof result === 'object' && result !== null ? result.error ?? result : result,
+                    'Suppression impossible.'
+                )
+                setError(message)
+                show({
+                    variant: response.status >= 500 ? 'error' : 'warning',
+                    title: 'Echec de la suppression',
+                    description: message,
+                })
                 return
             }
 
             setData((previous) => previous.filter((item) => item.id !== row.id))
+            show({
+                variant: 'success',
+                title: 'Bien supprime',
+                description: `"${row.title}" a ete supprime de votre catalogue.`,
+            })
         } catch {
-            setError('Erreur reseau lors de la suppression.')
+            const message = 'Erreur reseau lors de la suppression.'
+            setError(message)
+            show({
+                variant: 'error',
+                title: 'Erreur reseau',
+                description: message,
+            })
         } finally {
             setPendingId(null)
         }

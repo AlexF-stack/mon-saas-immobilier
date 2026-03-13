@@ -90,7 +90,7 @@ export async function POST(request: Request) {
                 name: parsed.name,
                 password: hashedPassword,
                 role: 'TENANT',
-                createdById: user.id,
+                createdBy: { connect: { id: user.id } },
             },
         })
 
