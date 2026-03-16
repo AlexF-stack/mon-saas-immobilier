@@ -24,7 +24,6 @@ const MIN_JWT_SECRET_LENGTH = 32
 
 export async function POST(request: Request) {
     try {
-        const correlationId = getCorrelationIdFromRequest(request)
         const csrfError = enforceCsrf(request)
         if (csrfError) return csrfError
 

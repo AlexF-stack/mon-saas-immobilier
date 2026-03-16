@@ -89,7 +89,7 @@ async function sendResetEmail(input: {
         }
 
         return { sent: true }
-    } catch (error) {
+    } catch {
         await createSystemLog({
             action: 'PASSWORD_RESET_EMAIL_FAILED',
             targetType: 'AUTH',
