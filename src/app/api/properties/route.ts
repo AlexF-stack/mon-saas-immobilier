@@ -6,6 +6,8 @@ import { prisma } from '@/lib/prisma'
 import { verifyAuth, getTokenFromRequest } from '@/lib/auth'
 import { createSystemLog } from '@/lib/audit'
 import { enforceCsrf } from '@/lib/csrf'
+import { getCorrelationIdFromRequest } from '@/lib/correlation-id'
+import { captureServerError } from '@/lib/monitoring'
 import { normalizePropertyOfferType } from '@/lib/property-offer'
 
 export const runtime = 'nodejs'
@@ -13,7 +15,6 @@ export const dynamic = 'force-dynamic'
 
 const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
-
 
 const createPropertySchema = z.object({
     title: z.string().trim().min(2).max(150),
@@ -30,6 +31,14 @@ const createPropertySchema = z.object({
     isPublished: z.coerce.boolean().optional(),
     imageUrls: z.array(z.string().trim().min(5)).optional(),
 })
+
+function getOptionalFormString(
+    formData: FormData,
+    key: string
+): string | undefined {
+    const value = formData.get(key)
+    return typeof value === 'string' ? value : undefined
+}
 
 function normalizeCreationStatus(input?: string): 'AVAILABLE' | 'RENTED' | null {
     if (!input) return 'AVAILABLE'
@@ -123,6 +132,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
+        const correlationId = getCorrelationIdFromRequest(request)
         const csrfError = enforceCsrf(request)
         if (csrfError) return csrfError
 
@@ -136,17 +146,17 @@ export async function POST(request: Request) {
         }
 
         const formData = await request.formData()
-        const title = formData.get('title')
-        const city = formData.get('city')
-        const address = formData.get('address')
-        const price = formData.get('price')
-        const description = formData.get('description')
-        const propertyType = formData.get('propertyType')
-        const offerType = formData.get('offerType')
-        const isPublished = formData.get('isPublished')
-        const status = formData.get('status')
+        const title = getOptionalFormString(formData, 'title')
+        const city = getOptionalFormString(formData, 'city')
+        const address = getOptionalFormString(formData, 'address')
+        const price = getOptionalFormString(formData, 'price')
+        const description = getOptionalFormString(formData, 'description')
+        const propertyType = getOptionalFormString(formData, 'propertyType')
+        const offerType = getOptionalFormString(formData, 'offerType')
+        const isPublished = getOptionalFormString(formData, 'isPublished')
+        const status = getOptionalFormString(formData, 'status')
         const image = formData.get('image') as File | null
-        const imageUrlsRaw = typeof formData.get('imageUrls') === 'string' ? String(formData.get('imageUrls')) : ''
+        const imageUrlsRaw = getOptionalFormString(formData, 'imageUrls') ?? ''
         const imageUrls = imageUrlsRaw
             ? imageUrlsRaw
                   .split(/\r?\n|,/)
@@ -155,14 +165,14 @@ export async function POST(request: Request) {
             : []
 
         const data = {
-            title,
-            city,
-            address,
-            price,
-            description,
-            propertyType,
-            offerType,
-            status,
+            title: title ?? undefined,
+            city: city ?? undefined,
+            address: address ?? undefined,
+            price: price ?? undefined,
+            description: description ?? undefined,
+            propertyType: propertyType ?? undefined,
+            offerType: offerType ?? undefined,
+            status: status ?? undefined,
             isPublished: isPublished === 'true',
             imageUrls,
         }
@@ -289,6 +299,8 @@ export async function POST(request: Request) {
             action: 'PROPERTY_CREATED',
             targetType: 'PROPERTY',
             targetId: property.id,
+            correlationId,
+            route: '/api/properties',
             details: `title=${property.title};managerId=${property.managerId ?? 'none'};status=${property.status};published=${property.isPublished};type=${property.propertyType};imageCount=${allImageUrls.length}`,
         })
 
@@ -297,7 +309,13 @@ export async function POST(request: Request) {
         if (error instanceof z.ZodError) {
             return NextResponse.json({ error: error.issues }, { status: 400 })
         }
-        console.error(error)
+
+        await captureServerError(error, {
+            scope: 'properties_create',
+            targetType: 'PROPERTY',
+            correlationId: getCorrelationIdFromRequest(request),
+            route: '/api/properties',
+        })
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
 }
