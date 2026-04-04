@@ -33,13 +33,20 @@ export function useToast() {
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = React.useState<ToastInternal[]>([]);
 
+  const createToastId = React.useCallback(() => {
+    if (typeof globalThis.crypto?.randomUUID === "function") {
+      return globalThis.crypto.randomUUID();
+    }
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }, []);
+
   const remove = React.useCallback((id: string) => {
     setToasts((current) => current.filter((toast) => toast.id !== id));
   }, []);
 
   const show = React.useCallback(
     (options: ToastOptions) => {
-      const id = options.id ?? crypto.randomUUID();
+      const id = options.id ?? createToastId();
       const toast: ToastInternal = {
         id,
         title: options.title,
@@ -50,10 +57,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       setToasts((current) => [...current, toast]);
 
       if (toast.durationMs && toast.durationMs > 0) {
-        window.setTimeout(() => remove(id), toast.durationMs);
+        globalThis.setTimeout(() => remove(id), toast.durationMs);
       }
     },
-    [remove]
+    [createToastId, remove]
   );
 
   const value = React.useMemo<ToastContextValue>(() => ({ show }), [show]);

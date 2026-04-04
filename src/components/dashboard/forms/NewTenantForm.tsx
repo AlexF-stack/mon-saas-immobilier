@@ -61,14 +61,14 @@ export function NewTenantForm({ locale, dashboardPathPrefix }: NewTenantFormProp
       if (res.ok) {
         if (payload.generatedPassword) {
           setSuccess(`Locataire cree. Mot de passe temporaire: ${payload.generatedPassword}`)
+          // We intentionally do NOT auto-redirect here so the manager can copy the password.
         } else {
           setSuccess('Locataire cree avec succes.')
+          setTimeout(() => {
+            router.push(`${dashboardPath}/tenants`)
+            router.refresh()
+          }, 2200)
         }
-
-        setTimeout(() => {
-          router.push(`${dashboardPath}/tenants`)
-          router.refresh()
-        }, 2200)
         return
       }
 
@@ -109,10 +109,10 @@ export function NewTenantForm({ locale, dashboardPathPrefix }: NewTenantFormProp
         </CardContent>
         <CardFooter className="justify-end gap-2 border-t border-slate-200/70 dark:border-slate-800">
           <Button asChild variant="outline" disabled={loading}>
-            <Link href={`${dashboardPath}/tenants`}>Annuler</Link>
+            <Link href={`${dashboardPath}/tenants`}>{success ? 'Retour' : 'Annuler'}</Link>
           </Button>
-          <Button type="submit" disabled={loading}>
-            {loading ? 'Creation...' : 'Creer le locataire'}
+          <Button type="submit" disabled={loading || !!success}>
+            {loading ? 'Creation...' : success ? 'Cree' : 'Creer le locataire'}
           </Button>
         </CardFooter>
       </form>
