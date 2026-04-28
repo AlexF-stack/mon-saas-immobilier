@@ -31,7 +31,14 @@ async function resolveInquiryForUser(inquiryId: string, userId: string, role: st
       guestAccessTokenHash: true,
       guestAccessTokenExpiresAt: true,
       property: {
-        select: { id: true, title: true, managerId: true },
+        select: {
+          id: true,
+          title: true,
+          managerId: true,
+          manager: {
+            select: { id: true, name: true, email: true, phone: true, preferredLanguage: true },
+          },
+        },
       },
     },
   })
@@ -58,7 +65,14 @@ async function resolveInquiryForGuest(inquiryId: string, guestToken: string) {
       guestAccessTokenHash: true,
       guestAccessTokenExpiresAt: true,
       property: {
-        select: { id: true, title: true, managerId: true },
+        select: {
+          id: true,
+          title: true,
+          managerId: true,
+          manager: {
+            select: { id: true, name: true, email: true, phone: true, preferredLanguage: true },
+          },
+        },
       },
     },
   })
@@ -179,6 +193,7 @@ export async function POST(
       },
     })
 
+    // Create internal notifications for Dashboard users
     const recipientIds = new Set<string>()
     if (inquiry.requesterUserId && inquiry.requesterUserId !== user?.id) recipientIds.add(inquiry.requesterUserId)
     if (inquiry.property.managerId && inquiry.property.managerId !== user?.id) {
@@ -194,47 +209,64 @@ export async function POST(
           message: `Nouveau message sur la demande pour ${inquiry.property.title}.`,
         })),
       })
+    }
 
-      // Dispatch external notifications
-      const senderName = user?.name || inquiry.requesterName
+    // External Notifications (Email/WhatsApp)
+    try {
+      const isManager = user?.id === inquiry.property.managerId
+      const senderName = user?.name || inquiry.requesterName || 'Un visiteur'
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
       const dashboardUrl = `${baseUrl}/dashboard/marketplace/inquiries?inquiryId=${inquiry.id}`
 
-      for (const recipientId of recipientIds) {
-        await notifyUser({
-          userId: recipientId,
-          senderName,
-          propertyTitle: inquiry.property.title,
-          messagePreview: payload.message,
-          dashboardUrl,
-        })
+      if (isManager) {
+        // Notify the visitor (Guest or Tenant)
+        if (inquiry.requesterUserId) {
+          // Internal user recipient
+          await notifyUser({
+            userId: inquiry.requesterUserId,
+            senderName,
+            propertyTitle: inquiry.property.title,
+            messagePreview: payload.message,
+            dashboardUrl,
+          })
+        } else {
+          // Guest recipient
+          const guestAccessToken = createGuestInquiryAccessToken()
+          const guestAccessTokenHash = hashGuestInquiryAccessToken(guestAccessToken)
+          const guestAccessTokenExpiresAt = buildGuestInquiryAccessExpiry()
+
+          await prisma.marketplaceInquiry.update({
+            where: { id: inquiry.id },
+            data: {
+              guestAccessTokenHash,
+              guestAccessTokenExpiresAt,
+            },
+            select: { id: true },
+          })
+
+          await notifyGuest({
+            email: inquiry.requesterEmail,
+            phone: inquiry.requesterPhone,
+            senderName,
+            propertyTitle: inquiry.property.title,
+            messagePreview: payload.message,
+            guestAccessUrl: `${baseUrl}/marketplace/inquiries/${inquiry.id}?guestToken=${encodeURIComponent(guestAccessToken)}`,
+          })
+        }
+      } else {
+        // Notify the Manager
+        if (inquiry.property.managerId) {
+          await notifyUser({
+            userId: inquiry.property.managerId,
+            senderName,
+            propertyTitle: inquiry.property.title,
+            messagePreview: payload.message,
+            dashboardUrl,
+          })
+        }
       }
-    }
-
-    // If a guest (no userId) is the recipient (i.e. manager replied to guest)
-    if (!inquiry.requesterUserId && user?.id === inquiry.property.managerId) {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-      const guestAccessToken = createGuestInquiryAccessToken()
-      const guestAccessTokenHash = hashGuestInquiryAccessToken(guestAccessToken)
-      const guestAccessTokenExpiresAt = buildGuestInquiryAccessExpiry()
-
-      await prisma.marketplaceInquiry.update({
-        where: { id: inquiry.id },
-        data: {
-          guestAccessTokenHash,
-          guestAccessTokenExpiresAt,
-        },
-        select: { id: true },
-      })
-
-      await notifyGuest({
-        email: inquiry.requesterEmail,
-        phone: inquiry.requesterPhone,
-        senderName: user.name || 'Le propriétaire',
-        propertyTitle: inquiry.property.title,
-        messagePreview: payload.message,
-        guestAccessUrl: `${baseUrl}/marketplace/inquiries/${inquiry.id}?guestToken=${encodeURIComponent(guestAccessToken)}`,
-      })
+    } catch (err) {
+      console.error('External notification error:', err)
     }
 
     await createSystemLog({
@@ -254,9 +286,10 @@ export async function POST(
 
     return NextResponse.json({ message }, { status: 201 })
   } catch (error) {
-    if (error instanceof z.ZodError) {
+    if (error instanceof z.ZError) {
       return NextResponse.json({ error: error.issues }, { status: 400 })
     }
+    console.error('Inquiry message error', error)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }
