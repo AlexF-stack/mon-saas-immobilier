@@ -272,6 +272,7 @@ export default async function MarketplacePropertyDetailPage(props: {
                                     propertyId={property.id}
                                     defaultName={user?.name ?? undefined}
                                     defaultEmail={user?.email ?? undefined}
+                                    locale={locale}
                                 />
                             </CardContent>
                         </Card>

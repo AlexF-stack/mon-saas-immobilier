@@ -20,7 +20,12 @@ const registerSchema = z.object({
     email: z.string().trim().email(),
     password: z.string().min(6),
     name: z.string().optional(),
+    phone: z
+        .string()
+        .trim()
+        .regex(/^\+?[0-9\s().-]{8,25}$/, 'Invalid phone number'),
     role: z.string().optional(),
+    rentalTerms: z.string().trim().min(20).max(5000).optional(),
 })
 
 const MIN_JWT_SECRET_LENGTH = 32
@@ -46,6 +51,7 @@ export async function POST(request: Request) {
         const email = parsed.email.toLowerCase()
         const password = parsed.password
         const name = parsed.name?.trim()
+        const phone = parsed.phone.trim()
 
         if (!validateRegistrationPassword(password)) {
             return NextResponse.json(
@@ -61,6 +67,14 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: roleResult.error }, { status: 400 })
         }
         const role = roleResult.internalRole
+        const rentalTerms = parsed.rentalTerms?.trim()
+
+        if (role === 'MANAGER' && !rentalTerms) {
+            return NextResponse.json(
+                { error: 'Les conditions de contrat sont obligatoires avant la creation d un compte proprietaire.' },
+                { status: 400 }
+            )
+        }
 
         const existingUser = await prisma.user.findUnique({
             where: { email },
@@ -80,7 +94,9 @@ export async function POST(request: Request) {
                 email,
                 password: hashedPassword,
                 name,
+                phone,
                 role,
+                rentalTermsTemplate: role === 'MANAGER' ? rentalTerms : null,
                 isSuspended: false,
             },
         })

@@ -32,11 +32,21 @@ type ProfileForm = {
   preferredLanguage: 'fr' | 'en'
   notifyEmail: boolean
   notifySms: boolean
+  notifyWhatsapp: boolean
   notifyPush: boolean
   twoFactorEnabled: boolean
   dashboardCompact: boolean
   companyName: string
   companyLogoUrl: string
+  rentalTermsTemplate: string
+  reminderChannelEmail: boolean
+  reminderChannelSms: boolean
+  reminderChannelWhatsapp: boolean
+  paymentCollectionMode: 'DIRECT' | 'PLATFORM'
+  paymentMomoNumber: string
+  paymentMomoProvider: 'MTN' | 'MOOV'
+  paymentCardLink: string
+  paymentInstructions: string
 }
 
 function toForm(profile: SettingsProfileSnapshot): ProfileForm {
@@ -47,11 +57,21 @@ function toForm(profile: SettingsProfileSnapshot): ProfileForm {
     preferredLanguage: profile.preferredLanguage === 'en' ? 'en' : 'fr',
     notifyEmail: profile.notifyEmail,
     notifySms: profile.notifySms,
+    notifyWhatsapp: profile.notifyWhatsapp,
     notifyPush: profile.notifyPush,
     twoFactorEnabled: profile.twoFactorEnabled,
     dashboardCompact: profile.dashboardCompact,
     companyName: profile.companyName ?? '',
     companyLogoUrl: profile.companyLogoUrl ?? '',
+    rentalTermsTemplate: profile.rentalTermsTemplate ?? '',
+    reminderChannelEmail: profile.reminderChannelEmail,
+    reminderChannelSms: profile.reminderChannelSms,
+    reminderChannelWhatsapp: profile.reminderChannelWhatsapp,
+    paymentCollectionMode: profile.paymentCollectionMode === 'PLATFORM' ? 'PLATFORM' : 'DIRECT',
+    paymentMomoNumber: profile.paymentMomoNumber ?? '',
+    paymentMomoProvider: profile.paymentMomoProvider === 'MOOV' ? 'MOOV' : 'MTN',
+    paymentCardLink: profile.paymentCardLink ?? '',
+    paymentInstructions: profile.paymentInstructions ?? '',
   }
 }
 
@@ -128,6 +148,7 @@ export function SettingsWorkspace({ locale, profile, loginHistory, wishlist: ini
           preferredLanguage: form.preferredLanguage,
           notifyEmail: form.notifyEmail,
           notifySms: form.notifySms,
+          notifyWhatsapp: form.notifyWhatsapp,
           notifyPush: form.notifyPush,
           twoFactorEnabled: form.twoFactorEnabled,
           ...(canManageCompany
@@ -135,6 +156,15 @@ export function SettingsWorkspace({ locale, profile, loginHistory, wishlist: ini
                 dashboardCompact: form.dashboardCompact,
                 companyName: form.companyName.trim() || null,
                 companyLogoUrl: form.companyLogoUrl.trim() || null,
+                rentalTermsTemplate: form.rentalTermsTemplate.trim() || null,
+                reminderChannelEmail: form.reminderChannelEmail,
+                reminderChannelSms: form.reminderChannelSms,
+                reminderChannelWhatsapp: form.reminderChannelWhatsapp,
+                paymentCollectionMode: form.paymentCollectionMode,
+                paymentMomoNumber: form.paymentMomoNumber.trim() || null,
+                paymentMomoProvider: form.paymentMomoNumber.trim() ? form.paymentMomoProvider : null,
+                paymentCardLink: form.paymentCardLink.trim() || null,
+                paymentInstructions: form.paymentInstructions.trim() || null,
               }
             : {}),
         }),
@@ -371,6 +401,20 @@ export function SettingsWorkspace({ locale, profile, loginHistory, wishlist: ini
                     <Label>Company Logo URL</Label>
                     <Input value={form.companyLogoUrl} onChange={(e) => setForm((p) => ({ ...p, companyLogoUrl: e.target.value }))} />
                   </div>
+                  <div className='space-y-2 md:col-span-2'>
+                    <Label>Modele de conditions de location</Label>
+                    <Textarea
+                      value={form.rentalTermsTemplate}
+                      className='min-h-32'
+                      minLength={20}
+                      maxLength={5000}
+                      placeholder='Ex: depot de garantie, delais de paiement, penalites de retard, entretien, preavis...'
+                      onChange={(e) => setForm((p) => ({ ...p, rentalTermsTemplate: e.target.value }))}
+                    />
+                    <p className='text-xs text-slate-500 dark:text-slate-400'>
+                      Ce texte sera repris automatiquement dans les nouveaux contrats et fige au moment de la creation.
+                    </p>
+                  </div>
                 </>
               ) : null}
             </div>
@@ -378,10 +422,57 @@ export function SettingsWorkspace({ locale, profile, loginHistory, wishlist: ini
             <div className='grid grid-cols-1 gap-2 md:grid-cols-2'>
               <label className='flex items-center gap-2 text-sm'><input type='checkbox' checked={form.notifyEmail} onChange={(e) => setForm((p) => ({ ...p, notifyEmail: e.target.checked }))} /> Email notifications</label>
               <label className='flex items-center gap-2 text-sm'><input type='checkbox' checked={form.notifySms} onChange={(e) => setForm((p) => ({ ...p, notifySms: e.target.checked }))} /> SMS notifications</label>
+              <label className='flex items-center gap-2 text-sm'><input type='checkbox' checked={form.notifyWhatsapp} onChange={(e) => setForm((p) => ({ ...p, notifyWhatsapp: e.target.checked }))} /> WhatsApp notifications</label>
               <label className='flex items-center gap-2 text-sm'><input type='checkbox' checked={form.notifyPush} onChange={(e) => setForm((p) => ({ ...p, notifyPush: e.target.checked }))} /> Push notifications</label>
               <label className='flex items-center gap-2 text-sm'><input type='checkbox' checked={form.twoFactorEnabled} onChange={(e) => setForm((p) => ({ ...p, twoFactorEnabled: e.target.checked }))} /> Enable 2FA (soft toggle)</label>
               {canManageCompany ? <label className='flex items-center gap-2 text-sm'><input type='checkbox' checked={form.dashboardCompact} onChange={(e) => setForm((p) => ({ ...p, dashboardCompact: e.target.checked }))} /> Compact dashboard KPI layout</label> : null}
             </div>
+
+            {canManageCompany ? (
+              <div className='grid grid-cols-1 gap-4 rounded-xl border border-border bg-surface/40 p-4 md:grid-cols-2'>
+                <div className='space-y-2 md:col-span-2'>
+                  <Label>Canaux de rappel locataire</Label>
+                  <div className='grid grid-cols-1 gap-2 md:grid-cols-3'>
+                    <label className='flex items-center gap-2 text-sm'><input type='checkbox' checked={form.reminderChannelEmail} onChange={(e) => setForm((p) => ({ ...p, reminderChannelEmail: e.target.checked }))} /> Email</label>
+                    <label className='flex items-center gap-2 text-sm'><input type='checkbox' checked={form.reminderChannelSms} onChange={(e) => setForm((p) => ({ ...p, reminderChannelSms: e.target.checked }))} /> SMS</label>
+                    <label className='flex items-center gap-2 text-sm'><input type='checkbox' checked={form.reminderChannelWhatsapp} onChange={(e) => setForm((p) => ({ ...p, reminderChannelWhatsapp: e.target.checked }))} /> WhatsApp</label>
+                  </div>
+                  <p className='text-xs text-slate-500 dark:text-slate-400'>Le locataire ne choisit pas le canal. Ces options pilotent les rappels pour vos contrats.</p>
+                </div>
+                <div className='space-y-2'>
+                  <Label>Mode de collecte</Label>
+                  <Select value={form.paymentCollectionMode} onValueChange={(value) => setForm((p) => ({ ...p, paymentCollectionMode: value === 'PLATFORM' ? 'PLATFORM' : 'DIRECT' }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='DIRECT'>Paiement direct proprietaire</SelectItem>
+                      <SelectItem value='PLATFORM'>Encaissement plateforme</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className='space-y-2'>
+                  <Label>Numero MoMo</Label>
+                  <Input value={form.paymentMomoNumber} onChange={(e) => setForm((p) => ({ ...p, paymentMomoNumber: e.target.value }))} placeholder='+22997000000' />
+                </div>
+                <div className='space-y-2'>
+                  <Label>Operateur MoMo</Label>
+                  <Select value={form.paymentMomoProvider} onValueChange={(value) => setForm((p) => ({ ...p, paymentMomoProvider: value === 'MOOV' ? 'MOOV' : 'MTN' }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='MTN'>MTN</SelectItem>
+                      <SelectItem value='MOOV'>MOOV</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className='space-y-2'>
+                  <Label>Lien de paiement carte</Label>
+                  <Input value={form.paymentCardLink} onChange={(e) => setForm((p) => ({ ...p, paymentCardLink: e.target.value }))} placeholder='https://...' />
+                </div>
+                <div className='space-y-2 md:col-span-2'>
+                  <Label>Instructions de paiement</Label>
+                  <Textarea value={form.paymentInstructions} className='min-h-24' onChange={(e) => setForm((p) => ({ ...p, paymentInstructions: e.target.value }))} placeholder='Ex: envoyer la reference apres paiement ou utiliser uniquement MTN pour les loyers.' />
+                </div>
+              </div>
+            ) : null}
 
             {profileError ? <p className='text-sm text-rose-600 dark:text-rose-400'>{profileError}</p> : null}
             {profileMessage ? <p className='text-sm text-emerald-600 dark:text-emerald-400'>{profileMessage}</p> : null}

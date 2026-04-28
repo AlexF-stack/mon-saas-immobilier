@@ -231,6 +231,18 @@ export default async function PropertiesPage(props: {
                   <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     Cree le {property.createdAt.toLocaleDateString('fr-FR')}
                   </p>
+                  <div className="flex items-center gap-2 pt-2">
+                    <Button asChild variant="outline" size="sm" className="flex-1">
+                      <Link href={`/${locale}/marketplace/${property.id}`} target="_blank">
+                        Voir
+                      </Link>
+                    </Button>
+                    <Button asChild variant="default" size="sm" className="flex-1">
+                      <Link href={`/${locale}/dashboard/properties/${property.id}`}>
+                        Modifier
+                      </Link>
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}

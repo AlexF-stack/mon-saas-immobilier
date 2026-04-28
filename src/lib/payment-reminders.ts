@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { createSystemLog } from '@/lib/audit'
 
-export const REMINDER_DAY_OFFSETS = [7, 5, 3, 1] as const
+export const REMINDER_DAY_OFFSETS = [7, 5, 3, 1, 0] as const
 const REMINDER_WEBHOOK_TIMEOUT_MS = 6000
 
 export type ReminderDayOffset = (typeof REMINDER_DAY_OFFSETS)[number]
@@ -13,8 +13,9 @@ type Recipient = {
   email: string
   phone: string | null
   preferredLanguage: string
-  notifyEmail: boolean
-  notifySms: boolean
+  reminderChannelEmail?: boolean
+  reminderChannelSms?: boolean
+  reminderChannelWhatsapp?: boolean
 }
 
 type ReminderCopy = {
@@ -165,27 +166,44 @@ function buildTenantReminderCopy(
 ): ReminderCopy {
   const dueDateLabel = formatDisplayDate(payload.dueDate, locale)
   const amountLabel = formatAmount(payload.amount)
-  const dayBadge = `J-${payload.daysBefore}`
+  const dayBadge = payload.daysBefore === 0 ? 'ECHEANCE' : `J-${payload.daysBefore}`
   const displayName = payload.recipientName?.trim() || (locale === 'fr' ? 'Locataire' : 'Tenant')
 
   if (locale === 'fr') {
+    const dueQualifier =
+      payload.daysBefore === 0
+        ? 'est attendu aujourd hui'
+        : `est attendu le ${dueDateLabel} (J-${payload.daysBefore})`
     return {
-      title: `Rappel de paiement ${dayBadge}`,
-      inAppMessage: `Votre loyer (${amountLabel}) pour ${payload.propertyTitle} est attendu le ${dueDateLabel}.`,
-      emailSubject: `ImmoSaaS - Rappel loyer ${dayBadge}`,
-      emailBody: `Bonjour ${displayName},\n\nVotre loyer de ${amountLabel} pour ${payload.propertyTitle} est attendu le ${dueDateLabel} (${dayBadge}).\nMerci d'anticiper votre paiement.\n\nImmoSaaS`,
-      smsBody: `ImmoSaaS: Rappel ${dayBadge}, loyer ${amountLabel} pour ${payload.propertyTitle} attendu le ${dueDateLabel}.`,
-      whatsappBody: `ImmoSaaS: Rappel ${dayBadge}, loyer ${amountLabel} pour ${payload.propertyTitle} attendu le ${dueDateLabel}.`,
+      title:
+        payload.daysBefore === 0
+          ? 'Echeance de paiement aujourd hui'
+          : `Rappel de paiement ${dayBadge}`,
+      inAppMessage: `Votre loyer (${amountLabel}) pour ${payload.propertyTitle} ${dueQualifier}.`,
+      emailSubject:
+        payload.daysBefore === 0
+          ? 'ImmoSaaS - Echeance loyer aujourd hui'
+          : `ImmoSaaS - Rappel loyer ${dayBadge}`,
+      emailBody: `Bonjour ${displayName},\n\nVotre loyer de ${amountLabel} pour ${payload.propertyTitle} ${dueQualifier}.\nMerci d'anticiper votre paiement.\n\nImmoSaaS`,
+      smsBody: `ImmoSaaS: loyer ${amountLabel} pour ${payload.propertyTitle} ${dueQualifier}.`,
+      whatsappBody: `ImmoSaaS: loyer ${amountLabel} pour ${payload.propertyTitle} ${dueQualifier}.`,
     }
   }
 
+  const dueQualifier =
+    payload.daysBefore === 0
+      ? 'is due today'
+      : `is due on ${dueDateLabel} (D-${payload.daysBefore})`
   return {
-    title: `Payment reminder ${dayBadge}`,
-    inAppMessage: `Your rent (${amountLabel}) for ${payload.propertyTitle} is due on ${dueDateLabel}.`,
-    emailSubject: `ImmoSaaS - Rent reminder ${dayBadge}`,
-    emailBody: `Hello ${displayName},\n\nYour rent payment of ${amountLabel} for ${payload.propertyTitle} is due on ${dueDateLabel} (${dayBadge}).\nPlease plan your payment ahead.\n\nImmoSaaS`,
-    smsBody: `ImmoSaaS: Reminder ${dayBadge}, rent ${amountLabel} for ${payload.propertyTitle} due on ${dueDateLabel}.`,
-    whatsappBody: `ImmoSaaS: Reminder ${dayBadge}, rent ${amountLabel} for ${payload.propertyTitle} due on ${dueDateLabel}.`,
+    title: payload.daysBefore === 0 ? 'Payment due today' : `Payment reminder ${dayBadge}`,
+    inAppMessage: `Your rent (${amountLabel}) for ${payload.propertyTitle} ${dueQualifier}.`,
+    emailSubject:
+      payload.daysBefore === 0
+        ? 'ImmoSaaS - Rent due today'
+        : `ImmoSaaS - Rent reminder ${dayBadge}`,
+    emailBody: `Hello ${displayName},\n\nYour rent payment of ${amountLabel} for ${payload.propertyTitle} ${dueQualifier}.\nPlease plan your payment ahead.\n\nImmoSaaS`,
+    smsBody: `ImmoSaaS: rent ${amountLabel} for ${payload.propertyTitle} ${dueQualifier}.`,
+    whatsappBody: `ImmoSaaS: rent ${amountLabel} for ${payload.propertyTitle} ${dueQualifier}.`,
   }
 }
 
@@ -202,28 +220,45 @@ function buildManagerReminderCopy(
 ): ReminderCopy {
   const dueDateLabel = formatDisplayDate(payload.dueDate, locale)
   const amountLabel = formatAmount(payload.amount)
-  const dayBadge = `J-${payload.daysBefore}`
+  const dayBadge = payload.daysBefore === 0 ? 'ECHEANCE' : `J-${payload.daysBefore}`
   const managerName = payload.recipientName?.trim() || (locale === 'fr' ? 'Manager' : 'Manager')
   const tenantName = payload.tenantName?.trim() || (locale === 'fr' ? 'locataire' : 'tenant')
 
   if (locale === 'fr') {
+    const dueQualifier =
+      payload.daysBefore === 0
+        ? 'est attendu aujourd hui'
+        : `est attendu le ${dueDateLabel} (J-${payload.daysBefore})`
     return {
-      title: `Suivi loyer ${dayBadge}`,
-      inAppMessage: `Le loyer de ${tenantName} (${amountLabel}) pour ${payload.propertyTitle} est attendu le ${dueDateLabel}.`,
-      emailSubject: `ImmoSaaS - Suivi loyer ${dayBadge}`,
-      emailBody: `Bonjour ${managerName},\n\nLe loyer de ${tenantName} (${amountLabel}) pour ${payload.propertyTitle} est attendu le ${dueDateLabel} (${dayBadge}).\n\nImmoSaaS`,
-      smsBody: `ImmoSaaS: ${tenantName} - loyer ${amountLabel} (${payload.propertyTitle}) attendu le ${dueDateLabel} (${dayBadge}).`,
-      whatsappBody: `ImmoSaaS: ${tenantName} - loyer ${amountLabel} (${payload.propertyTitle}) attendu le ${dueDateLabel} (${dayBadge}).`,
+      title:
+        payload.daysBefore === 0
+          ? 'Echeance loyer aujourd hui'
+          : `Suivi loyer ${dayBadge}`,
+      inAppMessage: `Le loyer de ${tenantName} (${amountLabel}) pour ${payload.propertyTitle} ${dueQualifier}.`,
+      emailSubject:
+        payload.daysBefore === 0
+          ? 'ImmoSaaS - Echeance loyer aujourd hui'
+          : `ImmoSaaS - Suivi loyer ${dayBadge}`,
+      emailBody: `Bonjour ${managerName},\n\nLe loyer de ${tenantName} (${amountLabel}) pour ${payload.propertyTitle} ${dueQualifier}.\n\nImmoSaaS`,
+      smsBody: `ImmoSaaS: ${tenantName} - loyer ${amountLabel} (${payload.propertyTitle}) ${dueQualifier}.`,
+      whatsappBody: `ImmoSaaS: ${tenantName} - loyer ${amountLabel} (${payload.propertyTitle}) ${dueQualifier}.`,
     }
   }
 
+  const dueQualifier =
+    payload.daysBefore === 0
+      ? 'is due today'
+      : `is due on ${dueDateLabel} (D-${payload.daysBefore})`
   return {
-    title: `Rent follow-up ${dayBadge}`,
-    inAppMessage: `${tenantName}'s rent (${amountLabel}) for ${payload.propertyTitle} is due on ${dueDateLabel}.`,
-    emailSubject: `ImmoSaaS - Rent follow-up ${dayBadge}`,
-    emailBody: `Hello ${managerName},\n\n${tenantName}'s rent (${amountLabel}) for ${payload.propertyTitle} is due on ${dueDateLabel} (${dayBadge}).\n\nImmoSaaS`,
-    smsBody: `ImmoSaaS: ${tenantName} rent ${amountLabel} (${payload.propertyTitle}) due on ${dueDateLabel} (${dayBadge}).`,
-    whatsappBody: `ImmoSaaS: ${tenantName} rent ${amountLabel} (${payload.propertyTitle}) due on ${dueDateLabel} (${dayBadge}).`,
+    title: payload.daysBefore === 0 ? 'Rent due today' : `Rent follow-up ${dayBadge}`,
+    inAppMessage: `${tenantName}'s rent (${amountLabel}) for ${payload.propertyTitle} ${dueQualifier}.`,
+    emailSubject:
+      payload.daysBefore === 0
+        ? 'ImmoSaaS - Rent due today'
+        : `ImmoSaaS - Rent follow-up ${dayBadge}`,
+    emailBody: `Hello ${managerName},\n\n${tenantName}'s rent (${amountLabel}) for ${payload.propertyTitle} ${dueQualifier}.\n\nImmoSaaS`,
+    smsBody: `ImmoSaaS: ${tenantName} rent ${amountLabel} (${payload.propertyTitle}) ${dueQualifier}.`,
+    whatsappBody: `ImmoSaaS: ${tenantName} rent ${amountLabel} (${payload.propertyTitle}) ${dueQualifier}.`,
   }
 }
 
@@ -261,7 +296,6 @@ async function deliverChannels(
     recipient: Recipient
     copy: ReminderCopy
     channels?: ReminderDeliveryChannel[]
-    ignoreUserPreferences?: boolean
     correlationId?: string
     route?: string
   }
@@ -290,9 +324,9 @@ async function deliverChannels(
     failures: 0,
   }
 
-  const canSendEmail = input.ignoreUserPreferences || input.recipient.notifyEmail
-  const canSendSms = input.ignoreUserPreferences || input.recipient.notifySms
-  const canSendWhatsapp = input.ignoreUserPreferences || input.recipient.notifySms
+  const canSendEmail = true
+  const canSendSms = true
+  const canSendWhatsapp = true
 
   if (desiredChannels.has('EMAIL') && canSendEmail && input.recipient.email) {
     if (!emailWebhookUrl) {
@@ -401,6 +435,22 @@ function hasPaymentInDueWindow(
   })
 }
 
+function getOwnerManagedReminderChannels(
+  config:
+    | {
+        reminderChannelEmail?: boolean
+        reminderChannelSms?: boolean
+        reminderChannelWhatsapp?: boolean
+      }
+    | null
+): ReminderDeliveryChannel[] {
+  const channels: ReminderDeliveryChannel[] = []
+  if (config?.reminderChannelWhatsapp) channels.push('WHATSAPP')
+  if (config?.reminderChannelSms) channels.push('SMS')
+  if (config?.reminderChannelEmail ?? true) channels.push('EMAIL')
+  return channels.length > 0 ? channels : ['EMAIL']
+}
+
 export async function sendManualPaymentReminder(input: {
   contractId: string
   daysBefore: ReminderDayOffset
@@ -427,14 +477,19 @@ export async function sendManualPaymentReminder(input: {
           email: true,
           phone: true,
           preferredLanguage: true,
-          notifyEmail: true,
-          notifySms: true,
         },
       },
       property: {
         select: {
           title: true,
           managerId: true,
+          manager: {
+            select: {
+              reminderChannelEmail: true,
+              reminderChannelSms: true,
+              reminderChannelWhatsapp: true,
+            },
+          },
         },
       },
     },
@@ -546,7 +601,9 @@ export async function sendManualPaymentReminder(input: {
   }
 
   const channels: ReminderDeliveryChannel[] =
-    input.channels && input.channels.length > 0 ? input.channels : ['EMAIL', 'SMS', 'WHATSAPP']
+    input.channels && input.channels.length > 0
+      ? input.channels
+      : getOwnerManagedReminderChannels(contract.property.manager)
   const metrics = await deliverChannels({
     reminderKey,
     recipient: {
@@ -555,12 +612,9 @@ export async function sendManualPaymentReminder(input: {
       email: contract.tenant.email,
       phone: contract.tenant.phone,
       preferredLanguage: contract.tenant.preferredLanguage,
-      notifyEmail: contract.tenant.notifyEmail,
-      notifySms: contract.tenant.notifySms,
     },
     copy: tenantCopy,
     channels,
-    ignoreUserPreferences: true,
     correlationId: input.correlationId,
     route: input.route,
   })
@@ -624,8 +678,6 @@ export async function sendDailyPaymentReminders(input?: {
           email: true,
           phone: true,
           preferredLanguage: true,
-          notifyEmail: true,
-          notifySms: true,
         },
       },
       property: {
@@ -639,8 +691,9 @@ export async function sendDailyPaymentReminders(input?: {
               email: true,
               phone: true,
               preferredLanguage: true,
-              notifyEmail: true,
-              notifySms: true,
+              reminderChannelEmail: true,
+              reminderChannelSms: true,
+              reminderChannelWhatsapp: true,
             },
           },
         },
@@ -682,8 +735,6 @@ export async function sendDailyPaymentReminders(input?: {
           email: contract.tenant.email,
           phone: contract.tenant.phone,
           preferredLanguage: contract.tenant.preferredLanguage,
-          notifyEmail: contract.tenant.notifyEmail,
-          notifySms: contract.tenant.notifySms,
         },
         manager: contract.property.manager
           ? {
@@ -692,8 +743,9 @@ export async function sendDailyPaymentReminders(input?: {
               email: contract.property.manager.email,
               phone: contract.property.manager.phone,
               preferredLanguage: contract.property.manager.preferredLanguage,
-              notifyEmail: contract.property.manager.notifyEmail,
-              notifySms: contract.property.manager.notifySms,
+              reminderChannelEmail: contract.property.manager.reminderChannelEmail,
+              reminderChannelSms: contract.property.manager.reminderChannelSms,
+              reminderChannelWhatsapp: contract.property.manager.reminderChannelWhatsapp,
             }
           : null,
       })
@@ -864,6 +916,7 @@ export async function sendDailyPaymentReminders(input?: {
         reminderKey,
         recipient: candidate.tenant,
         copy: tenantCopy,
+        channels: getOwnerManagedReminderChannels(candidate.manager),
         correlationId: input?.correlationId,
         route: input?.route,
       })
@@ -881,6 +934,7 @@ export async function sendDailyPaymentReminders(input?: {
           reminderKey,
           recipient: candidate.manager,
           copy: managerCopy,
+          channels: getOwnerManagedReminderChannels(candidate.manager),
           correlationId: input?.correlationId,
           route: input?.route,
         })

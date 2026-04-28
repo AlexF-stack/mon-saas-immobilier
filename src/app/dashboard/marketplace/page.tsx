@@ -148,6 +148,7 @@ export default async function DashboardMarketplacePage() {
                                     <th className="px-2 py-2">Contact</th>
                                     <th className="px-2 py-2">Date visite</th>
                                     <th className="px-2 py-2">Statut</th>
+                                    <th className="px-2 py-2">Discussion</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -168,6 +169,13 @@ export default async function DashboardMarketplacePage() {
                                             <span className="rounded-full bg-sky-100 px-2 py-1 text-xs font-medium text-sky-800 dark:bg-sky-900/30 dark:text-sky-200">
                                                 {inquiry.status}
                                             </span>
+                                        </td>
+                                        <td className="px-2 py-2">
+                                            <Button asChild size="sm" variant="outline">
+                                                <Link href={`/dashboard/marketplace/inquiries?inquiryId=${inquiry.id}`}>
+                                                    Ouvrir discussion
+                                                </Link>
+                                            </Button>
                                         </td>
                                     </tr>
                                 ))}

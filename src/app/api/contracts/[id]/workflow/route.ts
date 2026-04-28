@@ -16,6 +16,7 @@ const saveDocumentSchema = z.object({
   action: z.literal('SAVE_DOCUMENT'),
   documentSource: sourceSchema,
   contractType: contractTypeSchema.optional(),
+  rentalTermsSnapshot: z.string().trim().min(20).max(5000).optional(),
   contractFileUrl: z.string().trim().url().max(1200).optional(),
   contractText: z.string().trim().max(20000).optional(),
   receiptFileUrl: z.string().trim().url().max(1200).optional(),
@@ -115,6 +116,7 @@ export async function POST(
         where: { id: contract.id },
         data: {
           contractType: nextType,
+          rentalTermsSnapshot: payload.rentalTermsSnapshot ?? contract.rentalTermsSnapshot,
           documentSource: payload.documentSource,
           fileUrl: usingUpload ? payload.contractFileUrl ?? null : null,
           contractText: usingDraft ? payload.contractText ?? null : null,

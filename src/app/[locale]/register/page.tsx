@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { validateRegistrationPassword } from '@/lib/auth-policy'
 
 function getErrorMessage(errorPayload: unknown, fallback: string): string {
@@ -51,7 +52,9 @@ export default function RegisterPage() {
         const email = String(formData.get('email') ?? '').trim()
         const password = String(formData.get('password') ?? '')
         const name = String(formData.get('name') ?? '').trim()
+        const phone = String(formData.get('phone') ?? '').trim()
         const role = selectedRole
+        const rentalTerms = String(formData.get('rentalTerms') ?? '').trim()
 
         const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
         if (!isValidEmail) {
@@ -66,12 +69,32 @@ export default function RegisterPage() {
             return
         }
 
+        const phoneRegex = /^\+?[0-9\s().-]{8,25}$/
+        if (!phoneRegex.test(phone)) {
+            setLoading(false)
+            setError('Numero de telephone invalide.')
+            return
+        }
+
+        if (role === 'PROPRIETAIRE' && rentalTerms.length < 20) {
+            setLoading(false)
+            setError('Veuillez renseigner vos conditions de contrat avant de creer un compte proprietaire (minimum 20 caracteres).')
+            return
+        }
+
         try {
             const res = await fetch('/api/auth/register', {
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password, name, role }),
+                body: JSON.stringify({
+                    email,
+                    password,
+                    name,
+                    phone,
+                    role,
+                    rentalTerms: role === 'PROPRIETAIRE' ? rentalTerms : undefined,
+                }),
             })
 
             const data = await res.json()
@@ -109,6 +132,17 @@ export default function RegisterPage() {
                             <Input id="email" name="email" type="email" placeholder="john@example.com" required />
                         </div>
                         <div className="space-y-2">
+                            <Label htmlFor="phone">Telephone</Label>
+                            <Input
+                                id="phone"
+                                name="phone"
+                                type="tel"
+                                placeholder="+22997000000"
+                                pattern="^\\+?[0-9 ()\\.-]{8,25}$"
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
                             <Label htmlFor="password">{t('auth.password')}</Label>
                             <Input id="password" name="password" type="password" required />
                             <p className="text-xs text-secondary">
@@ -127,6 +161,27 @@ export default function RegisterPage() {
                                 </SelectContent>
                             </Select>
                         </div>
+                        {selectedRole === 'PROPRIETAIRE' && (
+                            <div className="space-y-3 rounded-xl border border-border bg-surface/50 p-4">
+                                <div className="space-y-1">
+                                    <Label htmlFor="rentalTerms">Conditions de contrat</Label>
+                                    <p className="text-xs text-secondary">
+                                        Obligatoire avant creation du compte proprietaire. Ce texte servira de base contractuelle par defaut dans vos nouveaux contrats.
+                                    </p>
+                                </div>
+                                <Textarea
+                                    id="rentalTerms"
+                                    name="rentalTerms"
+                                    required
+                                    minLength={20}
+                                    maxLength={5000}
+                                    placeholder="Ex: depot de garantie, modalites de paiement, obligations du locataire, penalites de retard, preavis, conditions de resiliation..."
+                                />
+                                <p className="text-xs text-secondary">
+                                    Sans ces conditions, le compte proprietaire ne peut pas etre cree.
+                                </p>
+                            </div>
+                        )}
                     </CardContent>
                     <CardFooter className="flex flex-col space-y-2">
                         <Button
@@ -149,4 +204,3 @@ export default function RegisterPage() {
         </div>
     )
 }
-

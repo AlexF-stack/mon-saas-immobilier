@@ -9,6 +9,7 @@ import {
     FileText,
     Home,
     LogOut,
+    MessageSquare,
     PanelLeftClose,
     PanelLeftOpen,
     ScrollText,
@@ -31,6 +32,7 @@ const iconMap = {
     settings: Settings,
     logs: ScrollText,
     store: Store,
+    messages: MessageSquare,
 } as const
 
 interface AppSidebarProps {
