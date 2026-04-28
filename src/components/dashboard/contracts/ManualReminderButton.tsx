@@ -7,7 +7,7 @@ type ManualReminderButtonProps = {
   contractId: string
 }
 
-const DAY_OPTIONS = [7, 5, 3, 1] as const
+const DAY_OPTIONS = [7, 5, 3, 1, 0] as const
 
 export function ManualReminderButton({ contractId }: ManualReminderButtonProps) {
   const [daysBefore, setDaysBefore] = useState<number>(7)
@@ -69,7 +69,7 @@ export function ManualReminderButton({ contractId }: ManualReminderButtonProps) 
         >
           {DAY_OPTIONS.map((value) => (
             <option key={value} value={String(value)}>
-              Rappel J-{value}
+              {value === 0 ? "Jour d'echeance (J)" : `Rappel J-${value}`}
             </option>
           ))}
         </select>

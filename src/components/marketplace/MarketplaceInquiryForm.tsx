@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,6 +13,7 @@ type MarketplaceInquiryFormProps = {
     propertyId: string
     defaultName?: string
     defaultEmail?: string
+    locale?: string
 }
 
 function toErrorMessage(status: number, payload: unknown) {
@@ -31,10 +33,12 @@ export function MarketplaceInquiryForm({
     propertyId,
     defaultName,
     defaultEmail,
+    locale,
 }: MarketplaceInquiryFormProps) {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
     const [success, setSuccess] = useState('')
+    const [conversationHref, setConversationHref] = useState('')
     const pendingRef = useRef(false)
     const { show } = useToast()
 
@@ -45,6 +49,7 @@ export function MarketplaceInquiryForm({
         setLoading(true)
         setError('')
         setSuccess('')
+        setConversationHref('')
 
         const formData = new FormData(event.currentTarget)
         const requesterName = String(formData.get('requesterName') ?? '').trim()
@@ -75,10 +80,21 @@ export function MarketplaceInquiryForm({
             if (response.ok) {
                 setError('')
                 setSuccess(result.message ?? 'Demande envoyee avec succes.')
+                const inquiryId = typeof result?.inquiry?.id === 'string' ? result.inquiry.id : ''
+                const guestAccessToken = typeof result?.guestAccessToken === 'string' ? result.guestAccessToken : ''
+                if (inquiryId) {
+                    const localizedBase = locale ? `/${locale}` : ''
+                    const href = guestAccessToken
+                        ? `${localizedBase}/marketplace/inquiries/${inquiryId}?guestToken=${encodeURIComponent(guestAccessToken)}`
+                        : `${localizedBase}/marketplace/inquiries/${inquiryId}`
+                    setConversationHref(href)
+                }
                 show({
                     variant: 'success',
                     title: 'Demande envoyee',
-                    description: 'Votre message a bien ete transmis au proprietaire.',
+                    description: guestAccessToken
+                        ? 'Votre message a bien ete transmis. Vous pouvez continuer la conversation sans creer de compte.'
+                        : 'Votre message a bien ete transmis au proprietaire.',
                 })
                 event.currentTarget.reset()
                 return
@@ -117,7 +133,12 @@ export function MarketplaceInquiryForm({
             />
             {success && (
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-900/20 dark:text-emerald-300">
-                    {success}
+                    <p>{success}</p>
+                    {conversationHref ? (
+                        <Link href={conversationHref} className="mt-2 inline-flex font-medium underline underline-offset-2">
+                            Ouvrir la conversation
+                        </Link>
+                    ) : null}
                 </div>
             )}
             {error && (
@@ -126,32 +147,40 @@ export function MarketplaceInquiryForm({
                 </div>
             )}
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                    <Label htmlFor="requesterName">Nom complet</Label>
-                    <Input
-                        id="requesterName"
-                        name="requesterName"
-                        defaultValue={defaultName ?? ''}
-                        placeholder="Ex: Kossi Toko"
-                        minLength={2}
-                        maxLength={120}
-                        required={!defaultName}
-                    />
+            {defaultEmail && defaultName ? (
+                <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-900/50 dark:bg-blue-900/20 dark:text-blue-300">
+                    <p className="font-medium">Connecté en tant que {defaultName}</p>
+                    <p className="opacity-90">{defaultEmail}</p>
+                    {/* Les infos sont pre-remplies, l'API utilisera la session */}
                 </div>
-                <div className="space-y-2">
-                    <Label htmlFor="requesterEmail">Email</Label>
-                    <Input
-                        id="requesterEmail"
-                        name="requesterEmail"
-                        type="email"
-                        defaultValue={defaultEmail ?? ''}
-                        placeholder="email@example.com"
-                        maxLength={254}
-                        required={!defaultEmail}
-                    />
+            ) : (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                        <Label htmlFor="requesterName">Nom complet</Label>
+                        <Input
+                            id="requesterName"
+                            name="requesterName"
+                            defaultValue={defaultName ?? ''}
+                            placeholder="Ex: Kossi Toko"
+                            minLength={2}
+                            maxLength={120}
+                            required={!defaultName}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="requesterEmail">Email</Label>
+                        <Input
+                            id="requesterEmail"
+                            name="requesterEmail"
+                            type="email"
+                            defaultValue={defaultEmail ?? ''}
+                            placeholder="email@example.com"
+                            maxLength={254}
+                            required={!defaultEmail}
+                        />
+                    </div>
                 </div>
-            </div>
+            )}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
@@ -185,6 +214,18 @@ export function MarketplaceInquiryForm({
             <Button type="submit" disabled={loading} className="w-full">
                 {loading ? 'Envoi...' : 'Postuler / Demander visite'}
             </Button>
+            {!defaultEmail ? (
+                <p className="text-xs text-secondary">
+                    Astuce:{' '}
+                    <Link
+                        href={locale ? `/${locale}/register` : '/register'}
+                        className="text-primary underline underline-offset-2"
+                    >
+                        creez un compte
+                    </Link>{' '}
+                    pour envoyer des demandes sans ressaisir vos informations et discuter avec le proprietaire.
+                </p>
+            ) : null}
         </form>
     )
 }

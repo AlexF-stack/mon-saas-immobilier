@@ -11,11 +11,21 @@ export type SettingsProfileSnapshot = {
     preferredLanguage: string
     notifyEmail: boolean
     notifySms: boolean
+    notifyWhatsapp: boolean
     notifyPush: boolean
     twoFactorEnabled: boolean
     dashboardCompact: boolean
     companyName: string | null
     companyLogoUrl: string | null
+    rentalTermsTemplate: string | null
+    reminderChannelEmail: boolean
+    reminderChannelSms: boolean
+    reminderChannelWhatsapp: boolean
+    paymentCollectionMode: string
+    paymentMomoNumber: string | null
+    paymentMomoProvider: string | null
+    paymentCardLink: string | null
+    paymentInstructions: string | null
     lastLoginAt: string | null
     createdAt: string
     updatedAt: string
@@ -69,11 +79,21 @@ export async function getSettingsPageSnapshot(
             preferredLanguage: true,
             notifyEmail: true,
             notifySms: true,
+            notifyWhatsapp: true,
             notifyPush: true,
             twoFactorEnabled: true,
             dashboardCompact: true,
             companyName: true,
             companyLogoUrl: true,
+            rentalTermsTemplate: true,
+            reminderChannelEmail: true,
+            reminderChannelSms: true,
+            reminderChannelWhatsapp: true,
+            paymentCollectionMode: true,
+            paymentMomoNumber: true,
+            paymentMomoProvider: true,
+            paymentCardLink: true,
+            paymentInstructions: true,
             lastLoginAt: true,
             createdAt: true,
             updatedAt: true,
@@ -138,11 +158,21 @@ export async function getSettingsPageSnapshot(
             preferredLanguage: profile.preferredLanguage,
             notifyEmail: profile.notifyEmail,
             notifySms: profile.notifySms,
+            notifyWhatsapp: profile.notifyWhatsapp,
             notifyPush: profile.notifyPush,
             twoFactorEnabled: profile.twoFactorEnabled,
             dashboardCompact: profile.dashboardCompact,
             companyName: profile.companyName,
             companyLogoUrl: profile.companyLogoUrl,
+            rentalTermsTemplate: profile.rentalTermsTemplate,
+            reminderChannelEmail: profile.reminderChannelEmail,
+            reminderChannelSms: profile.reminderChannelSms,
+            reminderChannelWhatsapp: profile.reminderChannelWhatsapp,
+            paymentCollectionMode: profile.paymentCollectionMode,
+            paymentMomoNumber: profile.paymentMomoNumber,
+            paymentMomoProvider: profile.paymentMomoProvider,
+            paymentCardLink: profile.paymentCardLink,
+            paymentInstructions: profile.paymentInstructions,
             lastLoginAt: profile.lastLoginAt?.toISOString() ?? null,
             createdAt: profile.createdAt.toISOString(),
             updatedAt: profile.updatedAt.toISOString(),

@@ -125,7 +125,18 @@ export async function GET(
         endDate: true,
         rentAmount: true,
         property: {
-          select: { managerId: true },
+          select: {
+            managerId: true,
+            manager: {
+              select: {
+                paymentCollectionMode: true,
+                paymentMomoNumber: true,
+                paymentMomoProvider: true,
+                paymentCardLink: true,
+                paymentInstructions: true,
+              },
+            },
+          },
         },
       },
     })
@@ -169,6 +180,13 @@ export async function GET(
       contractId: contract.id,
       contractType: contract.contractType,
       rentAmount: contract.rentAmount,
+      paymentCollection: {
+        mode: contract.property.manager?.paymentCollectionMode ?? 'DIRECT',
+        momoNumber: contract.property.manager?.paymentMomoNumber ?? null,
+        momoProvider: contract.property.manager?.paymentMomoProvider ?? null,
+        cardLink: contract.property.manager?.paymentCardLink ?? null,
+        instructions: contract.property.manager?.paymentInstructions ?? null,
+      },
       installments: installments.map((item) => ({
         id: item.id,
         sequence: item.sequence,

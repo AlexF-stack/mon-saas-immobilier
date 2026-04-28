@@ -4,6 +4,11 @@ import { prisma } from '@/lib/prisma'
 import { createSystemLog } from '@/lib/audit'
 import { enforceCsrf } from '@/lib/csrf'
 import { getTokenFromRequest, verifyAuth } from '@/lib/auth'
+import {
+    buildGuestInquiryAccessExpiry,
+    createGuestInquiryAccessToken,
+    hashGuestInquiryAccessToken,
+} from '@/lib/marketplace-inquiry-access'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -59,6 +64,52 @@ function getClientIp(request: Request): string | null {
     return null
 }
 
+export async function GET(request: Request) {
+    try {
+        const token = getTokenFromRequest(request)
+        if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+        const user = await verifyAuth(token)
+        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+        const url = new URL(request.url)
+        const limitRaw = Number.parseInt(url.searchParams.get('limit') ?? '20', 10)
+        const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 50) : 20
+
+        const where =
+            user.role === 'ADMIN'
+                ? {}
+                : user.role === 'MANAGER'
+                    ? { property: { managerId: user.id } }
+                    : { requesterUserId: user.id }
+
+        const inquiries = await prisma.marketplaceInquiry.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+            take: limit,
+            select: {
+                id: true,
+                requesterName: true,
+                requesterEmail: true,
+                requesterPhone: true,
+                message: true,
+                preferredVisitDate: true,
+                status: true,
+                lifecycleStage: true,
+                createdAt: true,
+                requesterUserId: true,
+                property: {
+                    select: { id: true, title: true, managerId: true },
+                },
+            },
+        })
+
+        return NextResponse.json(inquiries)
+    } catch {
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+    }
+}
+
 export async function POST(request: Request) {
     try {
         const csrfError = enforceCsrf(request)
@@ -102,6 +153,7 @@ export async function POST(request: Request) {
 
         const requesterName = parsed.requesterName ?? user?.name?.trim() ?? null
         const requesterEmail = parsed.requesterEmail?.toLowerCase() ?? user?.email?.toLowerCase() ?? null
+        const requesterPhone = parsed.requesterPhone ?? user?.phone?.trim() ?? null
 
         if (!requesterName || !requesterEmail) {
             return NextResponse.json(
@@ -132,6 +184,10 @@ export async function POST(request: Request) {
             }
         }
 
+        const guestAccessToken = !user ? createGuestInquiryAccessToken() : null
+        const guestAccessTokenHash = guestAccessToken ? hashGuestInquiryAccessToken(guestAccessToken) : null
+        const guestAccessTokenExpiresAt = guestAccessToken ? buildGuestInquiryAccessExpiry() : null
+
         const [inquiry] = await prisma.$transaction([
             prisma.marketplaceInquiry.create({
                 data: {
@@ -140,13 +196,17 @@ export async function POST(request: Request) {
                     requesterIp,
                     requesterName,
                     requesterEmail,
-                    requesterPhone: parsed.requesterPhone,
+                    requesterPhone,
                     message: parsed.message,
                     preferredVisitDate: parsed.preferredVisitDate,
+                    lifecycleStage: 'LEAD',
+                    guestAccessTokenHash,
+                    guestAccessTokenExpiresAt,
                 },
                 select: {
                     id: true,
                     status: true,
+                    lifecycleStage: true,
                     createdAt: true,
                 },
             }),
@@ -195,6 +255,7 @@ export async function POST(request: Request) {
         return NextResponse.json(
             {
                 inquiry,
+                guestAccessToken,
                 message: 'Demande envoyee. Le proprietaire vous contactera rapidement.',
             },
             { status: 201 }

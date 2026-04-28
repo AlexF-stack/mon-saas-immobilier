@@ -21,8 +21,8 @@ const initiatePaymentSchema = z.object({
     contractId: z.string().trim().min(1),
     installmentId: z.string().trim().min(1).optional(),
     amount: z.coerce.number().positive(),
-    phoneNumber: z.string().trim().min(8).max(20),
-    provider: z.enum(['MTN', 'MOOV']),
+    phoneNumber: z.string().trim().min(8).max(20).optional(),
+    provider: z.enum(['MTN', 'MOOV', 'CARD']),
 })
 
 const idempotencyKeySchema = z
@@ -147,6 +147,15 @@ export async function POST(request: Request) {
                     select: {
                         id: true,
                         managerId: true,
+                        manager: {
+                            select: {
+                                paymentCollectionMode: true,
+                                paymentMomoNumber: true,
+                                paymentMomoProvider: true,
+                                paymentCardLink: true,
+                                paymentInstructions: true,
+                            },
+                        },
                     },
                 },
             },
@@ -290,14 +299,49 @@ export async function POST(request: Request) {
             )
         }
 
-        const paymentResponse = await requestPayment({
-            amount: payload.amount,
-            phoneNumber: payload.phoneNumber,
-            provider: payload.provider,
-            contractId: payload.contractId,
-        })
+        const directOwnerCollection =
+            (contract.property.manager?.paymentCollectionMode ?? 'DIRECT') === 'DIRECT'
 
-        if (paymentResponse.status === 'FAILED') {
+        if (
+            directOwnerCollection &&
+            payload.provider !== 'CARD' &&
+            !payload.phoneNumber?.trim()
+        ) {
+            return NextResponse.json(
+                { error: 'Phone number is required for direct mobile money payments.' },
+                { status: 400 }
+            )
+        }
+
+        if (
+            directOwnerCollection &&
+            payload.provider === 'CARD' &&
+            !contract.property.manager?.paymentCardLink
+        ) {
+            return NextResponse.json(
+                { error: 'Owner has not configured a card payment link yet.' },
+                { status: 409 }
+            )
+        }
+
+        const paymentResponse =
+            directOwnerCollection
+                ? {
+                    transactionId: `DIRECT-${payload.contractId}-${Date.now()}`,
+                    status: 'PENDING' as const,
+                    message:
+                        payload.provider === 'CARD'
+                            ? 'Open the owner card payment link and complete the transfer. Your payment intent has been recorded.'
+                            : 'Pay the owner directly on the configured Mobile Money account. Your payment intent has been recorded.',
+                }
+                : await requestPayment({
+                    amount: payload.amount,
+                    phoneNumber: payload.phoneNumber ?? '',
+                    provider: payload.provider === 'CARD' ? 'MTN' : payload.provider,
+                    contractId: payload.contractId,
+                })
+
+        if (!directOwnerCollection && paymentResponse.status === 'FAILED') {
             await createSystemLog({
                 actor: user,
                 action: 'PAYMENT_INITIATION_PROVIDER_FAILED',
@@ -316,7 +360,7 @@ export async function POST(request: Request) {
                 const created = await tx.payment.create({
                     data: {
                         amount: payload.amount,
-                        method: payload.provider,
+                        method: directOwnerCollection ? `DIRECT_${payload.provider}` : payload.provider,
                         transactionId: paymentResponse.transactionId,
                         idempotencyKey,
                         status: 'PENDING',
@@ -379,6 +423,7 @@ export async function POST(request: Request) {
                 installmentId: contract.contractType === 'RENTAL' ? payload.installmentId ?? null : null,
                 amount: payload.amount,
                 provider: payload.provider,
+                collectionMode: directOwnerCollection ? 'DIRECT' : 'PLATFORM',
                 idempotencyKey,
             },
         })
@@ -390,7 +435,7 @@ export async function POST(request: Request) {
             targetId: payment.id,
             correlationId,
             route,
-            details: `contractId=${payload.contractId};tenantId=${contract.tenantId};propertyId=${contract.property.id};amount=${payload.amount};provider=${payload.provider};idempotencyKey=${idempotencyKey}`,
+            details: `contractId=${payload.contractId};tenantId=${contract.tenantId};propertyId=${contract.property.id};amount=${payload.amount};provider=${payload.provider};collectionMode=${directOwnerCollection ? 'DIRECT' : 'PLATFORM'};idempotencyKey=${idempotencyKey}`,
         })
 
         logServerEvent({
@@ -411,6 +456,17 @@ export async function POST(request: Request) {
             status: payment.status,
             idempotent: false,
             message: paymentResponse.message,
+            paymentCollection: directOwnerCollection
+                ? {
+                    mode: 'DIRECT',
+                    momoNumber: contract.property.manager?.paymentMomoNumber ?? null,
+                    momoProvider: contract.property.manager?.paymentMomoProvider ?? null,
+                    cardLink: contract.property.manager?.paymentCardLink ?? null,
+                    instructions: contract.property.manager?.paymentInstructions ?? null,
+                }
+                : {
+                    mode: 'PLATFORM',
+                },
         })
     } catch (error) {
         if (error instanceof z.ZodError) {

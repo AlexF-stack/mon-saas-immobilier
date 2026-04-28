@@ -16,6 +16,14 @@ type InstallmentOption = {
   totalDue: number
 }
 
+type PaymentCollection = {
+  mode: 'DIRECT' | 'PLATFORM'
+  momoNumber: string | null
+  momoProvider: string | null
+  cardLink: string | null
+  instructions: string | null
+}
+
 function toErrorMessage(status: number, errorPayload: unknown, fallback: string): string {
   if (typeof errorPayload === 'string' && errorPayload.trim()) {
     return errorPayload
@@ -52,17 +60,19 @@ function PaymentForm() {
   const [installments, setInstallments] = useState<InstallmentOption[]>([])
   const [installmentId, setInstallmentId] = useState('')
   const [amount, setAmount] = useState('')
+  const [paymentCollection, setPaymentCollection] = useState<PaymentCollection | null>(null)
 
   useEffect(() => {
     let cancelled = false
 
     async function loadInstallments() {
-      if (!contractId.trim()) {
-        setContractType(null)
-        setInstallments([])
-        setInstallmentId('')
-        return
-      }
+        if (!contractId.trim()) {
+          setContractType(null)
+          setInstallments([])
+          setInstallmentId('')
+          setPaymentCollection(null)
+          return
+        }
 
       setLoadingInstallments(true)
       try {
@@ -74,6 +84,7 @@ function PaymentForm() {
             setContractType(null)
             setInstallments([])
             setInstallmentId('')
+            setPaymentCollection(null)
           }
           return
         }
@@ -88,6 +99,7 @@ function PaymentForm() {
 
         setContractType(nextType)
         setInstallments(nextInstallments)
+        setPaymentCollection(payload?.paymentCollection ?? null)
         if (nextType === 'RENTAL' && nextInstallments.length > 0) {
           setInstallmentId(nextInstallments[0].id)
           setAmount(String(Math.round(nextInstallments[0].totalDue)))
@@ -100,6 +112,7 @@ function PaymentForm() {
           setContractType(null)
           setInstallments([])
           setInstallmentId('')
+          setPaymentCollection(null)
         }
       } finally {
         if (!cancelled) setLoadingInstallments(false)
@@ -132,7 +145,10 @@ function PaymentForm() {
       contractId: formData.get('contractId'),
       installmentId: contractType === 'RENTAL' ? formData.get('installmentId') : undefined,
       amount: formData.get('amount'),
-      phoneNumber: formData.get('phoneNumber'),
+      phoneNumber:
+        paymentCollection?.mode === 'DIRECT' && provider === 'CARD'
+          ? undefined
+          : formData.get('phoneNumber'),
       provider,
     }
 
@@ -241,10 +257,29 @@ function PaymentForm() {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="phoneNumber">Numero de telephone</Label>
-            <Input id="phoneNumber" name="phoneNumber" placeholder="22997000000" required />
-          </div>
+          {paymentCollection?.mode === 'DIRECT' ? (
+            <div className="space-y-3 rounded-xl border border-border bg-surface/60 p-4 text-sm">
+              <p className="font-medium text-primary">Paiement direct proprietaire</p>
+              {paymentCollection.momoNumber ? (
+                <p className="text-secondary">
+                  Mobile Money: {paymentCollection.momoProvider || 'MOMO'} - {paymentCollection.momoNumber}
+                </p>
+              ) : null}
+              {paymentCollection.cardLink ? (
+                <p className="text-secondary">Lien carte configure par le proprietaire disponible ci-dessous.</p>
+              ) : null}
+              {paymentCollection.instructions ? (
+                <p className="text-secondary">{paymentCollection.instructions}</p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {paymentCollection?.mode !== 'DIRECT' || provider !== 'CARD' ? (
+            <div className="space-y-2">
+              <Label htmlFor="phoneNumber">Numero de telephone</Label>
+              <Input id="phoneNumber" name="phoneNumber" placeholder="22997000000" required={paymentCollection?.mode !== 'DIRECT' || provider !== 'CARD'} />
+            </div>
+          ) : null}
 
           <div className="space-y-2">
             <Label htmlFor="provider">Moyen de paiement</Label>
@@ -255,9 +290,16 @@ function PaymentForm() {
               <SelectContent>
                 <SelectItem value="MTN">MTN Mobile Money</SelectItem>
                 <SelectItem value="MOOV">Moov Money</SelectItem>
+                {paymentCollection?.cardLink ? <SelectItem value="CARD">Carte bancaire</SelectItem> : null}
               </SelectContent>
             </Select>
           </div>
+
+          {paymentCollection?.mode === 'DIRECT' && provider === 'CARD' && paymentCollection.cardLink ? (
+            <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+              Ouvrez le lien du proprietaire pour regler par carte: <a className="underline" href={paymentCollection.cardLink} target="_blank" rel="noreferrer">{paymentCollection.cardLink}</a>
+            </div>
+          ) : null}
         </CardContent>
         <CardFooter className="justify-end border-t border-slate-200/70 dark:border-slate-800">
           <Button type="submit" disabled={loading}>

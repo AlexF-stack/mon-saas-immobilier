@@ -22,11 +22,26 @@ const profileUpdateSchema = z
         preferredLanguage: z.enum(['fr', 'en']).optional(),
         notifyEmail: z.boolean().optional(),
         notifySms: z.boolean().optional(),
+        notifyWhatsapp: z.boolean().optional(),
         notifyPush: z.boolean().optional(),
         twoFactorEnabled: z.boolean().optional(),
         dashboardCompact: z.boolean().optional(),
         companyName: z.string().trim().max(120).nullable().optional(),
         companyLogoUrl: z.string().trim().url().nullable().optional(),
+        rentalTermsTemplate: z.string().trim().min(20).max(5000).nullable().optional(),
+        reminderChannelEmail: z.boolean().optional(),
+        reminderChannelSms: z.boolean().optional(),
+        reminderChannelWhatsapp: z.boolean().optional(),
+        paymentCollectionMode: z.enum(['DIRECT', 'PLATFORM']).optional(),
+        paymentMomoNumber: z
+            .string()
+            .trim()
+            .regex(/^\+?[0-9\s().-]{8,25}$/, 'Invalid phone number')
+            .nullable()
+            .optional(),
+        paymentMomoProvider: z.enum(['MTN', 'MOOV']).nullable().optional(),
+        paymentCardLink: z.string().trim().url().nullable().optional(),
+        paymentInstructions: z.string().trim().max(1000).nullable().optional(),
     })
     .strict()
 
@@ -50,11 +65,21 @@ export async function GET(request: Request) {
                 preferredLanguage: true,
                 notifyEmail: true,
                 notifySms: true,
+                notifyWhatsapp: true,
                 notifyPush: true,
                 twoFactorEnabled: true,
                 dashboardCompact: true,
                 companyName: true,
                 companyLogoUrl: true,
+                rentalTermsTemplate: true,
+                reminderChannelEmail: true,
+                reminderChannelSms: true,
+                reminderChannelWhatsapp: true,
+                paymentCollectionMode: true,
+                paymentMomoNumber: true,
+                paymentMomoProvider: true,
+                paymentCardLink: true,
+                paymentInstructions: true,
                 lastLoginAt: true,
                 createdAt: true,
                 updatedAt: true,
@@ -84,7 +109,22 @@ export async function PATCH(request: Request) {
         const payload = profileUpdateSchema.parse(rawPayload)
         const isManagerOrAdmin = user.role === 'MANAGER' || user.role === 'ADMIN'
 
-        if (!isManagerOrAdmin && (payload.companyName !== undefined || payload.companyLogoUrl !== undefined)) {
+        if (
+            !isManagerOrAdmin &&
+            (
+                payload.companyName !== undefined ||
+                payload.companyLogoUrl !== undefined ||
+                payload.rentalTermsTemplate !== undefined ||
+                payload.reminderChannelEmail !== undefined ||
+                payload.reminderChannelSms !== undefined ||
+                payload.reminderChannelWhatsapp !== undefined ||
+                payload.paymentCollectionMode !== undefined ||
+                payload.paymentMomoNumber !== undefined ||
+                payload.paymentMomoProvider !== undefined ||
+                payload.paymentCardLink !== undefined ||
+                payload.paymentInstructions !== undefined
+            )
+        ) {
             return NextResponse.json(
                 { error: 'Company settings are restricted to manager/admin roles.' },
                 { status: 403 }
@@ -105,11 +145,21 @@ export async function PATCH(request: Request) {
             preferredLanguage?: 'fr' | 'en'
             notifyEmail?: boolean
             notifySms?: boolean
+            notifyWhatsapp?: boolean
             notifyPush?: boolean
             twoFactorEnabled?: boolean
             dashboardCompact?: boolean
             companyName?: string | null
             companyLogoUrl?: string | null
+            rentalTermsTemplate?: string | null
+            reminderChannelEmail?: boolean
+            reminderChannelSms?: boolean
+            reminderChannelWhatsapp?: boolean
+            paymentCollectionMode?: 'DIRECT' | 'PLATFORM'
+            paymentMomoNumber?: string | null
+            paymentMomoProvider?: 'MTN' | 'MOOV' | null
+            paymentCardLink?: string | null
+            paymentInstructions?: string | null
         } = {}
 
         if (payload.name !== undefined) data.name = payload.name && payload.name.length > 0 ? payload.name : null
@@ -118,11 +168,26 @@ export async function PATCH(request: Request) {
         if (payload.preferredLanguage !== undefined) data.preferredLanguage = payload.preferredLanguage
         if (payload.notifyEmail !== undefined) data.notifyEmail = payload.notifyEmail
         if (payload.notifySms !== undefined) data.notifySms = payload.notifySms
+        if (payload.notifyWhatsapp !== undefined) data.notifyWhatsapp = payload.notifyWhatsapp
         if (payload.notifyPush !== undefined) data.notifyPush = payload.notifyPush
         if (payload.twoFactorEnabled !== undefined) data.twoFactorEnabled = payload.twoFactorEnabled
         if (payload.dashboardCompact !== undefined) data.dashboardCompact = payload.dashboardCompact
         if (payload.companyName !== undefined) data.companyName = payload.companyName && payload.companyName.length > 0 ? payload.companyName : null
         if (payload.companyLogoUrl !== undefined) data.companyLogoUrl = payload.companyLogoUrl && payload.companyLogoUrl.length > 0 ? payload.companyLogoUrl : null
+        if (payload.rentalTermsTemplate !== undefined) {
+            data.rentalTermsTemplate =
+                payload.rentalTermsTemplate && payload.rentalTermsTemplate.length > 0
+                    ? payload.rentalTermsTemplate
+                    : null
+        }
+        if (payload.reminderChannelEmail !== undefined) data.reminderChannelEmail = payload.reminderChannelEmail
+        if (payload.reminderChannelSms !== undefined) data.reminderChannelSms = payload.reminderChannelSms
+        if (payload.reminderChannelWhatsapp !== undefined) data.reminderChannelWhatsapp = payload.reminderChannelWhatsapp
+        if (payload.paymentCollectionMode !== undefined) data.paymentCollectionMode = payload.paymentCollectionMode
+        if (payload.paymentMomoNumber !== undefined) data.paymentMomoNumber = payload.paymentMomoNumber && payload.paymentMomoNumber.length > 0 ? payload.paymentMomoNumber : null
+        if (payload.paymentMomoProvider !== undefined) data.paymentMomoProvider = payload.paymentMomoProvider
+        if (payload.paymentCardLink !== undefined) data.paymentCardLink = payload.paymentCardLink && payload.paymentCardLink.length > 0 ? payload.paymentCardLink : null
+        if (payload.paymentInstructions !== undefined) data.paymentInstructions = payload.paymentInstructions && payload.paymentInstructions.length > 0 ? payload.paymentInstructions : null
 
         if (Object.keys(data).length === 0) {
             return NextResponse.json({ error: 'No valid fields to update.' }, { status: 400 })
@@ -141,11 +206,21 @@ export async function PATCH(request: Request) {
                 preferredLanguage: true,
                 notifyEmail: true,
                 notifySms: true,
+                notifyWhatsapp: true,
                 notifyPush: true,
                 twoFactorEnabled: true,
                 dashboardCompact: true,
                 companyName: true,
                 companyLogoUrl: true,
+                rentalTermsTemplate: true,
+                reminderChannelEmail: true,
+                reminderChannelSms: true,
+                reminderChannelWhatsapp: true,
+                paymentCollectionMode: true,
+                paymentMomoNumber: true,
+                paymentMomoProvider: true,
+                paymentCardLink: true,
+                paymentInstructions: true,
                 lastLoginAt: true,
                 updatedAt: true,
             },

@@ -55,11 +55,21 @@ model User {
   preferredLanguage String @default("fr")
   notifyEmail Boolean @default(true)
   notifySms Boolean @default(false)
+  notifyWhatsapp Boolean @default(false)
   notifyPush Boolean @default(false)
   twoFactorEnabled Boolean @default(false)
   dashboardCompact Boolean @default(false)
   companyName String?
   companyLogoUrl String?
+  rentalTermsTemplate String?
+  reminderChannelEmail Boolean @default(true)
+  reminderChannelSms Boolean @default(true)
+  reminderChannelWhatsapp Boolean @default(true)
+  paymentCollectionMode String @default("DIRECT") // DIRECT, PLATFORM
+  paymentMomoNumber String?
+  paymentMomoProvider String?
+  paymentCardLink String?
+  paymentInstructions String?
   lastLoginAt DateTime?
   role      String   @default("TENANT") // ADMIN, MANAGER, TENANT
   isSuspended Boolean @default(false)
@@ -74,6 +84,7 @@ model User {
   managedProperties Property[] @relation("PropertyManager")
   contracts         Contract[]
   wishlistItems     WishlistItem[]
+  inquiryMessages   MarketplaceInquiryMessage[]
   loginHistory      LoginHistory[]
   updatedSystemConfigs SystemConfig[] @relation("SystemConfigUpdatedBy")
 
@@ -161,10 +172,12 @@ model PropertyImage {
 
 model Contract {
   id            String   @id @default(cuid())
+  contractNumber String  @unique
   startDate     DateTime
   endDate       DateTime
   rentAmount    Float
   depositAmount Float
+  rentalTermsSnapshot String?
   contractType  String   @default("RENTAL") // RENTAL, SALE
   workflowState String   @default("DRAFT") // DRAFT, SUBMITTED, SIGNED_BOTH, PAYMENT_INITIATED, ACTIVE
   documentSource String? // UPLOAD, DRAFT
@@ -192,6 +205,7 @@ model Contract {
 
   @@index([workflowState])
   @@index([contractType])
+  @@index([contractNumber])
 }
 
 model Payment {
@@ -266,14 +280,36 @@ model MarketplaceInquiry {
   message            String?
   preferredVisitDate DateTime?
   status             String   @default("NEW") // NEW, CONTACTED, CLOSED
+  lifecycleStage     String   @default("LEAD") // LEAD, VISIT_SCHEDULED, QUALIFIED, APPROVED, CONTRACT_DRAFT, CONTRACT_SENT, CLOSED
+  guestAccessTokenHash String?
+  guestAccessTokenExpiresAt DateTime?
+  guestLastSeenAt    DateTime?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
   property           Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  messages           MarketplaceInquiryMessage[]
 
   @@index([propertyId, createdAt])
   @@index([requesterEmail])
   @@index([requesterIp, createdAt])
+}
+
+model MarketplaceInquiryMessage {
+  id         String             @id @default(cuid())
+  inquiryId  String
+  senderUserId String?
+  senderGuestName String?
+  senderGuestEmail String?
+  message    String
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  inquiry    MarketplaceInquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  sender     User?              @relation(fields: [senderUserId], references: [id], onDelete: Cascade)
+
+  @@index([inquiryId, createdAt])
+  @@index([senderUserId, createdAt])
 }
 
 model WishlistItem {

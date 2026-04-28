@@ -25,6 +25,14 @@ const createContractSchema = z
         path: ['endDate'],
     })
 
+function buildContractNumber(date = new Date()) {
+    const yyyy = date.getUTCFullYear()
+    const mm = String(date.getUTCMonth() + 1).padStart(2, '0')
+    const dd = String(date.getUTCDate()).padStart(2, '0')
+    const random = Math.random().toString(36).slice(2, 8).toUpperCase()
+    return `CTR-${yyyy}${mm}${dd}-${random}`
+}
+
 export async function GET(request: Request) {
     try {
         const token = getTokenFromRequest(request)
@@ -78,10 +86,14 @@ export async function POST(request: Request) {
             (process.env.NODE_ENV === 'test' || process.env.ENABLE_TEST_CONTRACT_ROLLBACK === '1') &&
             request.headers.get('x-test-force-contract-rollback') === '1'
 
-        const [property, tenant, existingActiveContract] = await Promise.all([
+        const [property, ownerProfile, tenant, existingActiveContract] = await Promise.all([
             prisma.property.findUnique({
                 where: { id: payload.propertyId },
                 select: { id: true, managerId: true, status: true, offerType: true },
+            }),
+            prisma.user.findUnique({
+                where: { id: user.id },
+                select: { rentalTermsTemplate: true },
             }),
             prisma.user.findUnique({
                 where: { id: payload.tenantId },
@@ -109,19 +121,38 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Property already has an active contract' }, { status: 409 })
         }
 
+        if (!ownerProfile?.rentalTermsTemplate) {
+            return NextResponse.json(
+                { error: 'Owner rental terms are required before creating contracts.' },
+                { status: 409 }
+            )
+        }
+
         if (!tenant || tenant.role !== 'TENANT' || tenant.isSuspended) {
             return NextResponse.json({ error: 'Invalid tenant' }, { status: 400 })
         }
 
         const contract = await prisma.$transaction(async (tx) => {
+            let contractNumber = buildContractNumber()
+            for (let attempt = 0; attempt < 5; attempt += 1) {
+                const existingNumber = await tx.contract.findUnique({
+                    where: { contractNumber },
+                    select: { id: true },
+                })
+                if (!existingNumber) break
+                contractNumber = buildContractNumber()
+            }
+
             const createdContract = await tx.contract.create({
                 data: {
+                    contractNumber,
                     propertyId: payload.propertyId,
                     tenantId: payload.tenantId,
                     startDate: payload.startDate,
                     endDate: payload.endDate,
                     rentAmount: payload.rentAmount,
                     depositAmount: payload.depositAmount,
+                    rentalTermsSnapshot: ownerProfile.rentalTermsTemplate,
                     contractType: property.offerType === 'SALE' ? 'SALE' : 'RENTAL',
                     workflowState: 'DRAFT',
                     status: 'ACTIVE',

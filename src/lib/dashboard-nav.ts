@@ -8,6 +8,7 @@ export function getDashboardNav(role: string, locale?: string): NavItemSerializa
         { name: 'Analytics', href: `${prefix}/dashboard/analytics`, iconKey: 'chart' },
         { name: 'Biens', href: `${prefix}/dashboard/properties`, iconKey: 'building' },
         { name: 'Marketplace', href: `${prefix}/dashboard/marketplace`, iconKey: 'store' },
+        { name: 'Messages visites', href: `${prefix}/dashboard/marketplace/inquiries`, iconKey: 'messages' },
         { name: 'Locataires', href: `${prefix}/dashboard/tenants`, iconKey: 'users' },
         { name: 'Contrats', href: `${prefix}/dashboard/contracts`, iconKey: 'fileText' },
         { name: 'Paiements', href: `${prefix}/dashboard/payments`, iconKey: 'creditCard' },
@@ -28,6 +29,7 @@ export function getDashboardNav(role: string, locale?: string): NavItemSerializa
     if (role === 'TENANT') {
         return [
             { name: 'Accueil', href: `${prefix}/dashboard`, iconKey: 'home' },
+            { name: 'Messages visites', href: `${prefix}/dashboard/marketplace/inquiries`, iconKey: 'messages' },
             { name: 'Contrats', href: `${prefix}/dashboard/contracts`, iconKey: 'fileText' },
             { name: 'Paiements', href: `${prefix}/dashboard/payments`, iconKey: 'creditCard' },
             { name: 'Parametres', href: `${prefix}/dashboard/settings`, iconKey: 'settings' },
