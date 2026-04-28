@@ -4,7 +4,10 @@ import { prisma } from '@/lib/prisma'
 import { getTokenFromRequest, verifyAuth } from '@/lib/auth'
 import { enforceCsrf } from '@/lib/csrf'
 import { createSystemLog } from '@/lib/audit'
+import { notifyUser, notifyGuest } from '@/lib/notifications/dispatcher'
 import {
+  buildGuestInquiryAccessExpiry,
+  createGuestInquiryAccessToken,
   hashGuestInquiryAccessToken,
   isGuestInquiryAccessExpired,
 } from '@/lib/marketplace-inquiry-access'
@@ -24,6 +27,7 @@ async function resolveInquiryForUser(inquiryId: string, userId: string, role: st
       requesterUserId: true,
       requesterName: true,
       requesterEmail: true,
+      requesterPhone: true,
       guestAccessTokenHash: true,
       guestAccessTokenExpiresAt: true,
       property: {
@@ -50,6 +54,7 @@ async function resolveInquiryForGuest(inquiryId: string, guestToken: string) {
       requesterUserId: true,
       requesterName: true,
       requesterEmail: true,
+      requesterPhone: true,
       guestAccessTokenHash: true,
       guestAccessTokenExpiresAt: true,
       property: {
@@ -189,6 +194,47 @@ export async function POST(
           message: `Nouveau message sur la demande pour ${inquiry.property.title}.`,
         })),
       })
+
+      // Dispatch external notifications
+      const senderName = user?.name || inquiry.requesterName
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+      const dashboardUrl = `${baseUrl}/dashboard/marketplace/inquiries?inquiryId=${inquiry.id}`
+
+      for (const recipientId of recipientIds) {
+        await notifyUser({
+          userId: recipientId,
+          senderName,
+          propertyTitle: inquiry.property.title,
+          messagePreview: payload.message,
+          dashboardUrl,
+        })
+      }
+    }
+
+    // If a guest (no userId) is the recipient (i.e. manager replied to guest)
+    if (!inquiry.requesterUserId && user?.id === inquiry.property.managerId) {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+      const guestAccessToken = createGuestInquiryAccessToken()
+      const guestAccessTokenHash = hashGuestInquiryAccessToken(guestAccessToken)
+      const guestAccessTokenExpiresAt = buildGuestInquiryAccessExpiry()
+
+      await prisma.marketplaceInquiry.update({
+        where: { id: inquiry.id },
+        data: {
+          guestAccessTokenHash,
+          guestAccessTokenExpiresAt,
+        },
+        select: { id: true },
+      })
+
+      await notifyGuest({
+        email: inquiry.requesterEmail,
+        phone: inquiry.requesterPhone,
+        senderName: user.name || 'Le propriétaire',
+        propertyTitle: inquiry.property.title,
+        messagePreview: payload.message,
+        guestAccessUrl: `${baseUrl}/marketplace/inquiries/${inquiry.id}?guestToken=${encodeURIComponent(guestAccessToken)}`,
+      })
     }
 
     await createSystemLog({
@@ -214,4 +260,3 @@ export async function POST(
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }
-
