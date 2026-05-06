@@ -7,7 +7,7 @@ const REMINDER_WEBHOOK_TIMEOUT_MS = 6000
 export type ReminderDayOffset = (typeof REMINDER_DAY_OFFSETS)[number]
 export type ReminderDeliveryChannel = 'EMAIL' | 'SMS' | 'WHATSAPP'
 
-type Recipient = {
+export type Recipient = {
   id: string
   name: string | null
   email: string
@@ -18,7 +18,7 @@ type Recipient = {
   reminderChannelWhatsapp?: boolean
 }
 
-type ReminderCopy = {
+export type ReminderCopy = {
   title: string
   inAppMessage: string
   emailSubject: string
@@ -290,7 +290,7 @@ async function postReminderWebhook(
   }
 }
 
-async function deliverChannels(
+export async function deliverChannels(
   input: {
     reminderKey: string
     recipient: Recipient

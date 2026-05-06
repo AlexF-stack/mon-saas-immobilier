@@ -85,13 +85,10 @@ export function AppHeader({ onMenuClick, userProfile, role }: AppHeaderProps) {
     : userProfile?.email?.slice(0, 2).toUpperCase() ?? 'U'
 
   useEffect(() => {
-    if (!notificationOpen) return
-
     let cancelled = false
-    async function loadNotifications() {
+    async function loadNotifications(isInitial = false) {
       try {
-        setNotificationLoading(true)
-        setNotificationError('')
+        if (isInitial && notificationOpen) setNotificationLoading(true)
         const response = await fetch('/api/notifications?limit=8', {
           credentials: 'include',
         })
@@ -113,9 +110,11 @@ export function AppHeader({ onMenuClick, userProfile, role }: AppHeaderProps) {
       }
     }
 
-    void loadNotifications()
+    void loadNotifications(true)
+    const interval = setInterval(() => void loadNotifications(false), 30000)
     return () => {
       cancelled = true
+      clearInterval(interval)
     }
   }, [notificationOpen])
   const unreadCount = useMemo(

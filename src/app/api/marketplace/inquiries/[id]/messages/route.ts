@@ -286,7 +286,7 @@ export async function POST(
 
     return NextResponse.json({ message }, { status: 201 })
   } catch (error) {
-    if (error instanceof z.ZError) {
+    if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues }, { status: 400 })
     }
     console.error('Inquiry message error', error)

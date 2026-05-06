@@ -72,10 +72,7 @@ export function PropertyForm({ locale, dashboardPathPrefix, initialData }: Prope
       const res = await fetch(url, {
         method,
         credentials: 'include',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
+        body: formData,
       })
 
       if (res.ok) {
@@ -170,6 +167,11 @@ export function PropertyForm({ locale, dashboardPathPrefix, initialData }: Prope
                 </Select>
             </div>
           )}
+          <div className="space-y-2">
+            <Label htmlFor="image">Photo du bien</Label>
+            <Input id="image" name="image" type="file" accept="image/*" />
+            <p className="text-[11px] text-muted-foreground">Format JPG, PNG ou WEBP. Max 2Mo.</p>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
             <Textarea

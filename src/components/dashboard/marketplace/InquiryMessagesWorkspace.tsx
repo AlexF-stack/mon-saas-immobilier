@@ -54,17 +54,16 @@ export function InquiryMessagesWorkspace({ currentUserId }: InquiryMessagesWorks
     )
   }, [inquiries, search])
 
-  // Load inquiries
+  // Load and poll inquiries
   useEffect(() => {
     let cancelled = false
-    async function loadInquiries() {
-      setLoading(true)
-      setError('')
+    async function loadInquiries(isInitial = false) {
+      if (isInitial) setLoading(true)
       try {
         const res = await fetch('/api/marketplace/inquiries?limit=50', { credentials: 'include' })
         const payload = await res.json().catch(() => [])
         if (!res.ok) {
-          if (!cancelled) setError(typeof payload?.error === 'string' ? payload.error : 'Chargement impossible.')
+          if (!cancelled && isInitial) setError(typeof payload?.error === 'string' ? payload.error : 'Chargement impossible.')
           return
         }
         if (!cancelled) {
@@ -78,14 +77,16 @@ export function InquiryMessagesWorkspace({ currentUserId }: InquiryMessagesWorks
           }
         }
       } catch {
-        if (!cancelled) setError('Erreur reseau lors du chargement.')
+        if (!cancelled && isInitial) setError('Erreur reseau lors du chargement.')
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled && isInitial) setLoading(false)
       }
     }
-    void loadInquiries()
+    void loadInquiries(true)
+    const interval = setInterval(() => void loadInquiries(false), 20000)
     return () => {
       cancelled = true
+      clearInterval(interval)
     }
   }, [inquiryFromQuery])
 

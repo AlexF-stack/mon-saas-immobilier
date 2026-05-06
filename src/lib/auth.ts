@@ -214,9 +214,23 @@ export function getTokenFromRequest(request: Request): string | null {
     const authHeader = request.headers.get('Authorization')
     const bearer = authHeader?.match(/Bearer\s+(.+)/)?.[1]
     if (bearer) return bearer
-    const cookieHeader = request.headers.get('Cookie')
+
+    const cookieHeader = request.headers.get('Cookie') || request.headers.get('cookie')
     if (!cookieHeader) return null
-    const match = cookieHeader.match(/token=([^;]+)/)
+
+    const url = new URL(request.url)
+    const pathname = url.pathname.toLowerCase()
+
+    let match = null
+    if (pathname.includes('/admin')) match = cookieHeader.match(/token_admin=([^;]+)/)
+    if (!match && pathname.includes('/manager')) match = cookieHeader.match(/token_manager=([^;]+)/)
+    if (!match && pathname.includes('/tenant')) match = cookieHeader.match(/token_tenant=([^;]+)/)
+
+    if (!match) match = cookieHeader.match(/token=([^;]+)/)
+    if (!match) match = cookieHeader.match(/token_admin=([^;]+)/)
+    if (!match) match = cookieHeader.match(/token_manager=([^;]+)/)
+    if (!match) match = cookieHeader.match(/token_tenant=([^;]+)/)
+
     return match ? match[1].trim() : null
 }
 

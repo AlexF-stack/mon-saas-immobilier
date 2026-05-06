@@ -93,8 +93,21 @@ export async function PATCH(
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
-        const body = await request.json()
-        const parsed = patchPropertySchema.parse(body)
+        const formData = await request.formData()
+        const rawData: Record<string, any> = {}
+        formData.forEach((value, key) => {
+            if (key === 'isPublished') {
+                rawData[key] = value === 'true'
+            } else if (key === 'price') {
+                rawData[key] = Number(value)
+            } else if (value === '') {
+                rawData[key] = null
+            } else {
+                rawData[key] = value
+            }
+        })
+
+        const parsed = patchPropertySchema.parse(rawData)
         const data: {
             title?: string
             city?: string | null
