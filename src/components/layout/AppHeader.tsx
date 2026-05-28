@@ -117,6 +117,26 @@ export function AppHeader({ onMenuClick, userProfile, role }: AppHeaderProps) {
       clearInterval(interval)
     }
   }, [notificationOpen])
+
+  useEffect(() => {
+    const source = new EventSource('/api/realtime/notifications')
+    source.addEventListener('notification', async () => {
+      try {
+        const response = await fetch('/api/notifications?limit=8', {
+          credentials: 'include',
+        })
+        const payload = (await response.json().catch(() => [])) as AppNotification[]
+        if (response.ok) {
+          setNotifications(Array.isArray(payload) ? payload : [])
+        }
+      } catch {
+        // Keep silent; polling remains active as fallback.
+      }
+    })
+    return () => {
+      source.close()
+    }
+  }, [])
   const unreadCount = useMemo(
     () => notifications.reduce((count, notification) => count + (notification.isRead ? 0 : 1), 0),
     [notifications]

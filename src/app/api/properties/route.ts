@@ -15,6 +15,7 @@ export const dynamic = 'force-dynamic'
 
 const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
+const MIN_PROPERTY_IMAGES = 3
 
 const createPropertySchema = z.object({
     title: z.string().trim().min(2).max(150),
@@ -155,7 +156,10 @@ export async function POST(request: Request) {
         const offerType = getOptionalFormString(formData, 'offerType')
         const isPublished = getOptionalFormString(formData, 'isPublished')
         const status = getOptionalFormString(formData, 'status')
-        const image = formData.get('image') as File | null
+        const legacyImage = formData.get('image') as File | null
+        const images = formData
+            .getAll('images')
+            .filter((value): value is File => value instanceof File && value.size > 0)
         const imageUrlsRaw = getOptionalFormString(formData, 'imageUrls') ?? ''
         const imageUrls = imageUrlsRaw
             ? imageUrlsRaw
@@ -217,8 +221,9 @@ export async function POST(request: Request) {
             )
         }
 
-        let imageUrl: string | null = null
-        if (image && image.size > 0) {
+        const uploadedImages = images.length > 0 ? images : legacyImage && legacyImage.size > 0 ? [legacyImage] : []
+        const uploadedImageUrls: string[] = []
+        for (const image of uploadedImages) {
             if (image.size > MAX_IMAGE_SIZE_BYTES) {
                 return NextResponse.json(
                     { error: 'Image too large. Max size is 2MB.' },
@@ -239,23 +244,24 @@ export async function POST(request: Request) {
 
             if (process.env.VERCEL === '1') {
                 // Vercel serverless runtime cannot persist files under public/.
-                imageUrl = dataUri
-            } else {
-                try {
-                    // Local/dev fallback: store to public/uploads.
-                    const uploadsDir = join(process.cwd(), 'public', 'uploads')
-                    try {
-                        mkdirSync(uploadsDir, { recursive: true })
-                    } catch {}
+                uploadedImageUrls.push(dataUri)
+                continue
+            }
 
-                    const filename = `${Date.now()}-${image.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
-                    const filepath = join(uploadsDir, filename)
-                    writeFileSync(filepath, buffer)
-                    imageUrl = `/uploads/${filename}`
-                } catch {
-                    // If local file save fails, still persist image via data URI to avoid blocking creation.
-                    imageUrl = dataUri
-                }
+            try {
+                // Local/dev fallback: store to public/uploads.
+                const uploadsDir = join(process.cwd(), 'public', 'uploads')
+                try {
+                    mkdirSync(uploadsDir, { recursive: true })
+                } catch {}
+
+                const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${image.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
+                const filepath = join(uploadsDir, filename)
+                writeFileSync(filepath, buffer)
+                uploadedImageUrls.push(`/uploads/${filename}`)
+            } catch {
+                // If local file save fails, still persist image via data URI to avoid blocking creation.
+                uploadedImageUrls.push(dataUri)
             }
         }
 
@@ -272,9 +278,12 @@ export async function POST(request: Request) {
             publishedAt: parsed.isPublished === true ? new Date() : null,
             managerId: user.id,
         }
-        const allImageUrls = [...(parsed.imageUrls ?? [])]
-        if (imageUrl) {
-            allImageUrls.unshift(imageUrl)
+        const allImageUrls = [...uploadedImageUrls, ...(parsed.imageUrls ?? [])]
+        if (allImageUrls.length < MIN_PROPERTY_IMAGES) {
+            return NextResponse.json(
+                { error: `Au moins ${MIN_PROPERTY_IMAGES} images sont requises.` },
+                { status: 400 }
+            )
         }
 
         const property = await prisma.$transaction(async (tx) => {

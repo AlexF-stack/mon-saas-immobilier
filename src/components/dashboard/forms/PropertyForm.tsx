@@ -33,6 +33,8 @@ type PropertyFormProps = {
   }
 }
 
+const MIN_PROPERTY_IMAGES = 3
+
 function toErrorMessage(status: number, errorPayload: unknown, fallback: string): string {
   if (typeof errorPayload === 'string' && errorPayload.trim()) {
     return errorPayload
@@ -63,7 +65,15 @@ export function PropertyForm({ locale, dashboardPathPrefix, initialData }: Prope
     setError('')
 
     const formData = new FormData(event.currentTarget)
-    const data = Object.fromEntries(formData.entries())
+    const selectedImages = formData
+      .getAll('images')
+      .filter((value): value is File => value instanceof File && value.size > 0)
+
+    if (!isEdit && selectedImages.length < MIN_PROPERTY_IMAGES) {
+      setError(`Ajoute au moins ${MIN_PROPERTY_IMAGES} images pour créer le bien.`)
+      setLoading(false)
+      return
+    }
 
     try {
       const url = isEdit ? `/api/properties/${initialData!.id}` : '/api/properties'
@@ -168,9 +178,11 @@ export function PropertyForm({ locale, dashboardPathPrefix, initialData }: Prope
             </div>
           )}
           <div className="space-y-2">
-            <Label htmlFor="image">Photo du bien</Label>
-            <Input id="image" name="image" type="file" accept="image/*" />
-            <p className="text-[11px] text-muted-foreground">Format JPG, PNG ou WEBP. Max 2Mo.</p>
+            <Label htmlFor="images">Photos du bien</Label>
+            <Input id="images" name="images" type="file" accept="image/*" multiple={!isEdit} />
+            <p className="text-[11px] text-muted-foreground">
+              Format JPG, PNG ou WEBP. Max 2Mo par image. {isEdit ? '1 image facultative.' : `Minimum ${MIN_PROPERTY_IMAGES} images.`}
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>

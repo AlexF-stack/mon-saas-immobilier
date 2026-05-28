@@ -83,7 +83,7 @@ export function InquiryMessagesWorkspace({ currentUserId }: InquiryMessagesWorks
       }
     }
     void loadInquiries(true)
-    const interval = setInterval(() => void loadInquiries(false), 20000)
+    const interval = setInterval(() => void loadInquiries(false), 10000)
     return () => {
       cancelled = true
       clearInterval(interval)
@@ -113,11 +113,32 @@ export function InquiryMessagesWorkspace({ currentUserId }: InquiryMessagesWorks
     void loadMessages()
     const interval = setInterval(() => {
       void loadMessages()
-    }, 10000) // Poll every 10 seconds
+    }, 15000) // Fallback polling
 
     return () => {
       cancelled = true
       clearInterval(interval)
+    }
+  }, [selectedInquiryId])
+
+  useEffect(() => {
+    if (!selectedInquiryId) return
+    const source = new EventSource(`/api/realtime/marketplace/inquiries/${selectedInquiryId}/messages`)
+    source.addEventListener('message', async () => {
+      try {
+        const res = await fetch(`/api/marketplace/inquiries/${selectedInquiryId}/messages`, {
+          credentials: 'include',
+        })
+        const payload = await res.json().catch(() => ({}))
+        if (res.ok) {
+          setMessages(Array.isArray(payload?.messages) ? payload.messages : [])
+        }
+      } catch {
+        // Silent catch for realtime fallback
+      }
+    })
+    return () => {
+      source.close()
     }
   }, [selectedInquiryId])
 

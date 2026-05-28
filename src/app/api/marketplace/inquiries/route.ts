@@ -9,6 +9,7 @@ import {
     createGuestInquiryAccessToken,
     hashGuestInquiryAccessToken,
 } from '@/lib/marketplace-inquiry-access'
+import { publishRealtime } from '@/lib/realtime'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -242,6 +243,13 @@ export async function POST(request: Request) {
                     message: `${requesterName} a envoye une demande pour ${property.title}.${preferredVisitSuffix}`,
                 })),
             })
+            for (const recipientId of recipientIds) {
+                publishRealtime(`notifications:user:${recipientId}`, {
+                    type: 'MARKETPLACE_INQUIRY',
+                    inquiryId: inquiry.id,
+                    createdAt: new Date().toISOString(),
+                })
+            }
         }
 
         await createSystemLog({

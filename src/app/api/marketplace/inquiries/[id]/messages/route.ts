@@ -5,6 +5,7 @@ import { getTokenFromRequest, verifyAuth } from '@/lib/auth'
 import { enforceCsrf } from '@/lib/csrf'
 import { createSystemLog } from '@/lib/audit'
 import { notifyUser, notifyGuest } from '@/lib/notifications/dispatcher'
+import { publishRealtime } from '@/lib/realtime'
 import {
   buildGuestInquiryAccessExpiry,
   createGuestInquiryAccessToken,
@@ -209,6 +210,13 @@ export async function POST(
           message: `Nouveau message sur la demande pour ${inquiry.property.title}.`,
         })),
       })
+      for (const recipientId of recipientIds) {
+        publishRealtime(`notifications:user:${recipientId}`, {
+          type: 'MARKETPLACE_INQUIRY_MESSAGE',
+          inquiryId: inquiry.id,
+          createdAt: new Date().toISOString(),
+        })
+      }
     }
 
     // External Notifications (Email/WhatsApp)
@@ -283,6 +291,12 @@ export async function POST(
         select: { id: true },
       })
     }
+
+    publishRealtime(`inquiry:${inquiry.id}:messages`, {
+      inquiryId: inquiry.id,
+      messageId: message.id,
+      createdAt: message.createdAt.toISOString(),
+    })
 
     return NextResponse.json({ message }, { status: 201 })
   } catch (error) {

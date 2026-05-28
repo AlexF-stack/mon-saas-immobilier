@@ -63,11 +63,39 @@ export function PublicInquiryChat({ inquiryId, guestToken, currentUserId }: Prop
     void loadMessages()
     const interval = setInterval(() => {
       void loadMessages()
-    }, 10000)
+    }, 15000)
 
     return () => {
       cancelled = true
       clearInterval(interval)
+    }
+  }, [guestToken, inquiryId])
+
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (guestToken) params.set('guestToken', guestToken)
+    const qs = params.toString()
+    const source = new EventSource(
+      `/api/realtime/marketplace/inquiries/${inquiryId}/messages${qs ? `?${qs}` : ''}`
+    )
+    source.addEventListener('message', async () => {
+      try {
+        const res = await fetch(
+          `/api/marketplace/inquiries/${inquiryId}/messages${qs ? `?${qs}` : ''}`,
+          {
+          credentials: 'include',
+          }
+        )
+        const payload = await res.json().catch(() => ({}))
+        if (res.ok) {
+          setMessages(Array.isArray(payload?.messages) ? payload.messages : [])
+        }
+      } catch {
+        // Silent catch for realtime fallback
+      }
+    })
+    return () => {
+      source.close()
     }
   }, [guestToken, inquiryId])
 
