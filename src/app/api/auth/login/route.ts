@@ -238,6 +238,16 @@ export async function POST(request: Request) {
             redirectTo: getDashboardPathForRole(normalizedRole),
         })
 
+        const cookieName = `token_${normalizedRole.toLowerCase()}`
+        response.cookies.set(cookieName, token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 86400,
+            path: '/',
+        })
+
+        // Also set generic token for backward compatibility
         response.cookies.set('token', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',

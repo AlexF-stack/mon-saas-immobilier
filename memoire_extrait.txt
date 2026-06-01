@@ -1,0 +1,1235 @@
+REPUBLIQUE DU BENIN
+**********
+MINISTERE DE L’ENSEIGNEMENT SUPERIEUR ET DE LA
+RECHERCHE SCIENTIFIQUE (MESRS)
+**********
+UNIVERSITE AFRICAINE DE TECHNOLOGIE ET DE
+MANAGEMENT (UATM/ GASA-Formation)
+******
+MEMOIRE DE FIN DE FORMATION POUR L’OBTENTION DU
+DIPLOME DE LICENCE PROFESSIONNELLE
+******
+Option : Génie Électrique Filière : Systèmes Informatiques et Logiciels
+Réalisé par : Sous la supervison de :
+HOUNKPATIN Alex Frnky M. OGOUNDE Zoulkif
+DANDJEKPO Cédric. Ingénieur en informatique
+Thème : Conception et réalisation d’une application de gestion
+immobilière
+
+-- 1 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+SOMMAIRE
+
+-- 2 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+Dédicace 1
+Je dédie ce mémoire à mes parents, pour leur amour, leurs sacrifices et leur soutien constant
+tout au long de mon parcours académique.
+À ma famille, pour leurs encouragements et leur confiance.
+À mes enseignants, pour les connaissances transmises et l’accompagnement durant ma
+formation en Système Informatique et Logiciel.
+À tous ceux qui, de près ou de loin, ont contribué à la réalisation de ce travail.
+
+-- 3 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+Dédicace 2
+Je dédie ce mémoire à mes parents, pour leur amour, leurs sacrifices et leur soutien constant
+tout au long de mon parcours académique.
+À ma famille, pour leurs encouragements et leur confiance.
+À mes enseignants, pour les connaissances transmises et l’accompagnement durant ma
+formation en Système Informatique et Logiciel.
+À tous ceux qui, de près ou de loin, ont contribué à la réalisation de ce travail.
+
+-- 4 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+REMERCIEMENTS
+La réalisation de ce travail a été rendue possible grâce au soutien de plusieurs personnes,
+envers lesquelles nous exprimons notre sincère gratitude, en particulier :
+❖ Dr Théophane AYI, PDG de l'UATM GASA-FORMATION, pour son engagement
+constant dans la promotion de la formation professionnelle de la jeunesse africaine, et
+particulièrement celle du Bénin. Son investissement dans le développement des
+compétences de la jeune génération est un modèle d'inspiration.
+❖ Monsieur Lafite NGUEMEGNE, Directeur technique de l’UATM/GASA-FORMATION
+pour ces conseils, sa disponibilité et sa patience ;
+❖ M. Marc-Aurèle AKPONNA, directeur des Études, pour son encadrement précieux, ses
+conseils éclairés et son soutien sans faille, qui nous ont permis de réussir ce travail.
+❖ M. OGOUNDE Zoulkif, professeur à l’UATM GASA-FORMATION pour sa disponibilité
+et son encadrement sans faille, des atouts indéniables dans la réalisation de ce travail.
+❖ Toute l’administration de l’UATM GASA-FORMATION, ainsi que nos professeurs, pour
+leur savoir, leur savoir-faire et leur savoir-être, qui ont enrichi notre parcours académique.
+Leur rigueur, leur discipline et leur accompagnement ont joué un rôle essentiel dans
+l’acquisition des compétences nécessaires à la réalisation de ce mémoire.
+❖ Les membres du jury, qui, en acceptant d'examiner ce travail, ont contribué à son
+amélioration grâce à leurs retours constructifs et à leur expertise, enrichissant ainsi la qualité
+du document.
+
+-- 5 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+LISTE DES SIGLES ET ABREVIATIONS
+
+-- 6 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+LISTE DES FIGURES
+
+-- 7 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+LISTE DES TABLEAUX
+
+-- 8 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+Résumé
+
+-- 9 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+Abstract
+
+-- 10 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+
+-- 11 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+INTRODUCTION
+Le secteur immobilier constitue un levier majeur du développement économique et social au
+Bénin. Avec l’urbanisation croissante de pôles comme Cotonou, Abomey-Calavi et Porto-
+Novo, la gestion locative devient un enjeu crucial, bien qu'elle demeure encore largement
+informelle et peu digitalisée. Alors que des plateformes SaaS ont révolutionné la gestion
+immobilière ailleurs en automatisant les suivis et les paiements, ces solutions restent peu
+développées au Bénin, où les méthodes manuelles prédominent. Ce manque de digitalisation
+freine la professionnalisation du secteur, complique le recouvrement des loyers et rend opaque
+la gestion des charges liées à la SBEE et à la SONEB.
+Ainsi, ce mémoire s’interroge sur la manière de concevoir une plateforme SaaS efficace,
+sécurisée et adaptée au contexte béninois pour automatiser les processus critiques et optimiser
+la prise de décision. Pour répondre à cette problématique, nous présenterons d’abord une revue
+de littérature sur les concepts du SaaS et de la sécurité applicative. Ensuite, nous exposerons
+les étapes d’analyse, de conception et de développement de la plateforme. Enfin, nous
+analyserons les résultats de l’implémentation et les performances obtenues avant de conclure
+sur les perspectives d’évolution, notamment l’intégration des solutions de paiement mobile
+comme MTN et Moov Money.
+
+-- 12 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+CHAPITRE 1 :
+PRESENTATION DU CONTEXTE D’ETUDE
+
+-- 13 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+I. Contexte et justification
+Le secteur immobilier béninois connaît une transformation progressive sous l’effet de
+l’urbanisation, de la croissance démographique et de l’augmentation de la demande en
+logements et en biens fonciers. Dans les pôles urbains majeurs tels que Cotonou, Abomey-
+Calavi et Porto-Novo, cette dynamique s’accompagne d’un besoin croissant de
+professionnalisation de la gestion immobilière.
+Toutefois, dans de nombreux contextes, les pratiques restent majoritairement manuelles : suivi
+non structuré des loyers, relances tardives, gestion documentaire dispersée, faible traçabilité
+des transactions et visibilité limitée sur la performance financière. Ces limites favorisent les
+retards de paiement, les incompréhensions contractuelles et une gouvernance insuffisamment
+outillée.
+En parallèle, la plupart des solutions numériques disponibles se concentrent principalement sur
+la diffusion d’annonces immobilières, sans couvrir de manière intégrée l’ensemble du cycle
+métier : contractualisation, suivi des échéances, paiements, audit, pilotage analytique et sécurité
+des accès.
+Dans ce contexte, la conception d’une plateforme SaaS centralisée apparaît comme une réponse
+pertinente. Le présent projet vise à proposer une solution unifiée de gestion immobilière,
+adaptée aux réalités locales, intégrant la location, la vente, la marketplace, la traçabilité
+financière, l’automatisation des rappels et l’observabilité en production. Il s’inscrit ainsi dans
+une logique de transformation digitale durable, orientée vers la fiabilité opérationnelle et la
+qualité de service.
+II. PROBLÉMATIQUE
+Malgré le dynamisme du secteur immobilier et l’importance croissante de l’urbanisation, la
+gestion locative demeure complexe et archaïque au Bénin. Les bailleurs et gestionnaires
+rencontrent des difficultés majeures à assurer la traçabilité des loyers et des cautions, tandis que
+les locataires peinent à obtenir des quittances fiables ou une répartition transparente des charges
+d’utilité publique comme la SBEE et la SONEB. Ce manque de digitalisation entraîne une
+opacité financière, un risque élevé de litiges et une gestion inefficace du patrimoine immobilier,
+limitant ainsi la rentabilité des investissements.
+Dès lors, plusieurs questions se posent :
+❖ Comment concevoir une plateforme SaaS intuitive et sécurisée pour automatiser
+la gestion des contrats et le recouvrement des loyers au Bénin ?
+❖ Quels outils et technologies adopter pour garantir une expérience utilisateur
+fluide tout en assurant l'intégrité des données financières ?
+❖ Comment assurer une adoption massive de la plateforme par les propriétaires et
+agences immobilières habitués aux méthodes traditionnelles ?
+❖ Quelles solutions mettre en place, notamment à travers l'intégration du paiement
+mobile, pour sécuriser les transactions et pallier les contraintes de déplacement
+physique ?
+
+-- 14 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+Ce mémoire vise à répondre à ces interrogations en proposant une solution SaaS innovante,
+conforme à la législation nationale et rigoureusement adaptée aux réalités du marché
+immobilier béninois.
+III. Hypothèse de travail
+L’hypothèse principale de cette étude repose sur l’idée que la digitalisation de la gestion
+immobilière à travers une plateforme SaaS centralisée permettrait d’améliorer significativement
+l’efficacité, la transparence et la fiabilité des opérations.
+En effet, une telle solution offrirait la possibilité d’automatiser les tâches répétitives, de
+sécuriser les transactions financières et de garantir une meilleure traçabilité des données. Elle
+faciliterait également l’accès aux services pour les utilisateurs, tout en réduisant les risques de
+litiges liés à la mauvaise gestion des informations.
+Ainsi, l’intégration d’outils technologiques adaptés au contexte local, notamment les solutions
+de paiement mobile, contribuerait à renforcer l’adoption de la plateforme et à améliorer
+l’expérience utilisateur.
+IV. ObjectifS
+➢ Objectif principal
+L’objectif principal de ce projet est de concevoir et développer une plateforme SaaS centralisée
+permettant la gestion numérique complète des activités immobilières (location et vente) au
+Bénin.
+➢ Objectifs spécifiques
+1. Concevoir une interface utilisateur ergonomique, responsive et bilingue
+(français/anglais) pour garantir une navigation fluide sur desktop et mobile.
+2. Mettre en place un système structuré de gestion immobilière intégrant les biens, les
+contrats, les locataires et le suivi des transactions.
+3. Automatiser les processus financiers et administratifs, notamment les paiements, les
+rappels d’échéances, les retraits et la génération de documents PDF.
+4. Assurer la sécurité, la traçabilité et l’aide à la décision grâce au contrôle d’accès par
+rôles, aux journaux d’audit et aux tableaux de bord analytiques.
+➢ Objectifs fonctionnels
+1. Gérer les utilisateurs, l’authentification sécurisée et les autorisations selon les rôles
+définis.
+2. Administrer les biens immobiliers, les contrats, les locataires ainsi que les opérations de
+location et de vente.
+3. Assurer le suivi des paiements, des échéances, des relances automatiques et des retraits
+financiers avec traçabilité complète.
+4. Fournir une marketplace publique, des documents PDF normalisés et un tableau de bord
+analytique pour le pilotage des activités.
+
+-- 15 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+CHAPITRE 2 :
+PRESENTATION DES SOLUTIONS EXISTANTES
+
+-- 16 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+La gestion immobilière, particulièrement la gestion locative, a connu une forte digitalisation à
+l’échelle internationale ces dernières années. Cependant, au Bénin, le secteur reste
+majoritairement dominé par des agences traditionnelles et des portails d’annonces basiques,
+avec une émergence récente de solutions numériques locales. Cette partie analyse les
+principales solutions existantes, leurs fonctionnalités, leurs limites et leur pertinence dans le
+contexte béninois.
+I. Solutions locales au Bénin
+Au Bénin, la gestion immobilière reste majoritairement traditionnelle, avec des agences
+physiques et des portails d’annonces en ligne basiques. Les acteurs classiques comme Benin-
+Immo.com, BeninHouse.com et Noudaho-Immobilier.com se limitent souvent à la
+publication d’annonces (vente/location), à une recherche filtrée (ville, prix, type de bien), à
+l’affichage détaillé des propriétés et à une mise en relation directe, avec un accompagnement
+manuel en gestion locative (contrats, suivi des paiements). Ces plateformes sont bien adaptées
+au contexte local (coûts bas, conformité OHADA, pratiques culturelles), mais manquent
+d’outils numériques avancés.
+➢ BENIN-IMMO
+
+-- 17 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+➢ BeninHouse
+➢ Noudaho-Immobilier
+Depuis 2025-2026, des solutions plus innovantes émergent pour digitaliser le secteur. BatiBid
+(app mobile/web, néo-agence basée à Cotonou) propose une gestion locative complète : mise
+en location avec annonces ciblées, suivi des locataires, préfinancement des loyers (garantis
+même en cas d’impayé), promotions attractives (mois offerts, 0% frais), notifications digitales,
+et services complémentaires (rénovation, conseil juridique, projets de construction). Avec plus
+de 500 biens gérés, 1500+ locataires satisfaits et une forte présence (WhatsApp, app sur Google
+Play/App Store), elle cible particulièrement les propriétaires distants et la diaspora. Locapay,
+
+-- 18 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+quant à elle, se concentre sur l’automatisation des paiements de loyers (sécurisés via blockchain
+pour transparence), paiements fractionnés ou automatiques, suivi des contrats et réduction des
+litiges, rendant le processus plus fiable et accessible.
+➢ BatiBid
+Ces initiatives locales montrent une transition vers le numérique, adaptée aux réalités
+béninoises (Mobile Money probable, usage mobile élevé, expertise locale), mais avec un niveau
+d’automatisation encore moyen à émergent.
+II. Solutions internationales
+À l’échelle internationale, des plateformes SaaS comme Buildium dominent la gestion
+immobilière professionnelle grâce à une solution cloud tout-en-un hautement automatisée :
+publication d’annonces, leasing digital avec signatures électroniques, paiements en ligne,
+rappels automatiques de loyers, gestion des cautions, maintenance, comptabilité intégrée et
+tableaux de bord analytiques. Ces outils, enrichis d’IA, améliorent fortement l’efficacité sur les
+marchés matures (États-Unis et Europe). Cependant, ils restent mal adaptés au Bénin en raison
+de leurs coûts élevés (à partir de 62 USD/mois), de l’absence d’intégration Mobile Money et
+FCFA, de leur dépendance à une connexion internet stable, et de leur non-conformité à la
+fiscalité OHADA et aux pratiques locales.
+
+-- 19 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+➢ Buildium
+Malgré les nombreuses solutions existantes, l’accès à une plateforme unique et centralisée,
+conçue spécifiquement pour la gestion immobilière au Bénin et intégrant pleinement les réalités
+locales demeure encore très limité.
+II.1 Tableau comparatif des plateformes
+Nous avons essayé de faire une étude comparative des fonctionnalité et limites des site
+pour en ressortir vraiment les problèmes à résoudre
+Tableau 1 : Etude comparatif sur les plateformes
+Plateformes
+Fonctionnalités
+Benin-
+Immo.com
+BeninHouse.com Noudaho-
+Immobilier.com
+BatiBid
+(Bénin,
+2026)
+Buildium
+(international)
+Type de plateforme
+Nature de la solution
+Portail
+d’annonces
++ agence
+immobilière
+Portail d’annonces
++ agence
+immobilière
+Site vitrine
+d’agence
+immobilière
+Néo-
+agence
+digitale +
+app
+SaaS cloud de
+gestion
+immobilière
+
+-- 20 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+Plateformes
+Fonctionnalités
+Benin-
+Immo.com
+BeninHouse.com Noudaho-
+Immobilier.com
+BatiBid
+(Bénin,
+2026)
+Buildium
+(international)
+mobile/web
+(gestion
+locative +
+mise en
+location +
+rénovation)
+complète (tout-
+en-un)
+Publication d’annonces
+(vente/location)
+Oui Oui Oui Oui Oui
+Recherche filtrée (ville,
+prix, type, etc.)
+Oui Oui Oui Oui Oui
+Affichage détaillé des
+biens (photos,
+description)
+Oui Oui Oui Oui Oui
+Mise en relation
+propriétaire / client
+Oui Oui Oui Oui Oui
+Gestion des contrats
+locatifs
+Oui Partiel Partiel Oui Oui
+Suivi des paiements
+locatifs
+Partiel Non explicite Non explicite Oui Oui
+Automatisation des
+rappels de loyer
+Non Non Oui Partiel Oui
+Gestion des cautions et
+avances
+Oui Non explicite Non explicite Oui Oui
+Calcul automatisé des
+charges (électricité, eau,
+etc.)
+Non Non Non Non Partiel
+Tableau de bord
+analytique (revenus, taux
+paiement, KPI)
+Non Non Non Limité Oui
+
+-- 21 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+Plateformes
+Fonctionnalités
+Benin-
+Immo.com
+BeninHouse.com Noudaho-
+Immobilier.com
+BatiBid
+(Bénin,
+2026)
+Buildium
+(international)
+Système de notifications
+automatisées
+Non Non Non Oui Oui
+Paiement en ligne intégré Non Non Non Probable /
+en cours
+(Mobile
+Money
+adapté
+local)
+Oui (ACH,
+carte, transferts
+auto)
+Niveau d’automatisation Faible Faible Faible Moyen
+(app +
+suivi
+digital)
+Très élevé (AI
++ workflows)
+Accessibilité financière Gratuit
+consultation
+/
+commissions
+Gratuit /
+commissions
+Gratuit /
+commissions
+Abordable
+(promos
+0% frais, 2
+mois
+offerts)
+Élevé (à partir
+de ~62
+USD/mois)
+Adaptabilité au contexte
+béninois
+Très bonne
+(locale,
+OHADA
+Bonne Bonne Excellente
+(locale,
+Mobile
+Money,
+expertise
+Cotonou)
+Faible (pas
+FCFA, lois
+locales, Mobile
+Money)
+II.2 Critiques de l'existant
+L’analyse comparative montre que les plateformes immobilières locales comme Benin-Immo,
+BeninHouse et Noudaho-Immobilier sont accessibles et bien adaptées au contexte béninois,
+mais elles restent limitées par un faible niveau d’automatisation (absence de paiements en
+ligne, rappels automatiques et tableaux de bord). BatiBid apporte une amélioration avec plus
+de digitalisation, tandis que Buildium offre une solution très performante mais peu adaptée au
+Bénin à cause de son coût élevé et de l’absence de Mobile Money.
+
+-- 22 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+Cette analyse montre donc la nécessité de concevoir une solution hybride, moderne et adaptée
+aux réalités locales. C’est dans cette logique que s’inscrit notre plateforme de gestion
+immobilière SaaS.
+
+-- 23 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+CHAPITRE 3 :
+COMCEPTION DE L’APPLICATION
+
+-- 24 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+Pour concevoir et développer efficacement notre application de gestion immobilière, nous allons
+utiliser la méthodologie UML en trois étapes distinctes. Tout d'abord, nous aborderons la modélisation
+fonctionnelle en utilisant les diagrammes de contexte et de cas d'utilisation, qui nous permettront de
+définir les limites du système et de comprendre les interactions entre les utilisateurs et le système.
+Ensuite, nous passerons à la modélisation dynamique avec les diagrammes de séquence et d'activité,
+afin de représenter le comportement temporel et les flux de travail du système. Enfin, nous
+terminerons par la modélisation statique grâce aux diagrammes de classe et d'objet, qui nous aideront à
+structurer les données et les relations entre les différentes entités du système. Cette approche structurée
+garantit une conception claire, cohérente et bien organisée de notre plateforme.
+I LANGAGE DE MODÉLISATION
+La conception d’une application de gestion immobilière nécessite une approche
+méthodologique permettant de représenter de manière formelle les besoins, les comportements
+et la structure du système. Dans ce projet, nous avons choisi d’utiliser le langage UML (Unified
+Modeling Language) comme outil principal de modélisation. UML constitue un standard
+international de modélisation des systèmes d’information, offrant un ensemble de diagrammes
+permettant de représenter graphiquement les différentes vues d’un système.
+L’utilisation d’UML dans ce projet poursuit plusieurs objectifs. Elle permet d’améliorer la
+compréhension du système avant son développement, de faciliter la communication entre les
+différents intervenants (concepteurs, développeurs, encadreurs) et de réduire les risques
+d’erreurs lors de l’implémentation. UML ne décrit pas seulement les fonctionnalités du système,
+mais également son comportement dynamique et sa structure interne.
+La méthodologie adoptée repose sur trois axes principaux.
+• La modélisation fonctionnelle vise à identifier les besoins du système et les
+interactions entre les acteurs et l’application. Elle s’appuie principalement sur le
+diagramme de contexte et le diagramme de cas d’utilisation. Cette étape permet de
+définir clairement les frontières du système de gestion immobilière et les services qu’il
+doit offrir.
+• La modélisation dynamique permet de représenter le comportement du système dans
+le temps. Elle utilise les diagrammes de séquence et d’activité afin de décrire les
+scénarios d’exécution des processus métier, tels que la location d’un bien ou
+l’enregistrement d’un paiement.
+• La modélisation statique, enfin, permet de structurer les données du système à travers
+les diagrammes de classes. Elle définit les entités principales du domaine immobilier
+ainsi que les relations entre elles.
+Cette approche garantit une conception structurée, cohérente et adaptée aux exigences d’une
+application moderne de gestion immobilière.
+II MODÉLISATION FONCTIONNELLE
+II.1 Diagramme de Contexte
+Le diagramme de contexte de l’application de gestion immobilière représente une vue globale
+du système en mettant en évidence les interactions principales entre le système central et ses
+
+-- 25 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+acteurs externes. Il permet de définir clairement les frontières du système et d’identifier les
+flux d’informations entrants et sortants.
+Au centre du diagramme se trouve le Système de Gestion Immobilière, qui constitue le
+noyau fonctionnel de l’application.
+Ce système interagit avec cinq acteurs principaux :
+• Gestionnaire de bien (Agent immobilier / Propriétaire)
+• Locataire
+• Acheteur
+• Administrateur
+• Système de paiement électronique
+Le locataire peut consulter les biens immobiliers disponibles à la location, programmer des
+visites, effectuer une demande de location et payer le loyer en ligne.
+L’acheteur consulte les biens immobiliers disponibles à la vente, programme des visites et
+peut effectuer une demande d’achat.
+Le gestionnaire de bien publie les biens immobiliers, gère les informations des biens, valide
+les demandes de visite et suit les transactions de location ou de vente.
+L’administrateur supervise l’ensemble du système, gère les utilisateurs, valide les
+documents fonciers et contrôle les transactions immobilières.
+Le système de paiement électronique permet de traiter de manière sécurisée les transactions
+financières liées aux loyers, aux cautions ou aux ventes.
+Le tableau suivant présente les flux d’informations entre les acteurs et le système.
+Acteur Flux d’entrée vers le
+système
+Flux de sortie du système
+Locataire Recherche de biens,
+demande de location,
+réservation de visite,
+paiement
+Confirmation de visite,
+contrat de location,
+notifications
+Acheteur Recherche de biens,
+demande d’achat,
+réservation de visite
+Confirmation d’achat, mise
+en relation directe et fluide
+avec les vendeurs,
+notifications
+Gestionnaire de bien Publication de biens, gestion
+des visites, validation des
+demandes
+Liste des demandes,
+notifications, informations
+sur les transactions
+Administrateur Gestion des comptes,
+validation des documents
+fonciers
+Rapports, statistiques, état du
+système
+Système de paiement Confirmation de transaction Requête de transaction
+Tableau 2 : Flux d’information entre les acteurs et le système
+
+-- 26 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+• Présentation du diagramme de contexte
+Le diagramme se présente avec le Système de Gestion Immobilière au centre. Autour de celui-
+ci figurent les quatre acteurs reliés par des flèches bidirectionnelles représentant les flux
+d’informations. Chaque acteur échange des données spécifiques avec le système, sans
+interaction directe entre eux.
+Figure 1 : Diagramme de Contexte de l’Application de Gestion Immobilière
+II.2 Diagramme de cas d’utilisation
+Le diagramme de cas d’utilisation permet de représenter les interactions entre les différents
+acteurs et le système de gestion immobilière. Il sert à identifier et modéliser les différentes
+actions qu’un utilisateur peut effectuer sur la plateforme. Ce diagramme constitue un outil
+essentiel pour comprendre le périmètre fonctionnel du système et orienter le développement de
+l’application.
+1. Acteurs du système
+Les principaux acteurs identifiés dans notre plateforme de gestion immobilière sont :
+• Gestionnaire de bien (Agent immobilier / Propriétaire) : Il publie et gère les biens
+immobiliers disponibles sur la plateforme, organise les visites et suit les demandes de
+location ou d’achat.
+• Locataire : Il utilise la plateforme pour rechercher un bien immobilier, demander une
+location, réserver une visite et effectuer le paiement du loyer.
+• Acheteur : Il consulte les biens immobiliers disponibles à la vente et peut effectuer une
+demande d’achat.
+• Administrateur : Il gère l’ensemble du système, supervise les utilisateurs, valide les
+documents fonciers et contrôle les transactions.
+2. Cas d’utilisation principaux
+
+-- 27 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+❖ Gestion des utilisateurs
+• Inscription et connexion des utilisateurs
+• Mise à jour du profil
+• Gestion des informations personnelles
+❖ Consultation des biens immobiliers
+• Recherche et affichage des biens disponibles
+• Visualisation des détails d’un bien immobilier
+• Consultation des images et documents fonciers
+❖ Gestion des locations
+• Demander la location d’un bien immobilier
+• Signer un contrat de location
+• Déposer la caution
+• Payer le loyer
+• Consulter l’historique des paiements
+❖ Gestion des ventes immobilières
+• Rechercher un bien à acheter
+• Effectuer une demande d’achat
+❖ Gestion des biens immobiliers
+• Ajouter un bien immobilier
+• Modifier les informations d’un bien
+• Supprimer un bien immobilier
+• Gérer les visites des biens
+❖ Administration de la plateforme
+• Gestion des utilisateurs
+• Validation des documents fonciers
+• Gestion des paiements et transactions
+• Envoi des notifications
+❖ Gestion des visites immobilières
+• Programmer une visite
+• Consulter le programme de visite
+• Accepter ou refuser une visite
+❖ Gestion des contrats
+
+-- 28 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+• Générer un contrat de location
+• Consulter un contrat
+❖ Gestion des notifications
+• Recevoir une notification
+• Envoyer une notification
+• Consulter les notifications
+Le diagramme de cas d’utilisation représente donc de manière visuelle l’ensemble des
+interactions possibles entre les acteurs et le système. Il permet d’organiser les différentes
+fonctionnalités de la plateforme et facilite leur implémentation technique.
+Figure 2: Diagramme de cas d’utilisation
+II.3 Description textuelle des cas d’utilisation
+Afin d’obtenir les résultats attendus par les acteurs du système, chaque cas d’utilisation est
+accompagné d’une description textuelle décrivant les interactions entre l’utilisateur et le
+système.
+➢ Description du cas S’inscrire
+Titre : S’inscrire
+❖ Objectif
+Créer un compte utilisateur afin d’accéder aux fonctionnalités de la plateforme.
+
+-- 29 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+❖ Acteurs
+Gestionnaire de bien, Locataire, Acheteur.
+❖ Précondition
+L’utilisateur n’est pas encore inscrit sur la plateforme.
+Tableau 2 : Scénario nominal cas S’inscrire
+Utilisateur Système
+1- L’utilisateur clique sur “S’inscrire” 2- Le système affiche le formulaire d’inscription
+3- L’utilisateur saisit ses informations 4- Le système vérifie les informations
+5- Le système enregistre les données et crée le
+compte
+❖ Postcondition
+Un compte utilisateur est créé et peut être utilisé pour accéder au système.
+Tableau 3 : Scénarios alternatifs cas S’inscrire
+Situation Réponse du système
+Champs invalides ou incomplets Le système affiche un message d’erreur
+Email déjà existant Le système propose la connexion
+➢ Description du cas Se connecter
+Titre : Se connecter
+❖ Objectif
+Permettre à l’utilisateur d’accéder à son espace personnel.
+❖ Acteurs
+Gestionnaire de bien, Locataire, Acheteur, Administrateur.
+❖ Précondition
+L’utilisateur possède un compte valide.
+Tableau 4 : Scénario nominal Se connecter
+Utilisateur Système
+1- L’utilisateur accède à la plateforme 2- Le système affiche la page de connexion
+3- L’utilisateur saisit ses identifiants 4- Le système vérifie les informations
+5- L’utilisateur est redirigé vers son tableau
+de bord
+
+-- 30 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+❖ Postcondition
+L’utilisateur est connecté à son compte.
+Tableau 5 : Scénarios alternatifs cas Se connecter
+Situation Réponse du système
+Identifiants incorrects Message d’erreur et nouvelle tentative
+Trois tentatives échouées Proposition de réinitialisation du mot de
+passe
+➢ Description du cas Demander une location
+Titre : Demander une location
+❖ Objectif
+Permettre à un locataire de demander la location d’un bien immobilier.
+❖ Acteurs
+Locataire.
+❖ Précondition
+Le locataire est connecté.
+Tableau 6 : Scénario nominal Demander une location
+Locataire Système
+1- Le locataire recherche un bien 2- Le système affiche les résultats
+3- Le locataire sélectionne un bien 4- Le système affiche les détails du bien
+5- Le locataire envoie une demande de
+location 6- Le système enregistre la demande
+❖ Postcondition
+La demande de location est enregistrée.
+Tableau 7 : Scénarios alternatifs Demande une location
+Situation Réponse du système
+Bien déjà loué Message d’indisponibilité.
+Erreur lors de la demande Demande de correction
+➢ Description du cas Paiement en ligne
+
+-- 31 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+Titre : Paiement en ligne
+❖ Objectif
+Permettre à l’utilisateur d’effectuer le paiement en ligne.
+❖ Acteurs
+Locataire, Acheteur
+❖ Précondition
+Un contrat de location existe.
+Tableau 8 : Scénario nominal Paiement en ligne
+Utilisateur Système
+1- L’utilisateur consulte ses paiements 2- Le système affiche les paiements effectuer
+3- L’utilisateur choisit un mode de paiement 4- Le système traite le paiement
+5- Le système confirme la transaction
+❖ Postcondition
+Le paiement est enregistré dans le système.
+Tableau 9 : Scénarios alternatifs Paiement en ligne
+Situation Réponse du système
+Paiement refusé Nouvelle tentative
+Erreur technique Message d’assistance
+➢ Description du cas visite
+Titre : Programmer une visite
+❖ Objectif
+Permettre à un utilisateur de planifier une visite d’un bien immobilier.
+❖ Acteurs
+Locataire, Acheteur.
+❖ Précondition
+L’utilisateur est connecté à la plateforme.
+
+-- 32 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+Tableau 10 : Scénario nominal cas Visite
+Utilisateur Système
+1- L’utilisateur consulte un bien immobilier 2- Le système affiche les informations du
+bien
+3- L’utilisateur clique sur "Programmer une
+visite"
+4- Le système affiche le formulaire de
+réservation
+5- L’utilisateur choisit la date et l’heure 6-Le système enregistre la visite
+❖ Postcondition
+La visite est enregistrée dans le système.
+➢ Description du cas Effectuer une demande d’achat
+Titre : Demande d’achat
+❖ Objectif
+Permettre à un acheteur d’effectuer une demande d’achat pour un bien immobilier.
+❖ Acteurs
+Acheteur.
+❖ Précondition
+L’acheteur est connecté à la plateforme.
+Tableau 11 : Scénario nominal Demande d’achat
+Acheteur | Système
+1- L’acheteur consulte les biens à vendre 2- Le système affiche la liste des biens
+3- L’acheteur sélectionne un bien 4- Le système affiche les détails
+5- L’acheteur clique sur "Demander l'achat" 6- Le système enregistre la demande
+❖ Postcondition
+La demande d’achat est enregistrée.
+
+-- 33 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+Tableau 9 : Scénarios alternatifs Demande d’achat
+Acheteur Systeme
+Bien déjà vendu Le système affiche un message indiquant
+que le bien n'est plus disponible
+Demande déjà envoyée Le système informe l'utilisateur que la
+demande existe déjà
+Erreur lors de l’enregistrement Le système demande de réessayer
+III. Modélisation dynamique
+La modélisation dynamique permet de représenter le comportement du système en montrant
+l’enchaînement des actions et les interactions entre les acteurs et la plateforme.
+Dans le cadre de notre plateforme de gestion immobilière, plusieurs utilisateurs interagissent
+avec le système : le gestionnaire de bien (agent immobilier ou propriétaire), le locataire,
+l’acheteur et l’administrateur.
+À partir des cas d’utilisation identifiés, deux types de diagrammes dynamiques peuvent être
+réalisés :
+• Diagramme de séquence : il décrit l’ordre chronologique des interactions entre les acteurs
+et le système lors d’un scénario précis, comme la demande de location d’un bien, la
+programmation d’une visite ou le paiement du loyer.
+• Diagramme d’activités : il illustre les différentes étapes d’un processus métier sous forme
+de flux d’activités, comme le processus d’inscription d’un utilisateur, la gestion d’un bien
+immobilier ou le processus d’achat d’un bien.
+Ces diagrammes permettent de mieux comprendre le comportement du système et d’assurer la
+cohérence des interactions avant l’implémentation technique de l’application.
+Ils permettent également de représenter certains processus importants du système comme :
+• La génération automatique d’un contrat après validation d’une transaction
+• L’envoi de notifications aux utilisateurs
+• La gestion des paiements en ligne
+III.1 Diagramme d’activité
+Le diagramme d’activité représente les différentes étapes que suit un utilisateur pour réaliser
+une action sur la plateforme immobilière.
+➢ Diagramme d’activité S’inscrire
+Processus permettant à un utilisateur de créer un compte sur la plateforme.
+
+-- 34 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+Figure 3 : Diagramme d’activité S’inscrire
+➢ Diagramme d’activité Se connecté
+Processus permettant à un utilisateur de s’authentifier et d’accéder à
+son espace personnel.
+
+-- 35 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+Figure 4 : Diagramme d’activité Se connecter
+➢ Diagramme d’activité Consulter les biens immobiliers
+Permet à un utilisateur de rechercher et consulter les biens immobiliers
+disponibles sur la plateforme.
+
+-- 36 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+Figure 5 : Diagramme d’activité Consulter les biens
+➢ Diagramme d’activité Demander une location
+Permet à un locataire d’envoyer une demande pour louer un bien immobilier.
+
+-- 37 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+Figure 6 : Diagramme d’activité Demander une location
+➢ Diagramme d’activité Demander un achat
+Permet à un acheteur de sélectionner un bien immobilier et d’envoyer une
+demande d’achat au gestionnaire du bien.
+
+-- 38 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+Figure 7 : Diagramme d’activité Demander un achat
+➢ Diagramme d’activité Paiement en ligne
+Permet à un locataire d’effectuer le paiement du loyer ou des frais liés à la
+location.
+
+-- 39 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+Figure 8 : Diagramme d’activité Paiement en ligne
+III.2 Diagramme de séquence
+Le diagramme de séquence illustre l’ordre chronologique des interactions entre l’utilisateur et
+le système lors de l’exécution d’un scénario spécifique.
+➢ Diagramme de séquence S’inscrire
+
+-- 40 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+Figure 9 : Diagramme de séquence S’inscrire
+
+-- 41 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+➢ Diagramme de séquence Se connecter
+Figure 10 : Diagramme de séquence Se connecter
+
+-- 42 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+➢ Diagramme de séquence Consulter les biens immobiliers
+Figure 11 : Diagramme de séquence Consulter les biens
+➢ Diagramme de séquence Demander une location
+
+-- 43 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+Figure 12 : Diagramme de séquence Demander une location
+➢ Diagramme de séquence Demander un achat
+
+-- 44 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+Figure 13 : Diagramme de séquence Demander un achat
+➢ Diagramme de séquence Paiement en ligne
+
+-- 45 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+Figure 14 : Diagramme de séquence Paiement en ligne
+IV.1 Règles de domaine
+
+-- 46 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+Les règles de domaine définissent les contraintes, obligations et comportements spécifiques
+liés au fonctionnement du système de gestion immobilière. Elles permettent d'assurer la
+cohérence et le bon fonctionnement de la plateforme.
+Règles liées aux utilisateurs
+RD1 : Un utilisateur doit appartenir à un seul rôle parmi les suivants : gestionnaire de bien
+(agent immobilier ou propriétaire), locataire, acheteur ou administrateur.
+RD2 : Chaque utilisateur doit s’inscrire avec une adresse email unique.
+RD3 : Un utilisateur doit être authentifié pour accéder aux fonctionnalités de la plateforme.
+RD4 : Un utilisateur ne peut accéder qu’aux fonctionnalités correspondant à son rôle.
+RD5 : L’administrateur peut suspendre ou supprimer un compte utilisateur en cas d’abus.
+RD6 : Un utilisateur peut recevoir plusieurs notifications concernant les actions effectuées sur
+la plateforme.
+Règles liées aux biens immobiliers
+RD7 : Un gestionnaire de bien peut publier un ou plusieurs biens immobiliers.
+RD8 : Chaque bien immobilier doit contenir les informations suivantes :
+• Titre
+• Description
+• Prix
+• Localisation
+• Superficie
+• Statut (disponible, loué ou vendu)
+RD9 : Un bien immobilier doit appartenir à un seul gestionnaire de bien.
+RD10 : Un bien immobilier peut être disponible soit pour la location soit pour la vente.
+RD11 : Un bien immobilier peut avoir plusieurs images associées afin de faciliter sa
+visualisation.
+RD12 : Un bien immobilier peut posséder plusieurs documents fonciers permettant de
+prouver sa légalité et son authenticité.
+Règles liées aux visites
+RD13 : Un utilisateur doit être connecté pour programmer une visite d’un bien immobilier.
+RD14 : Une visite doit contenir une date et une heure.
+
+-- 47 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+RD15 : Un gestionnaire de bien peut accepter ou refuser une demande de visite.
+RD16 : Un programme de visite doit être associé à un bien immobilier et à un utilisateur.
+Règles liées aux transactions immobilières
+RD17 : Toute transaction immobilière doit suivre une procédure définie dans le système.
+RD18 : Une procédure de transaction permet de suivre les différentes étapes d’une opération
+de location ou d’achat.
+Règles liées aux locations
+RD19 : Un locataire doit être connecté pour effectuer une demande de location.
+RD20 : Une demande de location doit être validée avant la signature du contrat de location.
+RD21 : Chaque contrat de location doit être associé à un locataire et à un bien immobilier.
+RD22 : Un locataire doit déposer une caution avant d’occuper un bien immobilier.
+RD23 : Un locataire doit payer le loyer selon les conditions définies dans le contrat.
+RD24 : Chaque paiement de loyer doit être enregistré dans le système.
+Règles liées aux ventes
+RD25 : Un acheteur doit être connecté pour effectuer une demande d’achat.
+RD26 : Une demande d’achat doit être validée avant la signature du contrat de vente.
+RD27 : Chaque vente doit être associée à un bien immobilier et à un acheteur.
+RD28 : Un bien immobilier vendu devient automatiquement indisponible sur la plateforme.
+Règles liées aux contrats et paiements
+RD29 : Chaque transaction validée doit générer un contrat numérique.
+RD30 : Chaque contrat doit être associé à une transaction immobilière.
+RD31 : Un paiement doit être associé à un contrat.
+Règles liées à l’administration
+RD32 : L’administrateur peut gérer les utilisateurs, les biens immobiliers et les transactions.
+RD33 : L’administrateur peut supprimer ou modifier les informations publiées sur la
+plateforme.
+
+-- 48 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+RD34 : L’administrateur peut vérifier les documents fonciers avant la publication d’un bien
+immobilier.
+IV.2 Dictionnaire des données
+Le dictionnaire de données permet de définir les différentes entités manipulées dans le
+système ainsi que leurs attributs, leurs types et leurs significations. Il constitue une référence
+importante pour la conception de la base de données.
+Tableau : Dictionnaire des données
+Classes Attributs Désignations Types Tailles
+Utilisateur idUser Identifiant de
+l'utilisateur
+AN 10
+nom Nom de l’utilisateur c 30
+prenom Prenom de l’utilisateur c 30
+email Adresse email AN 50
+Telephone Numero de telephone N 20
+Motdepasse Mot de passe AN 100
+role Type d’utilisateur C 20
+BienImmobilier idBien Indentifiant du bien AN 10
+titre Titre du bien C 100
+description Description du bien AN 255
+prix Prix du bien N 10
+superficie Surface du bien N 10
+Localisation Adresse du bien AN 150
+statut Disponible/Louer/vendu C 20
+Visite idVisite Identifiant visite AN 10
+dateVisite Date de la visite D -
+heureVisite Heure de la visite AN 10
+statut Acceptee / Refusee C 20
+Location idLocation Identifiant location AN 10
+datDebut Date debut location D -
+dateFin Date fin location D -
+caution Montant de la caution N 10
+statut Enc ours / Terminee C 20
+Vente idVente Identifiant vente AN 10
+dateVente Date de vente D -
+PrixVente Prix final N 10
+Statut Validee / Annulee C 20
+Paiement idPaiement Identifiant paiement AN 10
+montant Montant paye N 10
+datePaiement Date paiement D -
+modePaiement Moyen de paiement C 30
+
+-- 49 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+Statut Reussi / Echoue C 20
+Avis idAvis Identifiant avis AN 10
+commentaire Commentaire utilisateur AN 255
+note Note attribuer N 5
+dateAvis Date de publication D -
+Image idImage Identifiant image AN 10
+urlImage Chemin de l’image AN 255
+description Description de l’image AN 255
+DocumentFoncier idDocument Identifiant document AN 10
+TypeDocument Type de document C 50
+numeroDocument Numero du document C 50
+dateEmission Date d’emission D -
+Contrat idContat Identifiant contrat AN 10
+typeContat Location / Vente C 20
+dateSignature Date de signature D -
+fichierPDF Document du contrat AN 255
+statut Actif / Résilié C 20
+Notification idNotification Identifiant notification AN 10
+message Contenu de la
+notfication
+AN 255
+dateNotification Date d’envoi D -
+titre Titre de notification AN 10
+statutLecture Lu /non lu C 10
+V.3 Diagramme des classes
+Le diagramme de classes constitue un élément fondamental de la modélisation orientée objet.
+Il permet de représenter la structure statique du système en identifiant les différentes classes
+du domaine ainsi que leurs attributs, leurs méthodes et les relations qui les relient.
+Dans le cadre de la conception de la plateforme de gestion immobilière, ce diagramme met en
+évidence les principales entités du système telles que les utilisateurs, les biens immobiliers,
+les images, les documents fonciers, les programmes de visite, les transactions immobilières,
+les contrats, les paiements et les notifications.
+Chaque utilisateur peut posséder un rôle spécifique (locataire, acheteur, gestionnaire de bien
+ou administrateur) qui détermine les actions qu’il peut effectuer dans le système.
+Les gestionnaires de biens peuvent publier plusieurs biens immobiliers. Chaque bien
+immobilier peut être associé à plusieurs images et documents fonciers afin de faciliter la
+visualisation et la vérification juridique du bien.
+
+-- 50 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+Les utilisateurs intéressés par un bien peuvent programmer des visites grâce au module de
+planification des visites. Lorsqu’un utilisateur souhaite louer ou acheter un bien, une
+procédure de transaction est déclenchée afin de suivre les différentes étapes de l’opération.
+Les transactions immobilières peuvent être de deux types : location ou vente. Chaque
+transaction donne lieu à la génération d’un contrat numérique et à l’enregistrement des
+paiements correspondants.
+Enfin, le système permet d’envoyer des notifications aux utilisateurs afin de les informer des
+différentes actions réalisées sur la plateforme, telles que la confirmation d’une visite, la
+validation d’une transaction ou la réception d’un paiement.
+Ainsi, le diagramme de classes permet de représenter l’ensemble des entités du système ainsi
+que les relations entre elles, facilitant la compréhension globale du fonctionnement de la
+plateforme et servant de base pour la conception de la base de données et l’implémentation
+technique de l’application.
+
+-- 51 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+Figure 15 : Diagramme de classes
+
+-- 52 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+CHAPITRE 4 : REALISATION
+
+-- 53 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+I. Technologies et outils de développement
+Dans le cadre du développement du SaaS immobilier, nous avons sélectionné un ensemble de
+technologies modernes combinant performance, scalabilité et sécurité. Contrairement à une
+architecture classique basée sur PHP, ce projet repose sur une stack JavaScript fullstack
+permettant un rendu hybride (SSR et SSG) et une meilleure expérience utilisateur.
+I.1 Architecture de l’application (MVC)
+Le modèle MVC est un patron de conception qui
+divise une application en trois parties distinctes : le
+modèle, qui gère les données et la logique métier ; la vue,
+qui s'occupe de l'affichage et de l'interface utilisateur ; et
+le contrôleur, qui reçoit les actions de l'utilisateur, interagit
+avec le modèle pour manipuler les données, et met à jour
+la vue. Cette architecture permet de séparer les
+responsabilités, facilitant ainsi la maintenance, l'évolutivité et les tests du code. Elle permet
+également une meilleure organisation du projet en rendant chaque composant modulaire et
+indépendant.
+I.2 Framework Next.js
+Next.js est un framework React permettant de développer des applications
+web modernes avec rendu côté serveur. Il offre :
+• SSR (Server-Side Rendering)
+• SSG (Static Site Generation)
+• Routing avancé Il améliore les performances et le référencement SEO.
+I.3 Langage TypeScript
+TypeScript est un langage basé sur JavaScript avec typage statique. Il permet :
+• de réduire les erreurs
+• d’améliorer la qualité du code
+• de faciliter la maintenance
+I.4 Interface utilisateur : Tailwind CSS
+Figure 14: Architecture MVC
+
+-- 54 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+Tailwind CSS est un framework CSS utilitaire basé sur
+une approche "utility-first", offrant des classes à faible niveau
+d'abstraction à intégrer directement dans le HTML pour
+concevoir des interfaces personnalisées. Contrairement aux
+frameworks traditionnels, qui proposent des composants
+prédéfinis, Tailwind permet une personnalisation fine sans nécessiter de CSS supplémentaire.
+Ce système accélère le développement en assurant une cohérence de design et optimise le
+fichier CSS en production grâce à PurgeCSS, qui supprime les classes inutilisées. Apprécié
+pour sa flexibilité et sa simplicité, Tailwind CSS s'intègre aisément avec des frameworks
+comme Laravel, React ou Vue.js, offrant aux développeurs un moyen efficace de créer des
+interfaces modernes, réactives et performantes.
+I.5 Bibliothèque React
+React est une bibliothèque JavaScript open-source
+développée par Facebook (désormais Meta) qui a
+révolutionné la création d'interfaces utilisateur interactives.
+Basée sur le concept de composants réutilisables, React
+utilise un DOM virtuel pour optimiser les performances en
+ne mettant à jour que les éléments qui changent réellement dans l'interface. Sa caractéristique
+distinctive est le JSX, une extension syntaxique permettant d'écrire du HTML dans du
+JavaScript, ce qui facilite la création de composants lisibles et maintenables. React adopte un
+flux de données unidirectionnel qui simplifie le débogage et favorise la prévisibilité du
+comportement de l'application. Grâce à son écosystème riche (Redux, React Router, Next.js),
+sa compatibilité avec le développement mobile via React Native, et sa communauté active,
+React s'est imposé comme l'un des outils front-end les plus populaires pour développer des
+applications web modernes, performantes et évolutives.
+I.6 Base de données PostgreSQL
+MySQL est un système de gestion de bases de données
+relationnelles (SGBDR) open-source très populaire, utilisant le
+langage SQL. Développé à l'origine par MySQL AB, il est aujourd'hui
+la propriété d'Oracle Corporation mais reste sous licence GNU GPL.
+MySQL est apprécié pour sa performance, sa fiabilité et sa facilité
+d'utilisation, ce qui en fait un choix privilégié pour les applications web, souvent intégré dans
+Figure 16 : Tailwind CSS
+Figure 17 : ReactJS
+Figure 18 : MySQL
+
+-- 55 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+la pile LAMP (Linux, Apache, MySQL, PHP/Python/Perl). Il supporte les transactions ACID,
+les procédures stockées, les déclencheurs (triggers) et offre différents moteurs de stockage
+comme InnoDB (par défaut) et MyISAM. Son architecture client-serveur et sa compatibilité
+multiplateforme (Windows, Linux, macOS) en font une solution polyvalente pour le stockage
+et la gestion des données.
+I.7 ORM Prisma
+Prisma permet d’interagir avec la base de données de manière sécurisée
+et typée. Fonctionnalités :
+• migrations automatiques
+• requêtes simplifiées
+• typage fort
+Figure 19 : ORM Prisma
+Prisma permet d’interagir avec la base de données de manière sécurisée et typée. Fonctionnalités : •
+migrations automatiques • requêtes simplifiées • typage fort
+I.8 Outil de développement
+C’est un éditeur de code moderne, performant et entièrement
+gratuit développé par Microsoft. Très apprécié pour sa légèreté et son
+extensibilité, il prend en charge une multitude de langages (JavaScript,
+Python, Java, etc.) et offre des fonctionnalités avancées comme le
+débogage intégré, la gestion Git, un terminal embarqué et une
+personnalisation poussée via des extensions. Son interface intuitive, combinée à des outils
+puissants comme IntelliSense (suggestions de code) et Live Server (prévisualisation web en
+direct), en fait un choix incontournable pour les développeurs, qu'ils travaillent sur du web, des
+applications ou des scripts.
+I. Diagramme de déploiement
+Le diagramme de déploiement illustre l’architecture physique du système plateforme SaaS,
+en mettant en évidence les composants matériels (nœuds) et les artefacts logiciels déployés sur
+chacun d’eux. Il permet de visualiser la répartition des modules applicatifs (comme le serveur
+web, la base de données ou le client mobile) ainsi que leur interaction au sein de l’infrastructure
+Figure 19 : VScode
+
+-- 56 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+technique. Ce diagramme est essentiel pour comprendre comment les différentes parties du
+système coopèrent dans un environnement réel.
+Figure 15: Diagramme de déploiement
+
+-- 57 of 58 --
+
+COMCEPTION ET REALISATION D’UNE APPLICATION DE GESTION IMMOBILIERE
+Réaliser par DANDJEKPO Cédric et HOUNKPATIN Alex Franky
+
+-- 58 of 58 --
+

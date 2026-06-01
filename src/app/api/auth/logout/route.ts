@@ -34,6 +34,9 @@ export async function POST(request: Request) {
 
     const cookieStore = await cookies()
     cookieStore.delete('token')
+    cookieStore.delete('token_admin')
+    cookieStore.delete('token_manager')
+    cookieStore.delete('token_tenant')
 
     const wantsJson =
         request.headers.get('x-requested-with') === 'fetch' ||

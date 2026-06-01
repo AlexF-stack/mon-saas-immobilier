@@ -15,6 +15,9 @@ ADD COLUMN "guestAccessTokenHash" TEXT,
 ADD COLUMN "guestAccessTokenExpiresAt" TIMESTAMP(3),
 ADD COLUMN "guestLastSeenAt" TIMESTAMP(3);
 
+CREATE UNIQUE INDEX "MarketplaceInquiry_guestAccessTokenHash_key"
+ON "MarketplaceInquiry"("guestAccessTokenHash");
+
 ALTER TABLE "MarketplaceInquiryMessage"
 ADD COLUMN "senderGuestName" TEXT,
 ADD COLUMN "senderGuestEmail" TEXT;

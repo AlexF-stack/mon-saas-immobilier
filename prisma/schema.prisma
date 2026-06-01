@@ -281,7 +281,7 @@ model MarketplaceInquiry {
   preferredVisitDate DateTime?
   status             String   @default("NEW") // NEW, CONTACTED, CLOSED
   lifecycleStage     String   @default("LEAD") // LEAD, VISIT_SCHEDULED, QUALIFIED, APPROVED, CONTRACT_DRAFT, CONTRACT_SENT, CLOSED
-  guestAccessTokenHash String?
+  guestAccessTokenHash String? @unique
   guestAccessTokenExpiresAt DateTime?
   guestLastSeenAt    DateTime?
   createdAt          DateTime @default(now())
