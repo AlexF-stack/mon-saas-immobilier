@@ -94,7 +94,7 @@ export async function PATCH(
         }
 
         const formData = await request.formData()
-        const rawData: Record<string, any> = {}
+        const rawData: Record<string, unknown> = {}
         formData.forEach((value, key) => {
             if (key === 'isPublished') {
                 rawData[key] = value === 'true'

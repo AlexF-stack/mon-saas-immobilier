@@ -3,7 +3,6 @@ import { EventEmitter } from 'events'
 type RealtimeListener = (payload: string) => void
 
 declare global {
-  // eslint-disable-next-line no-var
   var __antiRealtimeBus: EventEmitter | undefined
 }
 
