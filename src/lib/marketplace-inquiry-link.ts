@@ -43,9 +43,5 @@ export async function attachMarketplaceInquiriesToUser(params: {
     },
   })
 
-  if (bulk.count > 0 && params.pendingInquiryId && !linkedIds.includes(params.pendingInquiryId)) {
-    linkedIds.push(params.pendingInquiryId)
-  }
-
-  return { linkedCount: bulk.count, linkedIds }
+  return { linkedCount: bulk.count + linkedIds.length, linkedIds }
 }

@@ -46,7 +46,11 @@ export default function RegisterPage() {
     const emailFromQuery = searchParams.get('email')?.trim() ?? ''
     const profileParam = searchParams.get('profile')
     const [selectedRole, setSelectedRole] = useState<'LOCATAIRE' | 'PROPRIETAIRE'>(
-        pendingInquiry || profileParam === 'tenant' ? 'LOCATAIRE' : 'LOCATAIRE'
+        pendingInquiry || profileParam === 'tenant'
+            ? 'LOCATAIRE'
+            : profileParam === 'owner'
+              ? 'PROPRIETAIRE'
+              : 'LOCATAIRE'
     )
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {

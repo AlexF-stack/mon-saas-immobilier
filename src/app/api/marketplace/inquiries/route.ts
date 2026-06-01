@@ -198,6 +198,14 @@ export async function POST(request: Request) {
                     lifecycleStage: 'LEAD',
                     guestAccessTokenHash: null,
                     guestAccessTokenExpiresAt: null,
+                    messages: {
+                        create: {
+                            senderUserId: user?.id ?? null,
+                            senderGuestName: user ? null : requesterName,
+                            senderGuestEmail: user ? null : requesterEmail,
+                            message: parsed.message,
+                        },
+                    },
                 },
                 select: {
                     id: true,

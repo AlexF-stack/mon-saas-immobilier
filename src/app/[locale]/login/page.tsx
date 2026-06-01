@@ -82,6 +82,9 @@ export default function LoginPage() {
     const profileParam = searchParams.get('profile')
     const pendingInquiry = searchParams.get('pendingInquiry')?.trim() ?? ''
     const emailFromQuery = searchParams.get('email')?.trim() ?? ''
+    const registerHref = pendingInquiry
+        ? `/${locale}/register?pendingInquiry=${encodeURIComponent(pendingInquiry)}&profile=tenant${emailFromQuery ? `&email=${encodeURIComponent(emailFromQuery)}` : ''}`
+        : `/${locale}/register`
     const selectedProfile =
         pendingInquiry
             ? 'tenant'
@@ -173,11 +176,7 @@ export default function LoginPage() {
                     <CardFooter className="flex flex-col gap-3 pt-1">
                         <Button asChild variant="outline" className="w-full">
                             <Link
-                                href={
-                                    pendingInquiry
-                                        ? `/${locale}/register?pendingInquiry=${encodeURIComponent(pendingInquiry)}&profile=tenant${emailFromQuery ? `&email=${encodeURIComponent(emailFromQuery)}` : ''}`
-                                        : `/${locale}/register`
-                                }
+                                href={registerHref}
                             >
                                 {locale === 'fr' ? 'Creer un compte' : 'Create an account'}
                             </Link>
@@ -310,7 +309,7 @@ export default function LoginPage() {
                         <div className="text-center text-sm text-secondary">
                             {t('auth.noAccount')}{' '}
                             <Link 
-                                href={`/${locale}/register`} 
+                                href={registerHref} 
                                 className="text-primary font-semibold hover:underline hover:text-accent transition-colors"
                             >
                                 {t('auth.registerHere')}
