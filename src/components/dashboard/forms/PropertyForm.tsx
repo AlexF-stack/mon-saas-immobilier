@@ -196,10 +196,34 @@ export function PropertyForm({ locale, dashboardPathPrefix, initialData }: Prope
           )}
           <div className="space-y-2">
             <Label htmlFor="images">Photos du bien</Label>
-            <Input id="images" name="images" type="file" accept="image/*" multiple={!isEdit} />
-            <p className="text-[11px] text-muted-foreground">
-              Format JPG, PNG ou WEBP. Max 2Mo par image. {isEdit ? '1 image facultative.' : `Minimum ${MIN_PROPERTY_IMAGES} images.`}
-            </p>
+            {isEdit ? (
+              <>
+                <Input id="images" name="images" type="file" accept="image/*" />
+                <p className="text-[11px] text-muted-foreground">
+                  Format JPG, PNG ou WEBP. Max 2Mo par image. 1 image facultative.
+                </p>
+              </>
+            ) : (
+              <div className="space-y-3">
+                {Array.from({ length: MIN_PROPERTY_IMAGES }).map((_, index) => (
+                  <div key={index} className="space-y-1">
+                    <Label htmlFor={`image-${index + 1}`} className="text-xs text-secondary">
+                      Photo {index + 1}
+                    </Label>
+                    <Input
+                      id={`image-${index + 1}`}
+                      name="images"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      required
+                    />
+                  </div>
+                ))}
+                <p className="text-[11px] text-muted-foreground">
+                  Ajoutez 3 photos. Formats JPG, PNG ou WEBP. Max 2Mo par image.
+                </p>
+              </div>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="landDocuments">Documents fonciers</Label>

@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { hashPassword, generateToken, isUserRole } from '@/lib/auth'
+import { hashPassword, isUserRole } from '@/lib/auth'
 import {
-    getDashboardPathForRole,
     normalizeRequestedRole,
     validateRegistrationPassword,
 } from '@/lib/auth-policy'
@@ -31,6 +30,24 @@ const registerSchema = z.object({
 })
 
 const MIN_JWT_SECRET_LENGTH = 32
+
+function getLoginRedirectPath(params: {
+    email: string
+    role: 'MANAGER' | 'TENANT' | 'ADMIN'
+    pendingInquiryId?: string | null
+}) {
+    const searchParams = new URLSearchParams({
+        email: params.email,
+        profile: params.role === 'MANAGER' ? 'owner' : 'tenant',
+    })
+
+    if (params.pendingInquiryId) {
+        searchParams.set('pendingInquiry', params.pendingInquiryId)
+        searchParams.set('profile', 'tenant')
+    }
+
+    return `/login?${searchParams.toString()}`
+}
 
 export async function POST(request: Request) {
     try {
@@ -107,13 +124,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Invalid role in database' }, { status: 500 })
         }
 
-        const token = generateToken({
-            id: user.id,
-            email: user.email,
-            role: user.role,
-            name: user.name,
-        })
-
         const { password: removedPassword, ...userWithoutPassword } = user
         void removedPassword
 
@@ -126,20 +136,15 @@ export async function POST(request: Request) {
         const response = NextResponse.json(
             {
                 user: userWithoutPassword,
-                redirectTo: getDashboardPathForRole(user.role, {
+                redirectTo: getLoginRedirectPath({
+                    email: user.email,
+                    role: user.role,
                     pendingInquiryId: parsed.pendingInquiryId ?? null,
                 }),
+                message: 'Compte cree. Connectez-vous pour continuer.',
             },
             { status: 201 }
         )
-
-        response.cookies.set('token', token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: 86400,
-            path: '/',
-        })
 
         await createSystemLog({
             actor: {
