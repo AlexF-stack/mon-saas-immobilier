@@ -11,6 +11,7 @@ import { createSystemLog } from '@/lib/audit'
 import { getCorrelationIdFromRequest } from '@/lib/correlation-id'
 import { trackEvent } from '@/lib/analytics/track-event'
 import { captureServerError } from '@/lib/monitoring'
+import { attachMarketplaceInquiriesToUser } from '@/lib/marketplace-inquiry-link'
 import { z } from 'zod'
 
 export const runtime = 'nodejs'
@@ -26,6 +27,7 @@ const registerSchema = z.object({
         .regex(/^\+?[0-9\s().-]{8,25}$/, 'Invalid phone number'),
     role: z.string().optional(),
     rentalTerms: z.string().trim().min(20).max(5000).optional(),
+    pendingInquiryId: z.string().trim().cuid().optional(),
 })
 
 const MIN_JWT_SECRET_LENGTH = 32
@@ -115,10 +117,18 @@ export async function POST(request: Request) {
         const { password: removedPassword, ...userWithoutPassword } = user
         void removedPassword
 
+        await attachMarketplaceInquiriesToUser({
+            userId: user.id,
+            email: user.email,
+            pendingInquiryId: parsed.pendingInquiryId ?? null,
+        })
+
         const response = NextResponse.json(
             {
                 user: userWithoutPassword,
-                redirectTo: getDashboardPathForRole(user.role),
+                redirectTo: getDashboardPathForRole(user.role, {
+                    pendingInquiryId: parsed.pendingInquiryId ?? null,
+                }),
             },
             { status: 201 }
         )

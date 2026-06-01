@@ -41,13 +41,19 @@ export default function LoginPage() {
         const password = formData.get('password') as string
 
         try {
-            const res = await fetch('/api/auth/login', {
+            const pendingInquiry = searchParams.get('pendingInquiry')?.trim() || undefined
+
+        const res = await fetch('/api/auth/login', {
                 method: 'POST',
                 credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({
+                    email,
+                    password,
+                    pendingInquiryId: pendingInquiry,
+                }),
             })
             
             if (res.ok) {
@@ -74,8 +80,14 @@ export default function LoginPage() {
 
     const oauthError = searchParams.get('error')
     const profileParam = searchParams.get('profile')
+    const pendingInquiry = searchParams.get('pendingInquiry')?.trim() ?? ''
+    const emailFromQuery = searchParams.get('email')?.trim() ?? ''
     const selectedProfile =
-        profileParam === 'tenant' || profileParam === 'owner' ? profileParam : null
+        pendingInquiry
+            ? 'tenant'
+            : profileParam === 'tenant' || profileParam === 'owner'
+              ? profileParam
+              : null
     const oauthErrorMessage =
         oauthError === 'oauth_not_configured'
             ? 'Connexion sociale indisponible: configuration manquante.'
@@ -93,13 +105,17 @@ export default function LoginPage() {
               ? 'Espace proprietaire / manager'
               : 'Owner / manager access'
     const profileDescription =
-        selectedProfile === 'tenant'
+        pendingInquiry
             ? locale === 'fr'
-                ? 'Connectez-vous pour consulter votre bail, vos paiements et vos quittances.'
-                : 'Sign in to view your lease, payments and receipts.'
-            : locale === 'fr'
-              ? 'Connectez-vous pour gerer vos biens, contrats, paiements et locataires.'
-              : 'Sign in to manage properties, contracts, payments and tenants.'
+                ? 'Connectez-vous pour acceder a votre espace et discuter avec le proprietaire.'
+                : 'Sign in to access your space and chat with the owner.'
+            : selectedProfile === 'tenant'
+              ? locale === 'fr'
+                  ? 'Connectez-vous pour suivre vos demandes, vos contrats et vos paiements.'
+                  : 'Sign in to track your requests, contracts and payments.'
+              : locale === 'fr'
+                ? 'Connectez-vous pour gerer vos biens, contrats, paiements et locataires.'
+                : 'Sign in to manage properties, contracts, payments and tenants.'
 
     if (!selectedProfile) {
         return (
@@ -156,7 +172,13 @@ export default function LoginPage() {
                     </CardContent>
                     <CardFooter className="flex flex-col gap-3 pt-1">
                         <Button asChild variant="outline" className="w-full">
-                            <Link href={`/${locale}/register`}>
+                            <Link
+                                href={
+                                    pendingInquiry
+                                        ? `/${locale}/register?pendingInquiry=${encodeURIComponent(pendingInquiry)}&profile=tenant${emailFromQuery ? `&email=${encodeURIComponent(emailFromQuery)}` : ''}`
+                                        : `/${locale}/register`
+                                }
+                            >
                                 {locale === 'fr' ? 'Creer un compte' : 'Create an account'}
                             </Link>
                         </Button>
@@ -195,6 +217,13 @@ export default function LoginPage() {
                 </CardHeader>
                 <form onSubmit={handleSubmit}>
                     <CardContent className="space-y-6 pt-4">
+                        {pendingInquiry ? (
+                            <div className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-emerald-200">
+                                {locale === 'fr'
+                                    ? 'Votre demande est enregistree. Connectez-vous pour ouvrir la conversation avec le proprietaire.'
+                                    : 'Your request is saved. Sign in to open the conversation with the owner.'}
+                            </div>
+                        ) : null}
                         {oauthErrorMessage ? (
                             <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-300">
                                 {oauthErrorMessage}
@@ -216,7 +245,8 @@ export default function LoginPage() {
                                     id="email" 
                                     name="email" 
                                     type="email" 
-                                    placeholder="admin@test.com" 
+                                    placeholder="admin@test.com"
+                                    defaultValue={emailFromQuery}
                                     required 
                                     className="border-border bg-card pl-10 text-primary placeholder:text-[rgb(var(--text-secondary))] focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20"
                                 />

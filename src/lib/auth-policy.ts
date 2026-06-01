@@ -58,8 +58,14 @@ export function normalizeRequestedRole(value: unknown): NormalizeRoleResult {
     }
 }
 
-export function getDashboardPathForRole(role: UserRole): string {
+export function getDashboardPathForRole(
+    role: UserRole,
+    options?: { pendingInquiryId?: string | null }
+) {
+    if (options?.pendingInquiryId && role === 'TENANT') {
+        return `/dashboard/marketplace/inquiries?inquiryId=${encodeURIComponent(options.pendingInquiryId)}`
+    }
     if (role === 'MANAGER') return '/dashboard/properties'
-    if (role === 'TENANT') return '/dashboard/contracts'
+    if (role === 'TENANT') return '/dashboard/marketplace/inquiries'
     return '/dashboard/users'
 }

@@ -31,14 +31,32 @@ type InquiryMessage = {
   sender: { id: string; name: string | null; email: string; role: string } | null
 }
 
+type InquiryDetail = {
+  lifecycleStage: string
+  visitStatus: string
+  scheduledVisitAt: string | null
+  preferredVisitDate: string | null
+  visitNotes: string | null
+}
+
 type InquiryMessagesWorkspaceProps = {
   currentUserId?: string
   canManageInquiries?: boolean
+  isBuyerView?: boolean
+}
+
+const VISIT_STATUS_LABELS: Record<string, string> = {
+  REQUESTED: 'Demande envoyee',
+  SCHEDULED: 'Visite programmee',
+  CONFIRMED: 'Visite confirmee',
+  COMPLETED: 'Visite terminee',
+  CANCELLED: 'Visite annulee',
 }
 
 export function InquiryMessagesWorkspace({
   currentUserId,
   canManageInquiries = false,
+  isBuyerView = false,
 }: InquiryMessagesWorkspaceProps = {}) {
   const searchParams = useSearchParams()
   const [search, setSearch] = useState('')
@@ -50,6 +68,7 @@ export function InquiryMessagesWorkspace({
   const [messages, setMessages] = useState<InquiryMessage[]>([])
   const [draft, setDraft] = useState('')
   const [visitPanelKey, setVisitPanelKey] = useState(0)
+  const [inquiryDetail, setInquiryDetail] = useState<InquiryDetail | null>(null)
   const inquiryFromQuery = searchParams.get('inquiryId') ?? ''
 
   const filtered = useMemo(() => {
@@ -129,6 +148,31 @@ export function InquiryMessagesWorkspace({
       clearInterval(interval)
     }
   }, [selectedInquiryId])
+
+  useEffect(() => {
+    if (!selectedInquiryId) {
+      setInquiryDetail(null)
+      return
+    }
+    let cancelled = false
+    async function loadDetail() {
+      try {
+        const res = await fetch(`/api/marketplace/inquiries/${selectedInquiryId}`, {
+          credentials: 'include',
+        })
+        const payload = await res.json().catch(() => ({}))
+        if (!cancelled && res.ok) {
+          setInquiryDetail(payload as InquiryDetail)
+        }
+      } catch {
+        // silent
+      }
+    }
+    void loadDetail()
+    return () => {
+      cancelled = true
+    }
+  }, [selectedInquiryId, visitPanelKey])
 
   useEffect(() => {
     if (!selectedInquiryId) return
@@ -231,6 +275,34 @@ export function InquiryMessagesWorkspace({
         ) : (
           <div className="border-b border-border p-4 bg-surface/50 rounded-t-2xl h-16" />
         )}
+
+        {selectedInquiryId && isBuyerView && inquiryDetail ? (
+          <div className="border-b border-border bg-surface/30 px-4 py-3 text-sm">
+            <p className="font-medium text-primary">Suivi de votre demande</p>
+            <div className="mt-2 flex flex-wrap gap-2 text-xs text-secondary">
+              <span className="rounded-full border border-border px-2 py-0.5">
+                {VISIT_STATUS_LABELS[inquiryDetail.visitStatus] ?? inquiryDetail.visitStatus}
+              </span>
+              {inquiryDetail.scheduledVisitAt ? (
+                <span>
+                  Visite :{' '}
+                  {new Date(inquiryDetail.scheduledVisitAt).toLocaleString('fr-FR', {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                  })}
+                </span>
+              ) : inquiryDetail.preferredVisitDate ? (
+                <span>
+                  Date souhaitee :{' '}
+                  {new Date(inquiryDetail.preferredVisitDate).toLocaleDateString('fr-FR')}
+                </span>
+              ) : null}
+            </div>
+            {inquiryDetail.visitNotes ? (
+              <p className="mt-2 text-xs text-muted-foreground">{inquiryDetail.visitNotes}</p>
+            ) : null}
+          </div>
+        ) : null}
 
         {selectedInquiryId && canManageInquiries ? (
           <InquiryVisitPanel

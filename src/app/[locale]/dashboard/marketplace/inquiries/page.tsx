@@ -15,17 +15,24 @@ export default async function MarketplaceInquiriesPage(props: {
     redirect(`/${locale}/login`)
   }
 
+  const isBuyer = user.role === 'TENANT'
+
   return (
     <section className="space-y-4">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Messagerie visites</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {isBuyer ? 'Mes demandes et visites' : 'Messagerie visites'}
+        </h1>
         <p className="text-sm text-secondary">
-          Discutez entre demandeur et proprietaire autour des demandes de visite.
+          {isBuyer
+            ? 'Suivez vos demandes de location ou d achat et echangez avec les proprietaires.'
+            : 'Discutez avec les visiteurs et programmez les visites.'}
         </p>
       </div>
       <InquiryMessagesWorkspace
         currentUserId={user.id}
         canManageInquiries={user.role === 'ADMIN' || user.role === 'MANAGER'}
+        isBuyerView={isBuyer}
       />
     </section>
   )
