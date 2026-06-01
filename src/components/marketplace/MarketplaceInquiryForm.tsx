@@ -2,12 +2,14 @@
 
 import { useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { getErrorMessageFromPayload } from '@/lib/utils'
 import { useToast } from '@/components/ui/toast'
+import { getBuyerInquiriesDashboardPath } from '@/lib/marketplace-paths'
 
 type MarketplaceInquiryFormProps = {
     propertyId: string
@@ -21,7 +23,6 @@ function toErrorMessage(status: number, payload: unknown) {
     if (status === 403) return 'Action refusee.'
     if (status === 429) return 'Trop de demandes. Merci de reessayer plus tard.'
     return getErrorMessageFromPayload(
-        // les routes renvoient generalement { error: ... }
         (typeof payload === 'object' && payload !== null
             ? ((payload as { error?: unknown }).error ?? payload)
             : payload) as never,
@@ -35,12 +36,13 @@ export function MarketplaceInquiryForm({
     defaultEmail,
     locale,
 }: MarketplaceInquiryFormProps) {
+    const router = useRouter()
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
     const [success, setSuccess] = useState('')
-    const [conversationHref, setConversationHref] = useState('')
     const pendingRef = useRef(false)
     const { show } = useToast()
+    const isAuthenticated = Boolean(defaultEmail)
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault()
@@ -49,7 +51,6 @@ export function MarketplaceInquiryForm({
         setLoading(true)
         setError('')
         setSuccess('')
-        setConversationHref('')
 
         const formData = new FormData(event.currentTarget)
         const requesterName = String(formData.get('requesterName') ?? '').trim()
@@ -78,29 +79,45 @@ export function MarketplaceInquiryForm({
 
             const result = await response.json().catch(() => ({}))
             if (response.ok) {
-                setError('')
-                setSuccess(result.message ?? 'Demande envoyee avec succes.')
                 const inquiryId = typeof result?.inquiry?.id === 'string' ? result.inquiry.id : ''
-                const guestAccessToken = typeof result?.guestAccessToken === 'string' ? result.guestAccessToken : ''
-                if (inquiryId) {
-                    const localizedBase = locale ? `/${locale}` : ''
-                    const href = guestAccessToken
-                        ? `${localizedBase}/marketplace/inquiries/${inquiryId}?guestToken=${encodeURIComponent(guestAccessToken)}`
-                        : `${localizedBase}/marketplace/inquiries/${inquiryId}`
-                    setConversationHref(href)
+                const requiresAuth = result?.requiresAuth === true
+
+                if (requiresAuth && inquiryId) {
+                    const emailForLogin = requesterEmail || defaultEmail || ''
+                    const loginParams = new URLSearchParams({
+                        pendingInquiry: inquiryId,
+                        profile: 'tenant',
+                    })
+                    if (emailForLogin) loginParams.set('email', emailForLogin)
+                    const loginHref = locale
+                        ? `/${locale}/login?${loginParams.toString()}`
+                        : `/login?${loginParams.toString()}`
+                    show({
+                        variant: 'success',
+                        title: 'Demande enregistree',
+                        description: 'Connectez-vous pour acceder a votre espace de discussion.',
+                    })
+                    router.push(loginHref)
+                    return
                 }
-                show({
-                    variant: 'success',
-                    title: 'Demande envoyee',
-                    description: guestAccessToken
-                        ? 'Votre message a bien ete transmis. Vous pouvez continuer la conversation sans creer de compte.'
-                        : 'Votre message a bien ete transmis au proprietaire.',
-                })
+
+                if (inquiryId) {
+                    const dashboardHref = getBuyerInquiriesDashboardPath(locale, inquiryId)
+                    setSuccess(result.message ?? 'Demande envoyee. Redirection vers votre espace...')
+                    show({
+                        variant: 'success',
+                        title: 'Demande envoyee',
+                        description: 'Vous pouvez discuter avec le proprietaire dans votre espace.',
+                    })
+                    router.push(dashboardHref)
+                    return
+                }
+
+                setSuccess(result.message ?? 'Demande envoyee avec succes.')
                 event.currentTarget.reset()
                 return
             }
 
-            setSuccess('')
             setError(toErrorMessage(response.status, result.error))
             show({
                 variant: response.status >= 500 ? 'error' : 'warning',
@@ -108,7 +125,6 @@ export function MarketplaceInquiryForm({
                 description: toErrorMessage(response.status, result.error),
             })
         } catch {
-            setSuccess('')
             setError('Erreur reseau. Verifiez votre connexion.')
             show({
                 variant: 'error',
@@ -134,11 +150,6 @@ export function MarketplaceInquiryForm({
             {success && (
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-900/20 dark:text-emerald-300">
                     <p>{success}</p>
-                    {conversationHref ? (
-                        <Link href={conversationHref} className="mt-2 inline-flex font-medium underline underline-offset-2">
-                            Ouvrir la conversation
-                        </Link>
-                    ) : null}
                 </div>
             )}
             {error && (
@@ -147,39 +158,50 @@ export function MarketplaceInquiryForm({
                 </div>
             )}
 
-            {defaultEmail && defaultName ? (
+            {isAuthenticated ? (
                 <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-900/50 dark:bg-blue-900/20 dark:text-blue-300">
-                    <p className="font-medium">Connecté en tant que {defaultName}</p>
+                    <p className="font-medium">Connecte en tant que {defaultName}</p>
                     <p className="opacity-90">{defaultEmail}</p>
-                    {/* Les infos sont pre-remplies, l'API utilisera la session */}
+                    <p className="mt-2 text-xs opacity-90">
+                        Apres envoi, vous serez redirige vers votre espace pour echanger avec le proprietaire.
+                    </p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                        <Label htmlFor="requesterName">Nom complet</Label>
-                        <Input
-                            id="requesterName"
-                            name="requesterName"
-                            defaultValue={defaultName ?? ''}
-                            placeholder="Ex: Kossi Toko"
-                            minLength={2}
-                            maxLength={120}
-                            required={!defaultName}
-                        />
+                <>
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-200">
+                        <p className="font-medium">Connexion requise apres la demande</p>
+                        <p className="mt-1 text-xs opacity-90">
+                            Envoyez votre demande, puis connectez-vous pour acceder a votre espace de messagerie
+                            avec le proprietaire.
+                        </p>
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="requesterEmail">Email</Label>
-                        <Input
-                            id="requesterEmail"
-                            name="requesterEmail"
-                            type="email"
-                            defaultValue={defaultEmail ?? ''}
-                            placeholder="email@example.com"
-                            maxLength={254}
-                            required={!defaultEmail}
-                        />
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="requesterName">Nom complet</Label>
+                            <Input
+                                id="requesterName"
+                                name="requesterName"
+                                defaultValue={defaultName ?? ''}
+                                placeholder="Ex: Kossi Toko"
+                                minLength={2}
+                                maxLength={120}
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="requesterEmail">Email</Label>
+                            <Input
+                                id="requesterEmail"
+                                name="requesterEmail"
+                                type="email"
+                                defaultValue={defaultEmail ?? ''}
+                                placeholder="email@example.com"
+                                maxLength={254}
+                                required
+                            />
+                        </div>
                     </div>
-                </div>
+                </>
             )}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -212,18 +234,24 @@ export function MarketplaceInquiryForm({
             </div>
 
             <Button type="submit" disabled={loading} className="w-full">
-                {loading ? 'Envoi...' : 'Postuler / Demander visite'}
+                {loading ? 'Envoi...' : 'Envoyer ma demande'}
             </Button>
-            {!defaultEmail ? (
-                <p className="text-xs text-secondary">
-                    Astuce:{' '}
+            {!isAuthenticated ? (
+                <p className="text-xs text-secondary text-center">
+                    Deja un compte ?{' '}
                     <Link
-                        href={locale ? `/${locale}/register` : '/register'}
+                        href={locale ? `/${locale}/login?profile=tenant` : '/login?profile=tenant'}
                         className="text-primary underline underline-offset-2"
                     >
-                        creez un compte
-                    </Link>{' '}
-                    pour envoyer des demandes sans ressaisir vos informations et discuter avec le proprietaire.
+                        Se connecter
+                    </Link>
+                    {' · '}
+                    <Link
+                        href={locale ? `/${locale}/register?profile=tenant` : '/register?profile=tenant'}
+                        className="text-primary underline underline-offset-2"
+                    >
+                        Creer un compte
+                    </Link>
                 </p>
             ) : null}
         </form>

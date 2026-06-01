@@ -4,11 +4,6 @@ import { prisma } from '@/lib/prisma'
 import { createSystemLog } from '@/lib/audit'
 import { enforceCsrf } from '@/lib/csrf'
 import { getTokenFromRequest, verifyAuth } from '@/lib/auth'
-import {
-    buildGuestInquiryAccessExpiry,
-    createGuestInquiryAccessToken,
-    hashGuestInquiryAccessToken,
-} from '@/lib/marketplace-inquiry-access'
 import { publishRealtime } from '@/lib/realtime'
 
 export const runtime = 'nodejs'
@@ -188,10 +183,6 @@ export async function POST(request: Request) {
             }
         }
 
-        const guestAccessToken = !user ? createGuestInquiryAccessToken() : null
-        const guestAccessTokenHash = guestAccessToken ? hashGuestInquiryAccessToken(guestAccessToken) : null
-        const guestAccessTokenExpiresAt = guestAccessToken ? buildGuestInquiryAccessExpiry() : null
-
         const [inquiry] = await prisma.$transaction([
             prisma.marketplaceInquiry.create({
                 data: {
@@ -203,10 +194,18 @@ export async function POST(request: Request) {
                     requesterPhone,
                     message: parsed.message,
                     preferredVisitDate: parsed.preferredVisitDate,
-                    visitStatus: parsed.preferredVisitDate ? 'REQUESTED' : 'REQUESTED',
-                    lifecycleStage: parsed.preferredVisitDate ? 'LEAD' : 'LEAD',
-                    guestAccessTokenHash,
-                    guestAccessTokenExpiresAt,
+                    visitStatus: 'REQUESTED',
+                    lifecycleStage: 'LEAD',
+                    guestAccessTokenHash: null,
+                    guestAccessTokenExpiresAt: null,
+                    messages: {
+                        create: {
+                            senderUserId: user?.id ?? null,
+                            senderGuestName: user ? null : requesterName,
+                            senderGuestEmail: user ? null : requesterEmail,
+                            message: parsed.message,
+                        },
+                    },
                 },
                 select: {
                     id: true,
@@ -264,11 +263,24 @@ export async function POST(request: Request) {
             details: `propertyId=${property.id};requesterEmail=${requesterEmail};requesterIp=${requesterIp ?? 'none'}`,
         })
 
+        if (!user) {
+            return NextResponse.json(
+                {
+                    inquiry,
+                    requiresAuth: true,
+                    message:
+                        'Demande enregistree. Connectez-vous pour acceder a votre espace et discuter avec le proprietaire.',
+                },
+                { status: 201 }
+            )
+        }
+
         return NextResponse.json(
             {
                 inquiry,
-                guestAccessToken,
-                message: 'Demande envoyee. Le proprietaire vous contactera rapidement.',
+                requiresAuth: false,
+                redirectTo: `/dashboard/marketplace/inquiries?inquiryId=${inquiry.id}`,
+                message: 'Demande envoyee. Vous pouvez discuter avec le proprietaire dans votre espace.',
             },
             { status: 201 }
         )

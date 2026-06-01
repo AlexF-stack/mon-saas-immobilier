@@ -23,6 +23,7 @@ export default async function MarketplaceInquiriesPage() {
       <InquiryMessagesWorkspace
         currentUserId={user.id}
         canManageInquiries={user.role === 'ADMIN' || user.role === 'MANAGER'}
+        isBuyerView={user.role === 'TENANT'}
       />
     </section>
   )

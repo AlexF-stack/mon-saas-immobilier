@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -37,11 +37,21 @@ function getLocalizedRedirectPath(locale: string, redirectTo: string): string {
 
 export default function RegisterPage() {
     const router = useRouter()
+    const searchParams = useSearchParams()
     const locale = useLocale()
     const t = useTranslations()
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
-    const [selectedRole, setSelectedRole] = useState<'LOCATAIRE' | 'PROPRIETAIRE'>('LOCATAIRE')
+    const pendingInquiry = searchParams.get('pendingInquiry')?.trim() ?? ''
+    const emailFromQuery = searchParams.get('email')?.trim() ?? ''
+    const profileParam = searchParams.get('profile')
+    const [selectedRole, setSelectedRole] = useState<'LOCATAIRE' | 'PROPRIETAIRE'>(
+        pendingInquiry || profileParam === 'tenant'
+            ? 'LOCATAIRE'
+            : profileParam === 'owner'
+              ? 'PROPRIETAIRE'
+              : 'LOCATAIRE'
+    )
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault()
@@ -92,8 +102,9 @@ export default function RegisterPage() {
                     password,
                     name,
                     phone,
-                    role,
+                    role: pendingInquiry ? 'LOCATAIRE' : role,
                     rentalTerms: role === 'PROPRIETAIRE' ? rentalTerms : undefined,
+                    pendingInquiryId: pendingInquiry || undefined,
                 }),
             })
 
@@ -122,6 +133,11 @@ export default function RegisterPage() {
                 </CardHeader>
                 <form onSubmit={handleSubmit}>
                     <CardContent className="space-y-4">
+                        {pendingInquiry ? (
+                            <div className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                                Creez votre compte pour acceder a votre espace et discuter avec le proprietaire.
+                            </div>
+                        ) : null}
                         {error && <div className="text-danger text-sm">{error}</div>}
                         <div className="space-y-2">
                             <Label htmlFor="name">{t('auth.name')}</Label>
@@ -129,7 +145,14 @@ export default function RegisterPage() {
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="email">{t('auth.email')}</Label>
-                            <Input id="email" name="email" type="email" placeholder="john@example.com" required />
+                            <Input
+                                id="email"
+                                name="email"
+                                type="email"
+                                placeholder="john@example.com"
+                                defaultValue={emailFromQuery}
+                                required
+                            />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="phone">Telephone</Label>
@@ -151,7 +174,12 @@ export default function RegisterPage() {
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="role">{t('dashboard.profile')}</Label>
-                            <Select name="role" value={selectedRole} onValueChange={(value) => setSelectedRole(value as 'LOCATAIRE' | 'PROPRIETAIRE')}>
+                            <Select
+                                name="role"
+                                value={pendingInquiry ? 'LOCATAIRE' : selectedRole}
+                                onValueChange={(value) => setSelectedRole(value as 'LOCATAIRE' | 'PROPRIETAIRE')}
+                                disabled={Boolean(pendingInquiry)}
+                            >
                                 <SelectTrigger>
                                     <SelectValue placeholder={t('common.loading')} />
                                 </SelectTrigger>
@@ -194,7 +222,14 @@ export default function RegisterPage() {
                         </Button>
                         <div className="text-sm text-center text-secondary">
                             {t('auth.haveAccount')}{' '}
-                            <Link href={`/${locale}/login`} className="text-primary hover:underline">
+                            <Link
+                                href={
+                                    pendingInquiry
+                                        ? `/${locale}/login?pendingInquiry=${encodeURIComponent(pendingInquiry)}&profile=tenant${emailFromQuery ? `&email=${encodeURIComponent(emailFromQuery)}` : ''}`
+                                        : `/${locale}/login`
+                                }
+                                className="text-primary hover:underline"
+                            >
                                 {t('auth.loginHere')}
                             </Link>
                         </div>

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { comparePassword, generateToken, hashPassword, normalizeUserRole } from '@/lib/auth'
 import { getDashboardPathForRole } from '@/lib/auth-policy'
+import { attachMarketplaceInquiriesToUser } from '@/lib/marketplace-inquiry-link'
 import { enforceCsrf } from '@/lib/csrf'
 import { createSystemLog } from '@/lib/audit'
 import { getCorrelationIdFromRequest } from '@/lib/correlation-id'
@@ -22,6 +23,7 @@ export const dynamic = 'force-dynamic'
 const loginSchema = z.object({
     email: z.string().trim().email(),
     password: z.string(),
+    pendingInquiryId: z.string().trim().cuid().optional(),
 })
 
 const LOGIN_GLOBAL_BUCKET = 'AUTH_LOGIN_GLOBAL'
@@ -233,9 +235,17 @@ export async function POST(request: Request) {
             role: normalizedRole,
         }
 
+        await attachMarketplaceInquiriesToUser({
+            userId: user.id,
+            email: user.email,
+            pendingInquiryId: parsed.pendingInquiryId ?? null,
+        })
+
         const response = NextResponse.json({
             user: userWithoutPassword,
-            redirectTo: getDashboardPathForRole(normalizedRole),
+            redirectTo: getDashboardPathForRole(normalizedRole, {
+                pendingInquiryId: parsed.pendingInquiryId ?? null,
+            }),
         })
 
         const cookieName = `token_${normalizedRole.toLowerCase()}`

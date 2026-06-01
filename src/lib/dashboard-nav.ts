@@ -29,7 +29,8 @@ export function getDashboardNav(role: string, locale?: string): NavItemSerializa
     if (role === 'TENANT') {
         return [
             { name: 'Accueil', href: `${prefix}/dashboard`, iconKey: 'home' },
-            { name: 'Messages visites', href: `${prefix}/dashboard/marketplace/inquiries`, iconKey: 'messages' },
+            { name: 'Mes demandes', href: `${prefix}/dashboard/marketplace/inquiries`, iconKey: 'messages' },
+            { name: 'Marketplace', href: `${prefix}/marketplace`, iconKey: 'store' },
             { name: 'Contrats', href: `${prefix}/dashboard/contracts`, iconKey: 'fileText' },
             { name: 'Paiements', href: `${prefix}/dashboard/payments`, iconKey: 'creditCard' },
             { name: 'Parametres', href: `${prefix}/dashboard/settings`, iconKey: 'settings' },
