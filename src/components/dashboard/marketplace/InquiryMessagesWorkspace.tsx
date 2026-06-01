@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { InquiryVisitPanel } from '@/components/dashboard/marketplace/InquiryVisitPanel'
 
 type InquiryItem = {
   id: string
@@ -13,6 +14,9 @@ type InquiryItem = {
   requesterPhone: string | null
   message: string | null
   lifecycleStage?: string
+  visitStatus?: string
+  scheduledVisitAt?: string | null
+  preferredVisitDate?: string | null
   createdAt: string
   property: { id: string; title: string }
 }
@@ -29,9 +33,13 @@ type InquiryMessage = {
 
 type InquiryMessagesWorkspaceProps = {
   currentUserId?: string
+  canManageInquiries?: boolean
 }
 
-export function InquiryMessagesWorkspace({ currentUserId }: InquiryMessagesWorkspaceProps = {}) {
+export function InquiryMessagesWorkspace({
+  currentUserId,
+  canManageInquiries = false,
+}: InquiryMessagesWorkspaceProps = {}) {
   const searchParams = useSearchParams()
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
@@ -41,6 +49,7 @@ export function InquiryMessagesWorkspace({ currentUserId }: InquiryMessagesWorks
   const [selectedInquiryId, setSelectedInquiryId] = useState<string>('')
   const [messages, setMessages] = useState<InquiryMessage[]>([])
   const [draft, setDraft] = useState('')
+  const [visitPanelKey, setVisitPanelKey] = useState(0)
   const inquiryFromQuery = searchParams.get('inquiryId') ?? ''
 
   const filtered = useMemo(() => {
@@ -201,6 +210,7 @@ export function InquiryMessagesWorkspace({ currentUserId }: InquiryMessagesWorks
                 <p className="font-semibold text-primary truncate">{item.property.title}</p>
                 <p className="text-sm text-secondary truncate">{item.requesterName}</p>
                 <p className="text-xs text-muted-foreground mt-1">
+                  {item.lifecycleStage ? `${item.lifecycleStage} · ` : ''}
                   {new Date(item.createdAt).toLocaleDateString('fr-FR')}
                 </p>
               </button>
@@ -221,6 +231,26 @@ export function InquiryMessagesWorkspace({ currentUserId }: InquiryMessagesWorks
         ) : (
           <div className="border-b border-border p-4 bg-surface/50 rounded-t-2xl h-16" />
         )}
+
+        {selectedInquiryId && canManageInquiries ? (
+          <InquiryVisitPanel
+            key={`${selectedInquiryId}-${visitPanelKey}`}
+            inquiryId={selectedInquiryId}
+            canManage={canManageInquiries}
+            onUpdated={() => {
+              setVisitPanelKey((k) => k + 1)
+              void (async () => {
+                const res = await fetch('/api/marketplace/inquiries?limit=50', {
+                  credentials: 'include',
+                })
+                const payload = await res.json().catch(() => [])
+                if (res.ok && Array.isArray(payload)) {
+                  setInquiries(payload as InquiryItem[])
+                }
+              })()
+            }}
+          />
+        ) : null}
 
         <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-background/50">
           {selectedInquiryId ? (

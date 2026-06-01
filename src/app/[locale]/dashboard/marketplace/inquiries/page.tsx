@@ -23,7 +23,10 @@ export default async function MarketplaceInquiriesPage(props: {
           Discutez entre demandeur et proprietaire autour des demandes de visite.
         </p>
       </div>
-      <InquiryMessagesWorkspace currentUserId={user.id} />
+      <InquiryMessagesWorkspace
+        currentUserId={user.id}
+        canManageInquiries={user.role === 'ADMIN' || user.role === 'MANAGER'}
+      />
     </section>
   )
 }

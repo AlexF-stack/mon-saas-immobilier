@@ -12,6 +12,10 @@
     {
       "path": "/api/internal/payments/installments/daily",
       "schedule": "20 0 * * *"
+    },
+    {
+      "path": "/api/internal/visits/reminders/daily",
+      "schedule": "25 0 * * *"
     }
   ]
 }

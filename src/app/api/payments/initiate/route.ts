@@ -10,6 +10,7 @@ import { enforceRateLimit } from '@/lib/security-rate-limit'
 import { captureServerError } from '@/lib/monitoring'
 import { createFinancialAuditLog } from '@/lib/financial-audit'
 import { getLogContextFromRequest, logServerEvent } from '@/lib/logger'
+import { createAppNotification } from '@/lib/app-notifications'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -146,6 +147,7 @@ export async function POST(request: Request) {
                 property: {
                     select: {
                         id: true,
+                        title: true,
                         managerId: true,
                         manager: {
                             select: {
@@ -437,6 +439,23 @@ export async function POST(request: Request) {
             route,
             details: `contractId=${payload.contractId};tenantId=${contract.tenantId};propertyId=${contract.property.id};amount=${payload.amount};provider=${payload.provider};collectionMode=${directOwnerCollection ? 'DIRECT' : 'PLATFORM'};idempotencyKey=${idempotencyKey}`,
         })
+
+        await createAppNotification({
+            userId: contract.tenantId,
+            type: 'PAYMENT_INITIATED',
+            title: 'Paiement initie',
+            message: `Paiement de ${payload.amount.toLocaleString('fr-FR')} FCFA initie pour ${contract.property.title}.`,
+            paymentId: payment.id,
+        })
+        if (contract.property.managerId) {
+            await createAppNotification({
+                userId: contract.property.managerId,
+                type: 'PAYMENT_INITIATED',
+                title: 'Paiement en cours',
+                message: `Un paiement de ${payload.amount.toLocaleString('fr-FR')} FCFA a ete initie pour ${contract.property.title}.`,
+                paymentId: payment.id,
+            })
+        }
 
         logServerEvent({
             event: 'payment.initiate.created',

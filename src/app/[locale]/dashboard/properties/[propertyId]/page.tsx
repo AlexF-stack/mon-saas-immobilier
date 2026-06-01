@@ -3,6 +3,7 @@ import { forbidden, notFound, redirect } from 'next/navigation'
 import { verifyAuth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { PropertyForm } from '@/components/dashboard/forms/PropertyForm'
+import { PropertyDocumentsPanel } from '@/components/dashboard/properties/PropertyDocumentsPanel'
 
 export default async function EditPropertyPage(props: {
   params: Promise<{ locale: string; propertyId: string }>
@@ -54,6 +55,7 @@ export default async function EditPropertyPage(props: {
         </p>
       </div>
       <PropertyForm locale={locale} initialData={property} />
+      <PropertyDocumentsPanel propertyId={property.id} />
     </section>
   )
 }

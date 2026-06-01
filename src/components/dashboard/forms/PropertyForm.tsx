@@ -34,6 +34,14 @@ type PropertyFormProps = {
 }
 
 const MIN_PROPERTY_IMAGES = 3
+const MIN_LAND_DOCUMENTS = 1
+
+const LAND_DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  TITLE_DEED: 'Titre foncier',
+  CADASTRAL_PLAN: 'Plan cadastral',
+  TAX_RECEIPT: 'Quittance fiscale',
+  OTHER: 'Autre',
+}
 
 function toErrorMessage(status: number, errorPayload: unknown, fallback: string): string {
   if (typeof errorPayload === 'string' && errorPayload.trim()) {
@@ -68,9 +76,18 @@ export function PropertyForm({ locale, dashboardPathPrefix, initialData }: Prope
     const selectedImages = formData
       .getAll('images')
       .filter((value): value is File => value instanceof File && value.size > 0)
+    const selectedLandDocs = formData
+      .getAll('landDocuments')
+      .filter((value): value is File => value instanceof File && value.size > 0)
 
     if (!isEdit && selectedImages.length < MIN_PROPERTY_IMAGES) {
       setError(`Ajoute au moins ${MIN_PROPERTY_IMAGES} images pour créer le bien.`)
+      setLoading(false)
+      return
+    }
+
+    if (!isEdit && selectedLandDocs.length < MIN_LAND_DOCUMENTS) {
+      setError(`Ajoute au moins ${MIN_LAND_DOCUMENTS} document foncier (PDF ou image).`)
       setLoading(false)
       return
     }
@@ -183,6 +200,40 @@ export function PropertyForm({ locale, dashboardPathPrefix, initialData }: Prope
             <p className="text-[11px] text-muted-foreground">
               Format JPG, PNG ou WEBP. Max 2Mo par image. {isEdit ? '1 image facultative.' : `Minimum ${MIN_PROPERTY_IMAGES} images.`}
             </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="landDocuments">Documents fonciers</Label>
+            {!isEdit ? (
+              <>
+                <Select name="landDocumentType" defaultValue="TITLE_DEED">
+                  <SelectTrigger id="landDocumentType">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(LAND_DOCUMENT_TYPE_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  id="landDocuments"
+                  name="landDocuments"
+                  type="file"
+                  accept=".pdf,image/*"
+                  multiple
+                  required
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  PDF ou image, max 5 Mo. Minimum {MIN_LAND_DOCUMENTS} document (titre, plan, etc.).
+                </p>
+              </>
+            ) : (
+              <p className="text-[11px] text-muted-foreground">
+                Gerez les documents fonciers dans la section dediee ci-dessous.
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>

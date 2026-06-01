@@ -5,6 +5,7 @@ import { verifyAuth, getTokenFromRequest } from '@/lib/auth'
 import { canManageProperty } from '@/lib/rbac'
 import { enforceCsrf } from '@/lib/csrf'
 import { createSystemLog } from '@/lib/audit'
+import { createAppNotification } from '@/lib/app-notifications'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -139,6 +140,13 @@ export async function POST(
         details: `source=${updated.documentSource};workflowState=${updated.workflowState};contractType=${updated.contractType}`,
       })
 
+      await createAppNotification({
+        userId: contract.tenantId,
+        type: 'CONTRACT_DOCUMENT_SAVED',
+        title: 'Document de contrat en preparation',
+        message: `Le contrat pour ${contract.property.title} est en cours de preparation.`,
+      })
+
       return NextResponse.json({ contract: updated, message: 'Contract document saved.' })
     }
 
@@ -169,13 +177,11 @@ export async function POST(
         },
       })
 
-      await prisma.notification.create({
-        data: {
-          userId: contract.tenantId,
-          type: 'CONTRACT_SUBMITTED',
-          title: 'Nouveau contrat a signer',
-          message: `Le contrat ${contract.property.title} vous a ete soumis. Veuillez le verifier et le signer.`,
-        },
+      await createAppNotification({
+        userId: contract.tenantId,
+        type: 'CONTRACT_SUBMITTED',
+        title: 'Nouveau contrat a signer',
+        message: `Le contrat ${contract.property.title} vous a ete soumis. Veuillez le verifier et le signer.`,
       })
 
       await createSystemLog({
@@ -231,6 +237,28 @@ export async function POST(
       targetId: contract.id,
       details: `workflowState=${readyState}`,
     })
+
+    const counterpartyId = canManage ? contract.tenantId : contract.property.managerId
+    if (counterpartyId) {
+      await createAppNotification({
+        userId: counterpartyId,
+        type: 'CONTRACT_SIGNATURE',
+        title: 'Signature de contrat',
+        message:
+          readyState === 'SIGNED_BOTH'
+            ? `Le contrat ${contract.property.title} est signe par les deux parties.`
+            : `Une signature a ete enregistree sur le contrat ${contract.property.title}.`,
+      })
+    }
+
+    if (readyState === 'SIGNED_BOTH' && contract.property.managerId) {
+      await createAppNotification({
+        userId: contract.tenantId,
+        type: 'CONTRACT_READY_FOR_PAYMENT',
+        title: 'Contrat pret pour paiement',
+        message: `Le contrat ${contract.property.title} est signe. Vous pouvez proceder au paiement.`,
+      })
+    }
 
     return NextResponse.json({
       contract: finalized,

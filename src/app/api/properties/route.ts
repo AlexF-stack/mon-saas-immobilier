@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { mkdirSync, writeFileSync } from 'fs'
-import { join } from 'path'
 import { prisma } from '@/lib/prisma'
 import { verifyAuth, getTokenFromRequest } from '@/lib/auth'
 import { createSystemLog } from '@/lib/audit'
@@ -9,13 +7,16 @@ import { enforceCsrf } from '@/lib/csrf'
 import { getCorrelationIdFromRequest } from '@/lib/correlation-id'
 import { captureServerError } from '@/lib/monitoring'
 import { normalizePropertyOfferType } from '@/lib/property-offer'
+import {
+    normalizePropertyDocumentType,
+    persistUploadedFile,
+} from '@/lib/property-files'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024
-const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 const MIN_PROPERTY_IMAGES = 3
+const MIN_LAND_DOCUMENTS = 1
 
 const createPropertySchema = z.object({
     title: z.string().trim().min(2).max(150),
@@ -160,6 +161,12 @@ export async function POST(request: Request) {
         const images = formData
             .getAll('images')
             .filter((value): value is File => value instanceof File && value.size > 0)
+        const landDocuments = formData
+            .getAll('landDocuments')
+            .filter((value): value is File => value instanceof File && value.size > 0)
+        const defaultLandDocumentType = normalizePropertyDocumentType(
+            getOptionalFormString(formData, 'landDocumentType')
+        )
         const imageUrlsRaw = getOptionalFormString(formData, 'imageUrls') ?? ''
         const imageUrls = imageUrlsRaw
             ? imageUrlsRaw
@@ -224,45 +231,32 @@ export async function POST(request: Request) {
         const uploadedImages = images.length > 0 ? images : legacyImage && legacyImage.size > 0 ? [legacyImage] : []
         const uploadedImageUrls: string[] = []
         for (const image of uploadedImages) {
-            if (image.size > MAX_IMAGE_SIZE_BYTES) {
-                return NextResponse.json(
-                    { error: 'Image too large. Max size is 2MB.' },
-                    { status: 413 }
-                )
+            const stored = await persistUploadedFile(image, { kind: 'image' })
+            if ('error' in stored) {
+                return NextResponse.json({ error: stored.error }, { status: stored.status })
             }
+            uploadedImageUrls.push(stored.url)
+        }
 
-            if (!ALLOWED_IMAGE_TYPES.has(image.type)) {
-                return NextResponse.json(
-                    { error: 'Unsupported image format. Use JPG, PNG or WEBP.' },
-                    { status: 400 }
-                )
+        const uploadedLandDocuments: Array<{
+            title: string
+            documentType: string
+            url: string
+            mimeType: string
+            fileSize: number
+        }> = []
+        for (const doc of landDocuments) {
+            const stored = await persistUploadedFile(doc, { kind: 'document' })
+            if ('error' in stored) {
+                return NextResponse.json({ error: stored.error }, { status: stored.status })
             }
-
-            const buffer = Buffer.from(await image.arrayBuffer())
-            const base64 = buffer.toString('base64')
-            const dataUri = `data:${image.type};base64,${base64}`
-
-            if (process.env.VERCEL === '1') {
-                // Vercel serverless runtime cannot persist files under public/.
-                uploadedImageUrls.push(dataUri)
-                continue
-            }
-
-            try {
-                // Local/dev fallback: store to public/uploads.
-                const uploadsDir = join(process.cwd(), 'public', 'uploads')
-                try {
-                    mkdirSync(uploadsDir, { recursive: true })
-                } catch {}
-
-                const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${image.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
-                const filepath = join(uploadsDir, filename)
-                writeFileSync(filepath, buffer)
-                uploadedImageUrls.push(`/uploads/${filename}`)
-            } catch {
-                // If local file save fails, still persist image via data URI to avoid blocking creation.
-                uploadedImageUrls.push(dataUri)
-            }
+            uploadedLandDocuments.push({
+                title: doc.name.replace(/\.[^.]+$/, '') || 'Document foncier',
+                documentType: defaultLandDocumentType,
+                url: stored.url,
+                mimeType: stored.mimeType,
+                fileSize: stored.fileSize,
+            })
         }
 
         const propertyInfo = {
@@ -286,6 +280,13 @@ export async function POST(request: Request) {
             )
         }
 
+        if (uploadedLandDocuments.length < MIN_LAND_DOCUMENTS) {
+            return NextResponse.json(
+                { error: `Au moins ${MIN_LAND_DOCUMENTS} document foncier est requis.` },
+                { status: 400 }
+            )
+        }
+
         const property = await prisma.$transaction(async (tx) => {
             const created = await tx.property.create({
                 data: propertyInfo,
@@ -295,6 +296,15 @@ export async function POST(request: Request) {
                 await tx.propertyImage.createMany({
                     data: allImageUrls.map((url) => ({
                         url,
+                        propertyId: created.id,
+                    })),
+                })
+            }
+
+            if (uploadedLandDocuments.length > 0) {
+                await tx.propertyDocument.createMany({
+                    data: uploadedLandDocuments.map((doc) => ({
+                        ...doc,
                         propertyId: created.id,
                     })),
                 })
@@ -310,7 +320,7 @@ export async function POST(request: Request) {
             targetId: property.id,
             correlationId,
             route: '/api/properties',
-            details: `title=${property.title};managerId=${property.managerId ?? 'none'};status=${property.status};published=${property.isPublished};type=${property.propertyType};imageCount=${allImageUrls.length}`,
+            details: `title=${property.title};managerId=${property.managerId ?? 'none'};status=${property.status};published=${property.isPublished};type=${property.propertyType};imageCount=${allImageUrls.length};landDocCount=${uploadedLandDocuments.length}`,
         })
 
         return NextResponse.json(property, { status: 201 })

@@ -147,6 +147,7 @@ model Property {
 
   contracts   Contract[]
   images      PropertyImage[]
+  landDocuments PropertyDocument[]
   inquiries   MarketplaceInquiry[]
   wishlistedBy WishlistItem[]
 
@@ -168,6 +169,21 @@ model PropertyImage {
   url        String
   propertyId String
   property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+}
+
+model PropertyDocument {
+  id           String   @id @default(cuid())
+  propertyId   String
+  title        String
+  documentType String   @default("OTHER") // TITLE_DEED, CADASTRAL_PLAN, TAX_RECEIPT, OTHER
+  url          String
+  mimeType     String?
+  fileSize     Int?
+  createdAt    DateTime @default(now())
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, createdAt])
 }
 
 model Contract {
@@ -279,6 +295,10 @@ model MarketplaceInquiry {
   requesterPhone     String?
   message            String?
   preferredVisitDate DateTime?
+  scheduledVisitAt   DateTime?
+  visitStatus        String   @default("REQUESTED") // REQUESTED, SCHEDULED, CONFIRMED, COMPLETED, CANCELLED
+  visitNotes         String?
+  visitReminderSentAt DateTime?
   status             String   @default("NEW") // NEW, CONTACTED, CLOSED
   lifecycleStage     String   @default("LEAD") // LEAD, VISIT_SCHEDULED, QUALIFIED, APPROVED, CONTRACT_DRAFT, CONTRACT_SENT, CLOSED
   guestAccessTokenHash String? @unique
