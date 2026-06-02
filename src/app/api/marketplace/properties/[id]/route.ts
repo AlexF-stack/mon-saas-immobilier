@@ -33,6 +33,7 @@ export async function GET(
                 publishedAt: true,
                 createdAt: true,
                 images: {
+                    where: { url: { not: { startsWith: 'data:' } } },
                     select: { id: true, url: true },
                     orderBy: { id: 'asc' },
                 },

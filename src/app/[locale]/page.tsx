@@ -75,6 +75,7 @@ export default async function LandingPage(props: {
                         offerType: true,
                         propertyType: true,
                         images: {
+                            where: { url: { not: { startsWith: 'data:' } } },
                             select: { id: true, url: true },
                             take: 1,
                             orderBy: { id: 'asc' },
