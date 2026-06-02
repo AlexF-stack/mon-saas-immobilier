@@ -233,6 +233,7 @@ export default async function MarketplacePage(props: {
         publishedAt: true,
         createdAt: true,
         images: {
+            where: { url: { not: { startsWith: 'data:' } } },
             select: { id: true, url: true },
             take: 1,
             orderBy: { id: 'asc' as const },

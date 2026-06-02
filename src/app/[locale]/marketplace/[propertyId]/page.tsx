@@ -63,6 +63,7 @@ async function getPublishedMarketplaceProperty(propertyId: string) {
             inquiriesCount: true,
             publishedAt: true,
             images: {
+                where: { url: { not: { startsWith: 'data:' } } },
                 select: { id: true, url: true },
                 orderBy: { id: 'asc' },
             },
