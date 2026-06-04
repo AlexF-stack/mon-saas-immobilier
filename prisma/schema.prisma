@@ -75,6 +75,7 @@ model User {
   isSuspended Boolean @default(false)
   suspendedAt DateTime?
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   propertyId String? // nullable, will be required for tenants
   property   Property? @relation(fields: [propertyId], references: [id])
 
@@ -88,6 +89,7 @@ model User {
   inquiryMessages   MarketplaceInquiryMessage[]
   loginHistory      LoginHistory[]
   updatedSystemConfigs SystemConfig[] @relation("SystemConfigUpdatedBy")
+  visitRequests     VisitRequest[]
 
   @@index([createdById])
 }
@@ -152,6 +154,7 @@ model Property {
   inquiries   MarketplaceInquiry[]
   wishlistedBy WishlistItem[]
   tenants      User[]
+  visitRequests VisitRequest[]
 
   @@index([isPublished])
   @@index([isPublished, status])

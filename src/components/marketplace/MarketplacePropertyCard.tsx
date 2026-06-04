@@ -7,6 +7,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { getOfferTypeLabel } from '@/lib/property-offer'
+import { MarketplaceImage } from '@/components/marketplace/MarketplaceImage'
 
 type MarketplacePropertyCardProps = {
     locale: string
@@ -83,18 +84,11 @@ export function MarketplacePropertyCard({ locale, property }: MarketplacePropert
         >
             <Card className="depth-layer glass-card overflow-hidden border border-border bg-card">
                 <div className="h-44 w-full overflow-hidden bg-surface">
-                    {cover ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                            src={cover}
-                            alt={property.title}
-                            className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
-                        />
-                    ) : (
-                        <div className="flex h-full items-center justify-center bg-gradient-to-br from-surface to-[rgb(var(--card)/0.9)] text-secondary">
-                            Image indisponible
-                        </div>
-                    )}
+                    <MarketplaceImage
+                        src={cover}
+                        alt={property.title}
+                        className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+                    />
                 </div>
                 <CardHeader className="space-y-2 pb-3">
                     <div className="flex items-start justify-between gap-3">

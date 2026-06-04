@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
 // Validation schema for the request body
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ property }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors.map((e) => e.message) }, { status: 400 });
+      return NextResponse.json({ error: error.issues.map((issue) => issue.message) }, { status: 400 });
     }
     console.error('Error creating property:', error);
     return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 });
