@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/empty-state'
+import { MarketplaceImage } from '@/components/marketplace/MarketplaceImage'
 import ThemeToggle from '@/components/ui/theme-toggle'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { getLandingPricingPlans, type LandingPricingPlan } from '@/lib/landing-pricing'
@@ -75,7 +76,6 @@ export default async function LandingPage(props: {
                         offerType: true,
                         propertyType: true,
                         images: {
-                            where: { url: { not: { startsWith: 'data:' } } },
                             select: { id: true, url: true },
                             take: 1,
                             orderBy: { id: 'asc' },
@@ -386,18 +386,13 @@ export default async function LandingPage(props: {
                                     >
                                         <Card className="depth-layer glass-card overflow-hidden">
                                             <div className="h-40 w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
-                                                {property.images[0]?.url ? (
-                                                    // eslint-disable-next-line @next/next/no-img-element
-                                                    <img
-                                                        src={property.images[0].url}
-                                                        alt={property.title}
-                                                        className="h-full w-full object-cover"
-                                                    />
-                                                ) : (
-                                                    <div className="flex h-full items-center justify-center text-sm text-secondary">
-                                                        {locale === 'fr' ? 'Image indisponible' : 'Image unavailable'}
-                                                    </div>
-                                                )}
+                                                <MarketplaceImage
+                                                    src={property.images[0]?.url}
+                                                    alt={property.title}
+                                                    className="h-full w-full object-cover"
+                                                    fallbackClassName="flex h-full w-full items-center justify-center text-sm text-secondary"
+                                                    fallbackLabel={locale === 'fr' ? 'Image indisponible' : 'Image unavailable'}
+                                                />
                                             </div>
                                             <CardHeader className="space-y-2 pb-3">
                                                 <div className="flex items-start justify-between gap-3">

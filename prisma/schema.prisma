@@ -76,6 +76,8 @@ model User {
   suspendedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  propertyId String? // nullable, will be required for tenants
+  property   Property? @relation(fields: [propertyId], references: [id])
 
   createdById String?
   createdBy   User? @relation("UserCreator", fields: [createdById], references: [id])
@@ -87,6 +89,7 @@ model User {
   inquiryMessages   MarketplaceInquiryMessage[]
   loginHistory      LoginHistory[]
   updatedSystemConfigs SystemConfig[] @relation("SystemConfigUpdatedBy")
+  visitRequests     VisitRequest[]
 
   @@index([createdById])
 }
@@ -150,6 +153,8 @@ model Property {
   landDocuments PropertyDocument[]
   inquiries   MarketplaceInquiry[]
   wishlistedBy WishlistItem[]
+  tenants      User[]
+  visitRequests VisitRequest[]
 
   @@index([isPublished])
   @@index([isPublished, status])
@@ -372,3 +377,16 @@ model SystemConfig {
 
   @@index([updatedAt])
 }
+
+// --- Visit Request Model ----------------------------------------------------
+model VisitRequest {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  status        String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  visitorId     String
+  propertyId    String
+  visitor       User     @relation(fields: [visitorId], references: [id])
+  property      Property @relation(fields: [propertyId], references: [id])
+  chatThreadId String?  // optional link to a chat thread
+}
+

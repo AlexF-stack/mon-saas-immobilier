@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { MarketplaceHeader } from '@/components/marketplace/MarketplaceHeader'
+import { MarketplaceImage } from '@/components/marketplace/MarketplaceImage'
 import { MarketplaceInquiryForm } from '@/components/marketplace/MarketplaceInquiryForm'
 import { getOfferTypeLabel } from '@/lib/property-offer'
 
@@ -63,7 +64,6 @@ async function getPublishedMarketplaceProperty(propertyId: string) {
             inquiriesCount: true,
             publishedAt: true,
             images: {
-                where: { url: { not: { startsWith: 'data:' } } },
                 select: { id: true, url: true },
                 orderBy: { id: 'asc' },
             },
@@ -195,12 +195,12 @@ export default async function MarketplacePropertyDetailPage(props: {
                             {property.images.length > 0 ? (
                                 <div className="grid grid-cols-1 gap-2 p-2 md:grid-cols-2">
                                     {property.images.map((image) => (
-                                        // eslint-disable-next-line @next/next/no-img-element
-                                        <img
+                                        <MarketplaceImage
                                             key={image.id}
                                             src={image.url}
                                             alt={property.title}
                                             className="h-56 w-full rounded-xl object-cover md:h-64"
+                                            fallbackClassName="flex h-56 w-full items-center justify-center rounded-xl bg-gradient-to-br from-surface to-[rgb(var(--card)/0.9)] text-sm text-secondary md:h-64"
                                         />
                                     ))}
                                 </div>
