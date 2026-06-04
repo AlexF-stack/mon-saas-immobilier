@@ -83,7 +83,7 @@ export function MarketplacePropertyCard({ locale, property }: MarketplacePropert
             onPointerUp={resetTilt}
         >
             <Card className="depth-layer glass-card overflow-hidden border border-border bg-card">
-                <div className="h-44 w-full overflow-hidden bg-surface">
+                <div className="w-full overflow-hidden bg-surface aspect-[4/3] max-h-44">
                     <MarketplaceImage
                         src={cover}
                         alt={property.title}
