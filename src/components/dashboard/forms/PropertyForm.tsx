@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -64,10 +64,22 @@ export function PropertyForm({ locale, dashboardPathPrefix, initialData }: Prope
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [offerType, setOfferType] = useState<'RENT' | 'SALE'>((initialData?.offerType as 'RENT' | 'SALE') || 'RENT')
+  const [landDocumentType, setLandDocumentType] = useState('TITLE_DEED')
   const dashboardPath = dashboardPathPrefix ?? (locale ? `/${locale}/dashboard` : '/dashboard')
   const isEdit = Boolean(initialData)
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  const landDocOptions = Object.entries(LAND_DOCUMENT_TYPE_LABELS).filter(
+    ([value]) => offerType === 'SALE' || value !== 'TITLE_DEED'
+  )
+  const landDocDefault = landDocOptions.length > 0 ? landDocOptions[0][0] : ''
+
+  useEffect(() => {
+    setLandDocumentType((current) =>
+      landDocOptions.some(([value]) => value === current) ? current : landDocDefault
+    )
+  }, [landDocDefault, landDocOptions])
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setLoading(true)
     setError('')
@@ -229,18 +241,16 @@ export function PropertyForm({ locale, dashboardPathPrefix, initialData }: Prope
             <Label htmlFor="landDocuments">Documents fonciers</Label>
             {!isEdit ? (
               <>
-                <Select name="landDocumentType" defaultValue="TITLE_DEED">
+                <Select name="landDocumentType" key={offerType} value={landDocumentType} onValueChange={setLandDocumentType}>
                   <SelectTrigger id="landDocumentType">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(LAND_DOCUMENT_TYPE_LABELS)
-                      .filter(([value]) => value !== 'TITLE_DEED' || offerType === 'SALE')
-                      .map(([value, label]) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
-                        </SelectItem>
-                      ))}
+                    {landDocOptions.map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <Input
