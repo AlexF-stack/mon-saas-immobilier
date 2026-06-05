@@ -1,5 +1,4 @@
 import { randomUUID } from 'crypto'
-import { EventType, Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 
 type DailyKpiSnapshot = {
@@ -33,19 +32,35 @@ function roundMoney(value: number): number {
   return Math.round(value * 100) / 100
 }
 
-function readAmount(metadata: Prisma.JsonValue | null): number {
-  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+function readAmount(metadata: unknown): number {
+  let parsed: unknown = metadata
+
+  if (typeof metadata === 'string') {
+    try {
+      parsed = JSON.parse(metadata) as unknown
+    } catch {
+      return 0
+    }
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     return 0
   }
 
-  const raw = (metadata as Record<string, unknown>).amount
+  const raw = (parsed as Record<string, unknown>).amount
   const amount = typeof raw === 'number' ? raw : Number(raw)
   return Number.isFinite(amount) ? amount : 0
 }
 
+type BusinessEventType =
+  | 'SIGNUP'
+  | 'CONTRACT_CREATED'
+  | 'PAYMENT_COMPLETED'
+  | 'WITHDRAW_REQUESTED'
+
 function computeDailySnapshot(
   date: Date,
-  events: Array<{ type: EventType; metadata: Prisma.JsonValue | null }>
+  events: Array<{ type: BusinessEventType; metadata: unknown }>
 ): DailyKpiSnapshot {
   let signups = 0
   let contracts = 0
@@ -55,23 +70,23 @@ function computeDailySnapshot(
   let withdrawalVolume = 0
 
   for (const event of events) {
-    if (event.type === EventType.SIGNUP) {
+    if (event.type === 'SIGNUP') {
       signups += 1
       continue
     }
 
-    if (event.type === EventType.CONTRACT_CREATED) {
+    if (event.type === 'CONTRACT_CREATED') {
       contracts += 1
       continue
     }
 
-    if (event.type === EventType.PAYMENT_COMPLETED) {
+    if (event.type === 'PAYMENT_COMPLETED') {
       payments += 1
       grossVolume += readAmount(event.metadata)
       continue
     }
 
-    if (event.type === EventType.WITHDRAW_REQUESTED) {
+    if (event.type === 'WITHDRAW_REQUESTED') {
       withdrawalCount += 1
       withdrawalVolume += readAmount(event.metadata)
     }
@@ -110,7 +125,10 @@ export async function rebuildDailyKpiForDate(input: Date = new Date()) {
     },
   })
 
-  const snapshot = computeDailySnapshot(date, events)
+  const snapshot = computeDailySnapshot(
+    date,
+    events as Array<{ type: BusinessEventType; metadata: unknown }>
+  )
 
   const now = new Date()
   await prisma.$executeRaw`

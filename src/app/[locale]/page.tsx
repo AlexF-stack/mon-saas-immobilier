@@ -22,7 +22,7 @@ import {
 } from 'lucide-react'
 
 export const runtime = 'nodejs'
-export const dynamic = 'force-dynamic'
+export const revalidate = 60
 
 function propertyTypeLabel(propertyType: string, locale: string) {
     if (locale === 'fr') {
@@ -90,19 +90,17 @@ export default async function LandingPage(props: {
     ])
 
     if (featuredProperties.length > 0) {
-        try {
-            await prisma.$transaction(
-                featuredProperties.map((property) =>
-                    prisma.property.update({
-                        where: { id: property.id },
-                        data: { impressionsCount: { increment: 1 } },
-                        select: { id: true },
-                    })
-                )
+        void prisma.$transaction(
+            featuredProperties.map((property) =>
+                prisma.property.update({
+                    where: { id: property.id },
+                    data: { impressionsCount: { increment: 1 } },
+                    select: { id: true },
+                })
             )
-        } catch {
+        ).catch(() => {
             // Non-blocking: landing remains available even if impression tracking fails.
-        }
+        })
     }
 
     const marketplaceTitle = locale === 'fr' ? 'Annonces recentes' : 'Recent listings'

@@ -72,16 +72,16 @@ export default async function PropertiesPage(props: {
   if (query) {
     andFilters.push({
       OR: [
-        { title: { contains: query, mode: 'insensitive' } },
-        { address: { contains: query, mode: 'insensitive' } },
-        { description: { contains: query, mode: 'insensitive' } },
-        { city: { contains: query, mode: 'insensitive' } },
+        { title: { contains: query } },
+        { address: { contains: query } },
+        { description: { contains: query } },
+        { city: { contains: query } },
       ],
     })
   }
 
   if (city) {
-    andFilters.push({ city: { contains: city, mode: 'insensitive' } })
+    andFilters.push({ city: { contains: city } })
   }
 
   if (status) {

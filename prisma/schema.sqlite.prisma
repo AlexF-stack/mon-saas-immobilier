@@ -1,0 +1,377 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model BusinessEvent {
+  id        String    @id @default(cuid())
+  type      String
+  userId    String?
+  entityId  String?
+  metadata  String?
+  createdAt DateTime  @default(now())
+
+  @@index([type, createdAt])
+}
+
+model DailyKPI {
+  id               String   @id @default(cuid())
+  date             DateTime @unique
+  signups          Int      @default(0)
+  contracts        Int      @default(0)
+  payments         Int      @default(0)
+  withdrawalCount  Int      @default(0)
+  withdrawalVolume Float    @default(0)
+  grossVolume      Float    @default(0)
+  netCashFlow      Float    @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  phone     String?
+  avatarUrl String?
+  preferredLanguage String @default("fr")
+  notifyEmail Boolean @default(true)
+  notifySms Boolean @default(false)
+  notifyWhatsapp Boolean @default(false)
+  notifyPush Boolean @default(false)
+  twoFactorEnabled Boolean @default(false)
+  dashboardCompact Boolean @default(false)
+  companyName String?
+  companyLogoUrl String?
+  rentalTermsTemplate String?
+  reminderChannelEmail Boolean @default(true)
+  reminderChannelSms Boolean @default(true)
+  reminderChannelWhatsapp Boolean @default(true)
+  paymentCollectionMode String @default("DIRECT")
+  paymentMomoNumber String?
+  paymentMomoProvider String?
+  paymentCardLink String?
+  paymentInstructions String?
+  lastLoginAt DateTime?
+  role      String   @default("TENANT")
+  isSuspended Boolean @default(false)
+  suspendedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  propertyId String?
+  property   Property? @relation(fields: [propertyId], references: [id])
+
+  createdById String?
+  createdBy   User? @relation("UserCreator", fields: [createdById], references: [id])
+  createdUsers User[] @relation("UserCreator")
+
+  managedProperties Property[] @relation("PropertyManager")
+  contracts         Contract[]
+  wishlistItems     WishlistItem[]
+  inquiryMessages   MarketplaceInquiryMessage[]
+  loginHistory      LoginHistory[]
+  updatedSystemConfigs SystemConfig[] @relation("SystemConfigUpdatedBy")
+  visitRequests     VisitRequest[]
+
+  @@index([createdById])
+}
+
+model SystemLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actorEmail String?
+  actorRole  String?
+  action     String
+  targetType String
+  targetId   String?
+  details    String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorId])
+  @@index([targetType, targetId])
+}
+
+model FinancialAuditLog {
+  id            String   @id @default(cuid())
+  type          String
+  entityId      String
+  fromStatus    String?
+  toStatus      String
+  actorId       String?
+  correlationId String?
+  metadata      String?
+  createdAt     DateTime @default(now())
+
+  @@index([type, entityId, createdAt])
+  @@index([correlationId])
+  @@index([actorId, createdAt])
+}
+
+model Property {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  city        String?
+  address     String
+  price       Float
+  offerType   String   @default("RENT")
+  propertyType String  @default("APARTMENT")
+  status      String   @default("AVAILABLE")
+  isPublished Boolean  @default(false)
+  isPremium   Boolean  @default(false)
+  viewsCount  Int      @default(0)
+  impressionsCount Int @default(0)
+  inquiriesCount Int   @default(0)
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  managerId   String?
+  manager     User?    @relation("PropertyManager", fields: [managerId], references: [id])
+
+  contracts   Contract[]
+  images      PropertyImage[]
+  landDocuments PropertyDocument[]
+  inquiries   MarketplaceInquiry[]
+  wishlistedBy WishlistItem[]
+  tenants      User[]
+  visitRequests VisitRequest[]
+
+  @@index([isPublished])
+  @@index([isPublished, status])
+  @@index([isPublished, status, offerType])
+  @@index([isPremium])
+  @@index([viewsCount])
+  @@index([inquiriesCount])
+  @@index([status])
+  @@index([offerType])
+  @@index([propertyType])
+  @@index([city])
+  @@index([address])
+}
+
+model PropertyImage {
+  id         String   @id @default(cuid())
+  url        String
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+}
+
+model PropertyDocument {
+  id           String   @id @default(cuid())
+  propertyId   String
+  title        String
+  documentType String   @default("OTHER")
+  url          String
+  mimeType     String?
+  fileSize     Int?
+  createdAt    DateTime @default(now())
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, createdAt])
+}
+
+model Contract {
+  id            String   @id @default(cuid())
+  contractNumber String  @unique
+  startDate     DateTime
+  endDate       DateTime
+  rentAmount    Float
+  depositAmount Float
+  rentalTermsSnapshot String?
+  contractType  String   @default("RENTAL")
+  workflowState String   @default("DRAFT")
+  documentSource String?
+  status        String   @default("ACTIVE")
+  fileUrl       String?
+  contractText  String?
+  receiptFileUrl String?
+  receiptText   String?
+  submittedAt   DateTime?
+  ownerSignedAt DateTime?
+  tenantSignedAt DateTime?
+  paymentInitiatedAt DateTime?
+  activatedAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id])
+
+  tenantId String
+  tenant   User   @relation(fields: [tenantId], references: [id])
+
+  payments Payment[]
+  installments ContractInstallment[]
+
+  @@index([workflowState])
+  @@index([contractType])
+  @@index([contractNumber])
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  amount        Float
+  status        String   @default("PENDING")
+  type          String   @default("RENT")
+  method        String
+  transactionId String?  @unique
+  idempotencyKey String? @unique
+  tenantId      String?
+  propertyId    String?
+  initiatedById String?
+  initiatedByRole String?
+  receiptNumber String?  @unique
+  receiptIssuedAt DateTime?
+  ownerNotifiedAt DateTime?
+  installmentId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  contractId String
+  contract   Contract @relation(fields: [contractId], references: [id])
+  installment ContractInstallment? @relation(fields: [installmentId], references: [id])
+
+  @@index([installmentId])
+}
+
+model ContractInstallment {
+  id            String            @id @default(cuid())
+  contractId    String
+  sequence      Int
+  dueDate       DateTime
+  baseAmount    Decimal
+  penaltyAmount Decimal           @default(0)
+  totalDue      Decimal
+  status        String @default("OPEN")
+  paidAt        DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  contract      Contract          @relation(fields: [contractId], references: [id])
+  payments      Payment[]
+
+  @@unique([contractId, sequence])
+  @@index([contractId, status])
+  @@index([dueDate, status])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   @default("INFO")
+  title     String
+  message   String
+  paymentId String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([paymentId])
+}
+
+model MarketplaceInquiry {
+  id                 String   @id @default(cuid())
+  propertyId         String
+  requesterUserId    String?
+  requesterIp        String?
+  requesterName      String
+  requesterEmail     String
+  requesterPhone     String?
+  message            String?
+  preferredVisitDate DateTime?
+  scheduledVisitAt   DateTime?
+  visitStatus        String   @default("REQUESTED")
+  visitNotes         String?
+  visitReminderSentAt DateTime?
+  status             String   @default("NEW")
+  lifecycleStage     String   @default("LEAD")
+  guestAccessTokenHash String? @unique
+  guestAccessTokenExpiresAt DateTime?
+  guestLastSeenAt    DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  property           Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  messages           MarketplaceInquiryMessage[]
+
+  @@index([propertyId, createdAt])
+  @@index([requesterEmail])
+  @@index([requesterIp, createdAt])
+}
+
+model MarketplaceInquiryMessage {
+  id         String             @id @default(cuid())
+  inquiryId  String
+  senderUserId String?
+  senderGuestName String?
+  senderGuestEmail String?
+  message    String
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  inquiry    MarketplaceInquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  sender     User?              @relation(fields: [senderUserId], references: [id], onDelete: Cascade)
+
+  @@index([inquiryId, createdAt])
+  @@index([senderUserId, createdAt])
+}
+
+model WishlistItem {
+  id         String   @id @default(cuid())
+  userId     String
+  propertyId String
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, propertyId])
+  @@index([userId, createdAt])
+  @@index([propertyId, createdAt])
+}
+
+model LoginHistory {
+  id         String   @id @default(cuid())
+  userId     String
+  ipAddress  String?
+  userAgent  String?
+  success    Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model SystemConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  updatedBy   User?    @relation("SystemConfigUpdatedBy", fields: [updatedById], references: [id])
+
+  @@index([updatedAt])
+}
+
+model VisitRequest {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  status        String   @default("PENDING")
+  visitorId     String
+  propertyId    String
+  visitor       User     @relation(fields: [visitorId], references: [id])
+  property      Property @relation(fields: [propertyId], references: [id])
+  chatThreadId String?
+}

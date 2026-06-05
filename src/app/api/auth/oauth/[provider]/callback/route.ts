@@ -78,7 +78,6 @@ export async function GET(
             where: {
                 email: {
                     equals: identity.email,
-                    mode: 'insensitive',
                 },
             },
         })

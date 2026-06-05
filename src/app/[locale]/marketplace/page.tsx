@@ -16,7 +16,7 @@ import { MarketplaceHeader } from '@/components/marketplace/MarketplaceHeader'
 import { MarketplacePropertyCard } from '@/components/marketplace/MarketplacePropertyCard'
 
 export const runtime = 'nodejs'
-export const dynamic = 'force-dynamic'
+export const revalidate = 60
 
 type MarketplaceSearchParams = {
     q?: string | string[]
@@ -293,7 +293,7 @@ export default async function MarketplacePage(props: {
 
     if (properties.length > 0) {
         const propertyIds = properties.map((property) => property.id)
-        await prisma.property.updateMany({
+        void prisma.property.updateMany({
             where: { id: { in: propertyIds } },
             data: { impressionsCount: { increment: 1 } },
         })

@@ -35,7 +35,6 @@ export async function ensureBootstrapAdmin(
         where: {
             email: {
                 equals: activeEmail,
-                mode: 'insensitive',
             },
         },
         select: { id: true, email: true },

@@ -14,7 +14,7 @@ import { MarketplaceInquiryForm } from '@/components/marketplace/MarketplaceInqu
 import { getOfferTypeLabel } from '@/lib/property-offer'
 
 export const runtime = 'nodejs'
-export const dynamic = 'force-dynamic'
+export const revalidate = 60
 
 function propertyTypeLabel(propertyType: string) {
     if (propertyType === 'APARTMENT') return 'Appartement'
@@ -129,7 +129,7 @@ export default async function MarketplacePropertyDetailPage(props: {
     const property = await getPublishedMarketplaceProperty(propertyId)
     if (!property) notFound()
 
-    await prisma.property.update({
+    void prisma.property.update({
         where: { id: property.id },
         data: { viewsCount: { increment: 1 } },
         select: { id: true },

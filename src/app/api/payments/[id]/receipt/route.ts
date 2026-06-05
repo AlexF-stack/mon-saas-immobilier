@@ -96,6 +96,7 @@ export async function GET(
             amount: payment.amount,
             method: payment.method,
             transactionId: payment.transactionId ?? payment.id,
+            contractNumber: payment.contract.contractNumber,
             receiptText: payment.contract.receiptText,
         })
 

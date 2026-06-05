@@ -202,14 +202,16 @@ export async function POST(
     }
 
     if (recipientIds.size > 0) {
-      await prisma.notification.createMany({
-        data: [...recipientIds].map((recipientId) => ({
-          userId: recipientId,
-          type: 'MARKETPLACE_INQUIRY_MESSAGE',
-          title: 'Nouveau message visite',
-          message: `Nouveau message sur la demande pour ${inquiry.property.title}.`,
-        })),
-      })
+      for (const recipientId of recipientIds) {
+        await prisma.notification.create({
+          data: {
+            userId: recipientId,
+            type: 'MARKETPLACE_INQUIRY_MESSAGE',
+            title: 'Nouveau message visite',
+            message: `Nouveau message sur la demande pour ${inquiry.property.title}.`,
+          },
+        })
+      }
       for (const recipientId of recipientIds) {
         publishRealtime(`notifications:user:${recipientId}`, {
           type: 'MARKETPLACE_INQUIRY_MESSAGE',

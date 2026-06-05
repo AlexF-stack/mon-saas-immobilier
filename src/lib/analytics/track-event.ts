@@ -1,15 +1,14 @@
 import 'server-only'
 
 import * as Sentry from '@sentry/nextjs'
-import { Prisma } from '@prisma/client'
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/lib/prisma'; import { Prisma } from '@prisma/client'
 import { logServerEvent } from '@/lib/logger'
 
 export type TrackEventParams = {
   type: 'SIGNUP' | 'CONTRACT_CREATED' | 'PAYMENT_COMPLETED' | 'WITHDRAW_REQUESTED'
   userId?: string
   entityId?: string
-  metadata?: Record<string, unknown>
+  metadata?: Prisma.JsonValue | null
   correlationId?: string
 }
 
@@ -25,14 +24,36 @@ export async function trackEvent({
   correlationId,
 }: TrackEventParams) {
   try {
-    await prisma.businessEvent.create({
+    // Fire‑and‑forget DB write to avoid blocking the request.
+    void prisma.businessEvent.create({
       data: {
         type,
         userId,
         entityId,
-        metadata: metadata as Prisma.InputJsonValue | undefined,
+        metadata: (metadata as Prisma.JsonValue) ?? undefined,
       },
-    })
+    }).catch((error) => {
+      // Log async failure (same as outer catch handling)
+      logServerEvent({
+        level: 'error',
+        event: 'analytics.track.failed',
+        message: 'Failed to persist BusinessEvent (async)',
+        correlationId,
+        userId: userId ?? null,
+        details: { type, entityId: entityId ?? null },
+      });
+      try {
+        Sentry.withScope((scope) => {
+          scope.setTag('layer', 'analytics');
+          scope.setTag('type', type);
+          if (correlationId) scope.setTag('correlationId', correlationId);
+          if (userId) scope.setUser({ id: userId });
+          if (entityId) scope.setExtra('entityId', entityId);
+          if (metadata) scope.setExtra('metadata', metadata);
+          Sentry.captureException(error);
+        });
+      } catch {}
+    });
   } catch (error) {
     logServerEvent({
       level: 'error',

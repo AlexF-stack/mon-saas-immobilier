@@ -293,21 +293,25 @@ export async function POST(request: Request) {
             })
 
             if (allImageUrls.length > 0) {
-                await tx.propertyImage.createMany({
-                    data: allImageUrls.map((url) => ({
-                        url,
-                        propertyId: created.id,
-                    })),
-                })
+                for (const url of allImageUrls) {
+                    await tx.propertyImage.create({
+                        data: {
+                            url,
+                            propertyId: created.id,
+                        },
+                    })
+                }
             }
 
             if (uploadedLandDocuments.length > 0) {
-                await tx.propertyDocument.createMany({
-                    data: uploadedLandDocuments.map((doc) => ({
-                        ...doc,
-                        propertyId: created.id,
-                    })),
-                })
+                for (const doc of uploadedLandDocuments) {
+                    await tx.propertyDocument.create({
+                        data: {
+                            ...doc,
+                            propertyId: created.id,
+                        },
+                    })
+                }
             }
 
             return created

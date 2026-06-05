@@ -24,7 +24,13 @@ export async function GET(
         const contract = await prisma.contract.findUnique({
             where: { id },
             include: {
-                property: true,
+                property: {
+                    include: {
+                        manager: {
+                            select: { id: true, name: true, email: true, phone: true },
+                        },
+                    },
+                },
                 tenant: true,
             },
         })
@@ -42,14 +48,21 @@ export async function GET(
         }
 
         const pdfBytes = await generateContractPdf({
-            ownerName: 'Agence Immo SaaS',
+            ownerName: contract.property.manager?.name || contract.property.manager?.email || 'Agence Immo SaaS',
+            ownerEmail: contract.property.manager?.email || null,
             tenantName: contract.tenant.name || contract.tenant.email,
+            tenantEmail: contract.tenant.email || null,
+            tenantPhone: contract.tenant.phone || null,
+            propertyTitle: contract.property.title,
             propertyAddress: contract.property.address,
+            propertyCity: contract.property.city,
+            propertyType: contract.property.propertyType,
             startDate: contract.startDate,
             endDate: contract.endDate,
             rentAmount: contract.rentAmount,
             depositAmount: contract.depositAmount,
             contractType: contract.contractType === 'SALE' ? 'SALE' : 'RENTAL',
+            contractNumber: contract.contractNumber,
             contractText: contract.contractText,
             ownerSignedAt: contract.ownerSignedAt,
             tenantSignedAt: contract.tenantSignedAt,

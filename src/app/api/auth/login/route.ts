@@ -104,7 +104,6 @@ export async function POST(request: Request) {
             where: {
                 email: {
                     equals: email,
-                    mode: 'insensitive',
                 },
             },
         })
