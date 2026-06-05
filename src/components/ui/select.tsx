@@ -28,6 +28,7 @@ function SelectTrigger({
   className,
   size = "default",
   children,
+  onPointerDown,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Trigger> & {
   size?: "sm" | "default"
@@ -36,6 +37,11 @@ function SelectTrigger({
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
       data-size={size}
+      onPointerDown={(event) => {
+        onPointerDown?.(event)
+        if (event.defaultPrevented) return
+        event.preventDefault()
+      }}
       className={cn(
         "flex w-full items-center justify-between gap-2 whitespace-nowrap rounded-xl border border-border bg-card px-3 text-sm text-primary shadow-xs transition-[color,box-shadow,border-color,background-color] outline-none data-[placeholder]:text-[rgb(var(--text-secondary))]",
         "focus-visible:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/20",
