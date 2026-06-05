@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-
-const { PDFParse } = require('pdf-parse')
+import { PDFParse } from 'pdf-parse'
 
 import { generateContractPdf, generatePaymentReceiptPdf } from '../../src/lib/pdf'
 
