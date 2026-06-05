@@ -7,6 +7,7 @@ const execFileAsync = promisify(execFile)
 
 const TEST_PORT = Number.parseInt(process.env.TEST_PORT ?? '3520', 10)
 const TEST_DB_URL = process.env.INTEGRATION_TEST_DATABASE_URL ?? 'file:./test.db'
+const TEST_SCHEMA = process.env.INTEGRATION_PRISMA_SCHEMA ?? 'prisma/schema.sqlite.prisma'
 const TEST_JWT_SECRET =
   process.env.INTEGRATION_TEST_JWT_SECRET ??
   'integration_test_secret_abcdefghijklmnopqrstuvwxyz_123456'
@@ -165,8 +166,23 @@ async function main() {
   console.log('[integration] removing .next cache')
   await rm('.next', { recursive: true, force: true })
 
-  console.log('[integration] applying database migrations on test database')
-  await runCommand(process.execPath, ['node_modules/prisma/build/index.js', 'migrate', 'deploy'])
+  console.log('[integration] generating Prisma Client for the test schema')
+  await runCommand(process.execPath, [
+    'node_modules/prisma/build/index.js',
+    'generate',
+    '--schema',
+    TEST_SCHEMA,
+  ])
+
+  console.log('[integration] applying database schema on the test database')
+  await runCommand(process.execPath, [
+    'node_modules/prisma/build/index.js',
+    'db',
+    'push',
+    '--accept-data-loss',
+    '--schema',
+    TEST_SCHEMA,
+  ])
 
   console.log('[integration] building project (production)')
   await runCommand(process.execPath, ['node_modules/next/dist/bin/next', 'build'])
@@ -190,7 +206,11 @@ async function main() {
   await waitForServerReady()
 
   console.log('[integration] running integration tests')
-  await runCommand(process.execPath, ['--test', 'tests/integration/security-rbac.integration.test.mjs'])
+  await runCommand(process.execPath, [
+    '--test',
+    'tests/integration/security-rbac.integration.test.mjs',
+    'tests/integration/pdf.routes.integration.test.mjs',
+  ])
 }
 
 try {

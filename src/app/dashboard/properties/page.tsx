@@ -69,15 +69,15 @@ export default async function PropertiesPage(props: { searchParams: Promise<Prop
   if (query) {
     andFilters.push({
       OR: [
-        { title: { contains: query, mode: 'insensitive' } },
-        { address: { contains: query, mode: 'insensitive' } },
-        { description: { contains: query, mode: 'insensitive' } },
-        { city: { contains: query, mode: 'insensitive' } },
+        { title: { contains: query } },
+        { address: { contains: query } },
+        { description: { contains: query } },
+        { city: { contains: query } },
       ],
     })
   }
 
-  if (city) andFilters.push({ city: { contains: city, mode: 'insensitive' } })
+  if (city) andFilters.push({ city: { contains: city } })
   if (status) andFilters.push({ status })
   if (offerType) andFilters.push({ offerType })
 

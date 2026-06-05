@@ -12,7 +12,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { Button } from '@/components/ui/button'
 
 export const runtime = 'nodejs'
-export const dynamic = 'force-dynamic'
+export const revalidate = 60
 
 type CityPageSearchParams = {
     page?: string | string[]
@@ -144,7 +144,7 @@ export default async function MarketplaceCityPage(props: {
     })
 
     if (properties.length > 0) {
-        await prisma.$transaction(
+        void prisma.$transaction(
             properties.map((property) =>
                 prisma.property.update({
                     where: { id: property.id },

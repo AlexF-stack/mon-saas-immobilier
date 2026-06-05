@@ -163,11 +163,11 @@ export async function GET(request: Request) {
     if (query) {
       andFilters.push({
         OR: [
-          { transactionId: { contains: query, mode: 'insensitive' } },
-          { method: { contains: query, mode: 'insensitive' } },
-          { contract: { property: { title: { contains: query, mode: 'insensitive' } } } },
-          { contract: { tenant: { name: { contains: query, mode: 'insensitive' } } } },
-          { contract: { tenant: { email: { contains: query, mode: 'insensitive' } } } },
+          { transactionId: { contains: query } },
+          { method: { contains: query } },
+          { contract: { property: { title: { contains: query } } } },
+          { contract: { tenant: { name: { contains: query } } } },
+          { contract: { tenant: { email: { contains: query } } } },
         ],
       })
     }

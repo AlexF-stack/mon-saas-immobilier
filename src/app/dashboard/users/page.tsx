@@ -41,8 +41,8 @@ export default async function UsersPage(props: { searchParams: Promise<UsersSear
   if (query) {
     andFilters.push({
       OR: [
-        { name: { contains: query, mode: 'insensitive' } },
-        { email: { contains: query, mode: 'insensitive' } },
+        { name: { contains: query } },
+        { email: { contains: query } },
       ],
     })
   }

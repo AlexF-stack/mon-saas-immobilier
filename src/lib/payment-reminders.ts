@@ -885,9 +885,9 @@ export async function sendDailyPaymentReminders(input?: {
           })
         }
 
-        const createManyResult = await tx.notification.createMany({
-          data: notifications,
-        })
+        for (const notification of notifications) {
+          await tx.notification.create({ data: notification })
+        }
 
         await tx.systemLog.create({
           data: {
@@ -900,7 +900,7 @@ export async function sendDailyPaymentReminders(input?: {
 
         return {
           created: true,
-          inAppNotifications: createManyResult.count,
+          inAppNotifications: notifications.length,
         }
       })
 

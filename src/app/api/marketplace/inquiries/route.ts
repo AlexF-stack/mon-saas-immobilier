@@ -238,14 +238,16 @@ export async function POST(request: Request) {
                 ? ` Visite souhaitee: ${parsed.preferredVisitDate.toISOString().slice(0, 10)}.`
                 : ''
 
-            await prisma.notification.createMany({
-                data: [...recipientIds].map((recipientId) => ({
-                    userId: recipientId,
-                    type: 'MARKETPLACE_INQUIRY',
-                    title: 'Nouvelle demande marketplace',
-                    message: `${requesterName} a envoye une demande pour ${property.title}.${preferredVisitSuffix}`,
-                })),
-            })
+            for (const recipientId of recipientIds) {
+                await prisma.notification.create({
+                    data: {
+                        userId: recipientId,
+                        type: 'MARKETPLACE_INQUIRY',
+                        title: 'Nouvelle demande marketplace',
+                        message: `${requesterName} a envoye une demande pour ${property.title}.${preferredVisitSuffix}`,
+                    },
+                })
+            }
             for (const recipientId of recipientIds) {
                 publishRealtime(`notifications:user:${recipientId}`, {
                     type: 'MARKETPLACE_INQUIRY',

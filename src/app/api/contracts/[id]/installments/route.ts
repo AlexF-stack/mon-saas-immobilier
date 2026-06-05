@@ -95,10 +95,9 @@ async function ensureAdvanceInstallments(input: {
   }
 
   if (rows.length > 0) {
-    await prisma.contractInstallment.createMany({
-      data: rows,
-      skipDuplicates: true,
-    })
+    for (const row of rows) {
+      await prisma.contractInstallment.create({ data: row })
+    }
   }
 }
 

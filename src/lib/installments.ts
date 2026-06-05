@@ -151,11 +151,10 @@ async function generateMissingInstallments(input: DailyInstallmentRunInput) {
     }
 
     if (rows.length > 0) {
-      const result = await prisma.contractInstallment.createMany({
-        data: rows,
-        skipDuplicates: true,
-      })
-      createdCount += result.count
+      for (const row of rows) {
+        await prisma.contractInstallment.create({ data: row })
+        createdCount += 1
+      }
     }
   }
 

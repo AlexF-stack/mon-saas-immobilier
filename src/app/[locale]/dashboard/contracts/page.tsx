@@ -76,9 +76,9 @@ export default async function ContractsPage(props: {
   if (query) {
     andFilters.push({
       OR: [
-        { property: { title: { contains: query, mode: 'insensitive' } } },
-        { tenant: { name: { contains: query, mode: 'insensitive' } } },
-        { tenant: { email: { contains: query, mode: 'insensitive' } } },
+        { property: { title: { contains: query } } },
+        { tenant: { name: { contains: query } } },
+        { tenant: { email: { contains: query } } },
       ],
     })
   }
