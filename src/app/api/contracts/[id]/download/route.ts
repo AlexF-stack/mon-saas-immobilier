@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { generateContractPdf } from '@/lib/pdf'
-import { renderContractWordDocument, templateExists, type ContractWordData } from '@/lib/word-documents'
+import {
+  mapContractRecordToWordData,
+  renderContractWordDocument,
+  templateExists,
+} from '@/lib/word-documents'
 import { verifyAuth, getTokenFromRequest } from '@/lib/auth'
 import { canAccessContractScope } from '@/lib/rbac'
 
@@ -28,7 +32,13 @@ export async function GET(
                 property: {
                     include: {
                         manager: {
-                            select: { id: true, name: true, email: true, phone: true },
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                                phone: true,
+                                paymentMomoNumber: true,
+                            },
                         },
                     },
                 },
@@ -54,32 +64,7 @@ export async function GET(
                 return NextResponse.json({ error: 'Modele Word indisponible' }, { status: 503 })
             }
 
-            const wordData: ContractWordData = {
-                contractNumber: contract.contractNumber,
-                contractType: contract.contractType === 'SALE' ? 'SALE' : 'RENTAL',
-                ownerName:
-                    contract.property.manager?.name ||
-                    contract.property.manager?.email ||
-                    'Proprietaire',
-                ownerEmail: contract.property.manager?.email || '',
-                ownerPhone: contract.property.manager?.phone || '',
-                tenantName: contract.tenant.name || contract.tenant.email,
-                tenantEmail: contract.tenant.email,
-                tenantPhone: contract.tenant.phone || '',
-                propertyTitle: contract.property.title,
-                propertyAddress: contract.property.address,
-                propertyCity: contract.property.city || '',
-                propertyType: contract.property.propertyType,
-                startDate: contract.startDate,
-                endDate: contract.endDate,
-                rentAmount: contract.rentAmount,
-                depositAmount: contract.depositAmount,
-                clauses: contract.contractText || contract.rentalTermsSnapshot || '',
-                ownerSignedAt: contract.ownerSignedAt,
-                tenantSignedAt: contract.tenantSignedAt,
-            }
-
-            const docxBytes = await renderContractWordDocument(wordData)
+            const docxBytes = await renderContractWordDocument(mapContractRecordToWordData(contract))
             return new NextResponse(Buffer.from(docxBytes), {
                 headers: {
                     'Content-Type':

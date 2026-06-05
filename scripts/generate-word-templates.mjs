@@ -6,6 +6,7 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import PizZip from 'pizzip'
+import { beninBailHabitationLines } from './benin-bail-habitation-lines.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const templatesDir = path.join(__dirname, '..', 'templates')
@@ -58,45 +59,7 @@ function createDocx(paragraphs) {
   return zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' })
 }
 
-const contractRental = [
-  'CONTRAT DE LOCATION',
-  '',
-  'Numero : {contractNumber}',
-  'Date du document : {documentDate}',
-  '',
-  'ENTRE LES SOUSSIGNES',
-  '',
-  'Le proprietaire / gestionnaire : {ownerName}',
-  'Email : {ownerEmail}',
-  'Telephone : {ownerPhone}',
-  '',
-  'Le locataire : {tenantName}',
-  'Email : {tenantEmail}',
-  'Telephone : {tenantPhone}',
-  '',
-  'IL A ETE CONVENU CE QUI SUIT',
-  '',
-  'Article 1 - Objet',
-  'Le proprietaire loue au locataire le bien suivant :',
-  'Intitule : {propertyTitle}',
-  'Adresse : {propertyAddress}',
-  'Ville : {propertyCity}',
-  'Type : {propertyType}',
-  '',
-  'Article 2 - Duree',
-  'Du {startDate} au {endDate}.',
-  '',
-  'Article 3 - Loyer et caution',
-  'Loyer mensuel : {rentAmount} FCFA',
-  'Caution : {depositAmount} FCFA',
-  '',
-  'Article 4 - Conditions particulieres',
-  '{clauses}',
-  '',
-  'Article 5 - Signatures',
-  'Signature proprietaire : {ownerSignatureDate}',
-  'Signature locataire : {tenantSignatureDate}',
-]
+const contractRental = beninBailHabitationLines
 
 const contractSale = [
   'CONTRAT DE VENTE IMMOBILIERE',

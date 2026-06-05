@@ -226,8 +226,8 @@ export function ContractLifecycleActions(props: ContractLifecycleActionsProps) {
         <div className="space-y-3 rounded-xl border border-border bg-card p-3">
           <p className="text-xs uppercase tracking-wide text-secondary">Preparation du contrat</p>
           <p className="text-xs text-muted-foreground">
-            Utilisez le modele Word pour pre-remplir automatiquement les champs (proprietaire, locataire,
-            bien, montants).
+            Modele legal Benin (bail d&apos;habitation) : remplissage auto des parties, du bien, du loyer
+            et de la caution. Les champs CNI / naissance restent a completer dans le Word telecharge.
           </p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1">

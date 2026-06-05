@@ -1,49 +1,44 @@
-# Modeles Word (contrats et quittances)
+# Modeles Word — Benin
 
-Ces fichiers `.docx` sont remplis automatiquement via **docxtemplater**.
+## Contrat de bail d'habitation
 
-## Fichiers
+Le fichier `contrat-location.docx` reprend le modele legal **CONTRAT DE BAIL D'HABITATION** (Republique du Benin, Loi n° 2013-01).
 
-| Fichier | Usage |
-|---------|--------|
-| `contrat-location.docx` | Bail / location |
-| `contrat-vente.docx` | Vente immobiliere |
-| `quittance-loyer.docx` | Quittance apres paiement |
-
-## Regenerer les modeles par defaut
+Regenerer apres modification du texte :
 
 ```bash
-node scripts/generate-word-templates.mjs
+npm run templates:generate
 ```
 
-## Personnaliser vos propres modeles Word
+## Champs remplis automatiquement
 
-1. Ouvrez un fichier `.docx` dans Word.
-2. Inserez les balises **exactement** comme ci-dessous (accolades incluses).
-3. Enregistrez dans ce dossier `templates/` (meme nom de fichier).
+| Balise | Source application |
+|--------|-------------------|
+| `{bailleurNom}`, `{bailleurEmail}`, `{bailleurTelephone}` | Compte manager |
+| `{locataireNom}`, `{locataireEmail}`, `{locataireTelephone}` | Locataire du contrat |
+| `{bienAdresse}`, `{bienTitre}`, `{bienType}` | Fiche bien |
+| `{dateEffet}`, `{dateFin}`, `{dureeMois}` | Dates du contrat |
+| `{loyerMontant}`, `{cautionMontant}`, `{cautionMois}` | Montants du bail |
+| `{modePaiement}` | Parametres paiement manager (MoMo) |
+| `{clauses}` | Conditions de bail (parametres) |
+| `{contractNumber}` | Numero de contrat |
+| `{lieuSignature}`, `{dateSignature}` | Ville du bien + date du jour |
 
-### Contrat de location / vente
+## Champs a completer manuellement (Word)
 
-- `{contractNumber}` — numero de contrat
-- `{documentDate}` — date du jour
-- `{ownerName}`, `{ownerEmail}`, `{ownerPhone}`
-- `{tenantName}`, `{tenantEmail}`, `{tenantPhone}`
-- `{propertyTitle}`, `{propertyAddress}`, `{propertyCity}`, `{propertyType}`
-- `{startDate}`, `{endDate}`
-- `{rentAmount}`, `{depositAmount}` (formates)
-- `{clauses}` — conditions / texte libre
-- `{ownerSignatureDate}`, `{tenantSignatureDate}`
+Ces champs affichent **A completer** tant qu'ils ne sont pas saisis dans l'application :
 
-### Quittance
+- `{bailleurNaissance}`, `{bailleurNationalite}`, `{bailleurProfession}`, `{bailleurPieceIdentite}`
+- `{locataireNaissance}`, `{locataireNationalite}`, `{locataireProfession}`, `{locatairePieceIdentite}`
+- `{bienPieces}`, `{bienSurface}`, `{bienEtage}`
 
-- `{receiptNumber}`, `{contractNumber}`, `{paymentDate}`
-- `{tenantName}`, `{ownerName}`
-- `{propertyTitle}`, `{propertyAddress}`
-- `{amount}`, `{method}`, `{transactionId}`
-- `{receiptMentions}`, `{documentDate}`
+Vous pouvez les modifier directement dans le `.docx` telecharge.
 
-## Telechargement dans l'application
+## Telechargement
 
-- Contrat Word : `/api/contracts/[id]/download?format=docx`
-- Quittance Word : `/api/payments/[id]/receipt?format=docx`
-- Bouton **Remplir depuis modele Word** sur la fiche contrat (manager)
+- Word : `/api/contracts/[id]/download?format=docx`
+- PDF : `/api/contracts/[id]/download`
+
+## Quittance
+
+Fichier `quittance-loyer.docx` — voir balises `{receiptNumber}`, `{tenantName}`, `{amount}`, etc.

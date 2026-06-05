@@ -144,7 +144,7 @@ export async function POST(request: Request) {
 
         const managerProfile = await prisma.user.findUnique({
             where: { id: user.id },
-            select: { name: true, email: true, phone: true },
+            select: { name: true, email: true, phone: true, paymentMomoNumber: true },
         })
 
         const offerType = property.offerType === 'SALE' ? 'SALE' : 'RENTAL'
@@ -159,6 +159,7 @@ export async function POST(request: Request) {
                   ownerName: managerProfile?.name || managerProfile?.email || user.email,
                   ownerEmail: managerProfile?.email || user.email,
                   ownerPhone: managerProfile?.phone || '',
+                  ownerMomoNumber: managerProfile?.paymentMomoNumber,
                   tenantName: tenant.name || tenant.email,
                   tenantEmail: tenant.email,
                   tenantPhone: tenant.phone || '',
@@ -245,6 +246,7 @@ export async function POST(request: Request) {
                         ownerName: managerProfile?.name || managerProfile?.email || user.email,
                         ownerEmail: managerProfile?.email || user.email,
                         ownerPhone: managerProfile?.phone || '',
+                        ownerMomoNumber: managerProfile?.paymentMomoNumber,
                         tenantName: tenant.name || tenant.email,
                         tenantEmail: tenant.email,
                         tenantPhone: tenant.phone || '',

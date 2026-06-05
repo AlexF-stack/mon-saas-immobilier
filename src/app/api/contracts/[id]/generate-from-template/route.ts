@@ -5,10 +5,9 @@ import { canManageProperty } from '@/lib/rbac'
 import { enforceCsrf } from '@/lib/csrf'
 import {
   buildContractPlainTextFromTemplate,
-  buildContractWordPayload,
+  mapContractRecordToWordData,
   renderContractWordDocument,
   templateExists,
-  type ContractWordData,
 } from '@/lib/word-documents'
 
 export const runtime = 'nodejs'
@@ -35,7 +34,15 @@ export async function POST(
       include: {
         property: {
           include: {
-            manager: { select: { id: true, name: true, email: true, phone: true } },
+            manager: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                paymentMomoNumber: true,
+              },
+            },
           },
         },
         tenant: { select: { id: true, name: true, email: true, phone: true } },
@@ -60,29 +67,7 @@ export async function POST(
       )
     }
 
-    const wordData: ContractWordData = {
-      contractNumber: contract.contractNumber,
-      contractType: contract.contractType === 'SALE' ? 'SALE' : 'RENTAL',
-      ownerName:
-        contract.property.manager?.name || contract.property.manager?.email || 'Proprietaire',
-      ownerEmail: contract.property.manager?.email || '',
-      ownerPhone: contract.property.manager?.phone || '',
-      tenantName: contract.tenant.name || contract.tenant.email,
-      tenantEmail: contract.tenant.email,
-      tenantPhone: contract.tenant.phone || '',
-      propertyTitle: contract.property.title,
-      propertyAddress: contract.property.address,
-      propertyCity: contract.property.city || '',
-      propertyType: contract.property.propertyType,
-      startDate: contract.startDate,
-      endDate: contract.endDate,
-      rentAmount: contract.rentAmount,
-      depositAmount: contract.depositAmount,
-      clauses: contract.contractText || contract.rentalTermsSnapshot || '',
-      ownerSignedAt: contract.ownerSignedAt,
-      tenantSignedAt: contract.tenantSignedAt,
-    }
-
+    const wordData = mapContractRecordToWordData(contract)
     const contractText = buildContractPlainTextFromTemplate(wordData)
 
     const updated = await prisma.contract.update({
