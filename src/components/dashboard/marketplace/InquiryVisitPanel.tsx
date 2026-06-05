@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import { PlusIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,7 +17,8 @@ export type InquiryDetail = {
   visitNotes: string | null
   preferredVisitDate: string | null
   requesterName: string
-  property: { title: string }
+  requesterEmail?: string
+  property: { id: string; title: string }
 }
 
 const STAGE_OPTIONS = [
@@ -50,6 +53,8 @@ function toDateTimeLocalValue(iso: string | null): string {
 }
 
 export function InquiryVisitPanel({ inquiryId, canManage, onUpdated }: InquiryVisitPanelProps) {
+  const router = useRouter()
+  const pathname = usePathname()
   const [detail, setDetail] = useState<InquiryDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -114,6 +119,20 @@ export function InquiryVisitPanel({ inquiryId, canManage, onUpdated }: InquiryVi
     } finally {
       setSaving(false)
     }
+  }
+
+  function handleCreateContract() {
+    if (!detail?.property.id) return
+
+    const dashboardIndex = pathname?.indexOf('/dashboard') ?? -1
+    const dashboardPath =
+      pathname && dashboardIndex >= 0 ? pathname.slice(0, dashboardIndex + '/dashboard'.length) : '/dashboard'
+    const params = new URLSearchParams({
+      inquiryId,
+      propertyId: detail.property.id,
+    })
+
+    router.push(`${dashboardPath}/contracts/new?${params.toString()}`)
   }
 
   if (loading) {
@@ -199,9 +218,17 @@ export function InquiryVisitPanel({ inquiryId, canManage, onUpdated }: InquiryVi
       </div>
 
       {canManage ? (
-        <Button type="button" size="sm" disabled={saving} onClick={() => void save()}>
-          {saving ? 'Enregistrement...' : 'Enregistrer visite et pipeline'}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {visitStatus === 'COMPLETED' ? (
+            <Button type="button" size="sm" variant="secondary" onClick={handleCreateContract}>
+              <PlusIcon className="mr-1 size-4" />
+              Creer le bail / contrat
+            </Button>
+          ) : null}
+          <Button type="button" size="sm" disabled={saving} onClick={() => void save()}>
+            {saving ? 'Enregistrement...' : 'Enregistrer visite et pipeline'}
+          </Button>
+        </div>
       ) : null}
     </section>
   )
