@@ -12,6 +12,8 @@ type ContractLifecycleActionsProps = {
   contractId: string
   contractType: string
   workflowState: string
+  ownerPartyCompleted?: boolean
+  tenantPartyCompleted?: boolean
   documentSource: string | null
   fileUrl: string | null
   contractText: string | null
@@ -84,8 +86,12 @@ export function ContractLifecycleActions(props: ContractLifecycleActionsProps) {
   }, [source, contractFileUrl, contractText])
 
   const isSubmitted = Boolean(props.submittedAt)
-  const canSubmit = props.canManage && !isSubmitted && (hasPersistedDocument || hasLocalDocument)
-  const canSignNow = props.canSign && isSubmitted
+  const isRental = props.contractType === 'RENTAL'
+  const ownerPartyOk = !isRental || props.ownerPartyCompleted !== false
+  const tenantPartyOk = !isRental || props.tenantPartyCompleted !== false
+  const canSubmit =
+    props.canManage && !isSubmitted && (hasPersistedDocument || hasLocalDocument) && ownerPartyOk
+  const canSignNow = props.canSign && isSubmitted && tenantPartyOk
 
   async function sendPayload(payload: Record<string, unknown>) {
     setLoading(true)
@@ -168,6 +174,12 @@ export function ContractLifecycleActions(props: ContractLifecycleActionsProps) {
   }
 
   async function handleGenerateFromWordTemplate() {
+    if (isRental && !ownerPartyOk) {
+      setError(
+        'Completez d abord le formulaire bailleur (Article 1 et 2) avant de generer le contrat Word.'
+      )
+      return
+    }
     setLoading(true)
     setError('')
     setMessage('')
@@ -300,7 +312,7 @@ export function ContractLifecycleActions(props: ContractLifecycleActionsProps) {
               type="button"
               size="sm"
               variant="secondary"
-              disabled={loading || isSubmitted}
+              disabled={loading || isSubmitted || (isRental && !ownerPartyOk)}
               onClick={() => void handleGenerateFromWordTemplate()}
             >
               Remplir depuis modele Word
@@ -338,7 +350,9 @@ export function ContractLifecycleActions(props: ContractLifecycleActionsProps) {
           </div>
           {!canSubmit && !isSubmitted ? (
             <p className="text-xs text-amber-700 dark:text-amber-300">
-              Renseignez le texte du contrat (ou l&apos;URL PDF), puis enregistrez avant de soumettre.
+              {!ownerPartyOk
+                ? 'Completez d abord le formulaire d identite bailleur et les details du bien (ci-dessus).'
+                : 'Renseignez le texte du contrat (ou l URL PDF), puis enregistrez avant de soumettre.'}
             </p>
           ) : null}
         </div>
@@ -357,6 +371,10 @@ export function ContractLifecycleActions(props: ContractLifecycleActionsProps) {
       ) : props.canSign && !isSubmitted ? (
         <p className="text-xs text-muted-foreground">
           La signature sera disponible apres soumission du contrat par le proprietaire.
+        </p>
+      ) : props.canSign && isSubmitted && !tenantPartyOk ? (
+        <p className="text-xs text-amber-700">
+          Completez votre formulaire d identite locataire avant de signer.
         </p>
       ) : null}
 

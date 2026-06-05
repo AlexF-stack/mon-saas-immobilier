@@ -9,6 +9,7 @@ import {
   renderContractWordDocument,
   templateExists,
 } from '@/lib/word-documents'
+import { buildSnapshot, validateOwnerPartyProfile } from '@/lib/party-profile'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -65,6 +66,23 @@ export async function POST(
         { error: 'Modele Word introuvable. Executez node scripts/generate-word-templates.mjs' },
         { status: 503 }
       )
+    }
+
+    if (contract.contractType === 'RENTAL') {
+      const missing = validateOwnerPartyProfile(buildSnapshot(contract), {
+        name: contract.property.manager?.name,
+        phone: contract.property.manager?.phone,
+        email: contract.property.manager?.email,
+      })
+      if (missing.length > 0) {
+        return NextResponse.json(
+          {
+            error: `Completez d abord les informations bailleur et bien (Article 1 et 2) : ${missing.join(', ')}`,
+            missingFields: missing,
+          },
+          { status: 409 }
+        )
+      }
     }
 
     const wordData = mapContractRecordToWordData(contract)

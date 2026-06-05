@@ -12,14 +12,29 @@ export type ContractWordData = {
   ownerEmail: string
   ownerPhone: string
   ownerMomoNumber?: string | null
+  ownerBirthDate?: Date | null
+  ownerBirthPlace?: string | null
+  ownerNationality?: string | null
+  ownerProfession?: string | null
+  ownerIdDocumentNumber?: string | null
+  ownerAddress?: string | null
   tenantName: string
   tenantEmail: string
   tenantPhone: string
+  tenantBirthDate?: Date | null
+  tenantBirthPlace?: string | null
+  tenantNationality?: string | null
+  tenantProfession?: string | null
+  tenantIdDocumentNumber?: string | null
+  tenantAddress?: string | null
   propertyTitle: string
   propertyAddress: string
   propertyCity: string
   propertyType: string
   propertyDescription?: string | null
+  propertyRoomCount?: number | null
+  propertySurfaceSqm?: number | null
+  propertyFloor?: string | null
   startDate: Date
   endDate: Date
   rentAmount: number
@@ -32,15 +47,27 @@ export type ContractWordData = {
 export type ReceiptWordData = {
   receiptNumber: string
   contractNumber: string
-  tenantName: string
-  ownerName: string
-  propertyTitle: string
-  propertyAddress: string
+  emissionDate: Date
+  bailleurNom: string
+  bailleurAdresse: string
+  bailleurTelephone: string
+  locataireNom: string
+  locataireAdresse: string
+  locataireTelephone: string
+  bienAdresse: string
+  bienType: string
+  bienPieces: string
+  montantLoyer: number
+  montantCharges: number
+  montantAutres: number
+  autresLibelle: string
+  montantTotal: number
+  periodeDebut: Date
+  periodeFin: Date
+  modePaiement: string
+  lieuSignature: string
   paymentDate: Date
-  amount: number
-  method: string
   transactionId: string
-  receiptMentions: string
 }
 
 function formatDateFr(value: Date) {
@@ -84,6 +111,19 @@ function depositMonths(rentAmount: number, depositAmount: number) {
   return String(Math.max(1, Math.round(depositAmount / rentAmount)))
 }
 
+function fieldOr(value: string | null | undefined, fallback = A_COMPLETER) {
+  return value?.trim() ? value.trim() : fallback
+}
+
+function formatBirthLine(date?: Date | null, place?: string | null) {
+  if (date && place?.trim()) {
+    return `${formatDateFr(date)} a ${place.trim()}`
+  }
+  if (date) return formatDateFr(date)
+  if (place?.trim()) return place.trim()
+  return A_COMPLETER
+}
+
 function buildPaymentModeLabel(momoNumber?: string | null) {
   if (momoNumber?.trim()) {
     return `Mobile Money (numero : ${momoNumber.trim()}) — ou virement bancaire selon accord.`
@@ -103,29 +143,31 @@ export function buildContractWordPayload(data: ContractWordData): Record<string,
     documentDate: formatDateFr(new Date()),
 
     bailleurNom: data.ownerName,
-    bailleurNaissance: A_COMPLETER,
-    bailleurNationalite: A_COMPLETER,
-    bailleurProfession: A_COMPLETER,
-    bailleurAdresse: data.propertyCity ? `${data.propertyCity} (Benin)` : A_COMPLETER,
-    bailleurPieceIdentite: A_COMPLETER,
+    bailleurNaissance: formatBirthLine(data.ownerBirthDate, data.ownerBirthPlace),
+    bailleurNationalite: fieldOr(data.ownerNationality),
+    bailleurProfession: fieldOr(data.ownerProfession),
+    bailleurAdresse: fieldOr(data.ownerAddress, data.propertyCity ? `${data.propertyCity} (Benin)` : A_COMPLETER),
+    bailleurPieceIdentite: fieldOr(data.ownerIdDocumentNumber),
     bailleurEmail: data.ownerEmail || A_COMPLETER,
     bailleurTelephone: data.ownerPhone || A_COMPLETER,
 
     locataireNom: data.tenantName,
-    locataireNaissance: A_COMPLETER,
-    locataireNationalite: A_COMPLETER,
-    locataireProfession: A_COMPLETER,
-    locataireAdresse: bienAdresse || A_COMPLETER,
-    locatairePieceIdentite: A_COMPLETER,
+    locataireNaissance: formatBirthLine(data.tenantBirthDate, data.tenantBirthPlace),
+    locataireNationalite: fieldOr(data.tenantNationality),
+    locataireProfession: fieldOr(data.tenantProfession),
+    locataireAdresse: fieldOr(data.tenantAddress, bienAdresse || A_COMPLETER),
+    locatairePieceIdentite: fieldOr(data.tenantIdDocumentNumber),
     locataireTelephone: data.tenantPhone || A_COMPLETER,
     locataireEmail: data.tenantEmail || A_COMPLETER,
 
     bienAdresse: bienAdresse || A_COMPLETER,
     bienTitre: data.propertyTitle || A_COMPLETER,
     bienType: formatPropertyType(data.propertyType),
-    bienPieces: A_COMPLETER,
-    bienSurface: A_COMPLETER,
-    bienEtage: A_COMPLETER,
+    bienPieces:
+      data.propertyRoomCount != null ? String(data.propertyRoomCount) : A_COMPLETER,
+    bienSurface:
+      data.propertySurfaceSqm != null ? String(data.propertySurfaceSqm) : A_COMPLETER,
+    bienEtage: fieldOr(data.propertyFloor),
     bienUsage: 'habitation',
 
     dureeMois: String(dureeMois),
@@ -178,17 +220,46 @@ export function buildReceiptWordPayload(data: ReceiptWordData): Record<string, s
   return {
     receiptNumber: data.receiptNumber,
     contractNumber: data.contractNumber || A_COMPLETER,
+    emissionDate: formatDateFr(data.emissionDate),
     documentDate: formatDateFr(new Date()),
     paymentDate: formatDateFr(data.paymentDate),
-    tenantName: data.tenantName,
-    ownerName: data.ownerName,
-    propertyTitle: data.propertyTitle,
-    propertyAddress: data.propertyAddress,
-    amount: formatAmountFr(data.amount),
-    method: data.method,
+    bailleurNom: data.bailleurNom,
+    bailleurAdresse: data.bailleurAdresse,
+    bailleurTelephone: data.bailleurTelephone,
+    locataireNom: data.locataireNom,
+    locataireAdresse: data.locataireAdresse,
+    locataireTelephone: data.locataireTelephone,
+    bienAdresse: data.bienAdresse,
+    bienType: data.bienType,
+    bienPieces: data.bienPieces,
+    montantLoyer: formatAmountFr(data.montantLoyer),
+    montantCharges: formatAmountFr(data.montantCharges),
+    montantAutres: formatAmountFr(data.montantAutres),
+    autresLibelle: data.autresLibelle,
+    montantTotal: formatAmountFr(data.montantTotal),
+    periodeDebut: formatDateFr(data.periodeDebut),
+    periodeFin: formatDateFr(data.periodeFin),
+    modePaiement: data.modePaiement,
+    lieuSignature: data.lieuSignature,
+    dateSignatureBailleur: formatDateFr(data.paymentDate),
+    dateSignatureLocataire: formatDateFr(data.paymentDate),
+    ligneSignatureBailleur: '_______________________________',
+    ligneSignatureLocataire: '_______________________________',
+    tenantName: data.locataireNom,
+    ownerName: data.bailleurNom,
+    propertyTitle: data.bienAdresse,
+    propertyAddress: data.bienAdresse,
+    amount: formatAmountFr(data.montantTotal),
+    method: data.modePaiement,
     transactionId: data.transactionId,
-    receiptMentions: data.receiptMentions?.trim() || 'Paiement recu et constate.',
+    receiptMentions: 'Paiement recu et constate.',
   }
+}
+
+export function monthPeriodAround(date: Date) {
+  const start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1))
+  const end = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0))
+  return { start, end }
 }
 
 /** Resume pour le workflow applicatif (soumission / signature). */
@@ -283,6 +354,21 @@ type ContractRecordForWord = {
   depositAmount: number
   contractText: string | null
   rentalTermsSnapshot: string | null
+  ownerBirthDate?: Date | null
+  ownerBirthPlace?: string | null
+  ownerNationality?: string | null
+  ownerProfession?: string | null
+  ownerIdDocumentNumber?: string | null
+  ownerAddress?: string | null
+  tenantBirthDate?: Date | null
+  tenantBirthPlace?: string | null
+  tenantNationality?: string | null
+  tenantProfession?: string | null
+  tenantIdDocumentNumber?: string | null
+  tenantAddress?: string | null
+  propertyRoomCount?: number | null
+  propertySurfaceSqm?: number | null
+  propertyFloor?: string | null
   ownerSignedAt?: Date | null
   tenantSignedAt?: Date | null
   property: {
@@ -291,6 +377,9 @@ type ContractRecordForWord = {
     city: string | null
     propertyType: string
     description?: string | null
+    roomCount?: number | null
+    surfaceSqm?: number | null
+    floor?: string | null
     manager?: {
       name: string | null
       email: string | null
@@ -305,6 +394,77 @@ type ContractRecordForWord = {
   }
 }
 
+function formatPaymentMethodLabel(method: string) {
+  switch (method) {
+    case 'MOMO_MTN':
+      return 'Mobile Money MTN'
+    case 'MOOV':
+      return 'Mobile Money Moov'
+    case 'CASH':
+      return 'Especes'
+    default:
+      return method || A_COMPLETER
+  }
+}
+
+type PaymentForReceipt = {
+  amount: number
+  method: string
+  updatedAt: Date
+  transactionId: string | null
+  id: string
+  type: string
+}
+
+export function mapPaymentToReceiptWordData(
+  payment: PaymentForReceipt,
+  contract: ContractRecordForWord,
+  receiptNumber: string,
+  emissionDate: Date
+): ReceiptWordData {
+  const wordContract = mapContractRecordToWordData(contract)
+  const period = monthPeriodAround(payment.updatedAt)
+  const rent = contract.rentAmount
+  const isDeposit = payment.type === 'DEPOSIT'
+  const montantLoyer = isDeposit ? 0 : Math.min(payment.amount, rent)
+  const montantCharges = isDeposit ? 0 : Math.max(0, payment.amount - rent)
+  const montantAutres = isDeposit ? payment.amount : 0
+  const autresLibelle = isDeposit ? 'Caution / depot de garantie' : ''
+
+  const bienAdresse = [contract.property.address, contract.property.city].filter(Boolean).join(', ')
+
+  return {
+    receiptNumber,
+    contractNumber: contract.contractNumber,
+    emissionDate,
+    bailleurNom: wordContract.ownerName,
+    bailleurAdresse: fieldOr(contract.ownerAddress ?? wordContract.ownerAddress),
+    bailleurTelephone: wordContract.ownerPhone || A_COMPLETER,
+    locataireNom: wordContract.tenantName,
+    locataireAdresse: fieldOr(contract.tenantAddress ?? wordContract.tenantAddress),
+    locataireTelephone: wordContract.tenantPhone || A_COMPLETER,
+    bienAdresse: bienAdresse || A_COMPLETER,
+    bienType: formatPropertyType(contract.property.propertyType),
+    bienPieces:
+      contract.propertyRoomCount != null
+        ? String(contract.propertyRoomCount)
+        : contract.property.roomCount != null
+          ? String(contract.property.roomCount)
+          : A_COMPLETER,
+    montantLoyer,
+    montantCharges,
+    montantAutres,
+    autresLibelle,
+    montantTotal: payment.amount,
+    periodeDebut: period.start,
+    periodeFin: period.end,
+    modePaiement: formatPaymentMethodLabel(payment.method),
+    lieuSignature: contract.property.city || 'Cotonou',
+    paymentDate: payment.updatedAt,
+    transactionId: payment.transactionId ?? payment.id,
+  }
+}
+
 export function mapContractRecordToWordData(contract: ContractRecordForWord): ContractWordData {
   const manager = contract.property.manager
   return {
@@ -314,14 +474,29 @@ export function mapContractRecordToWordData(contract: ContractRecordForWord): Co
     ownerEmail: manager?.email || '',
     ownerPhone: manager?.phone || '',
     ownerMomoNumber: manager?.paymentMomoNumber,
+    ownerBirthDate: contract.ownerBirthDate,
+    ownerBirthPlace: contract.ownerBirthPlace,
+    ownerNationality: contract.ownerNationality,
+    ownerProfession: contract.ownerProfession,
+    ownerIdDocumentNumber: contract.ownerIdDocumentNumber,
+    ownerAddress: contract.ownerAddress,
     tenantName: contract.tenant.name || contract.tenant.email,
     tenantEmail: contract.tenant.email,
     tenantPhone: contract.tenant.phone || '',
+    tenantBirthDate: contract.tenantBirthDate,
+    tenantBirthPlace: contract.tenantBirthPlace,
+    tenantNationality: contract.tenantNationality,
+    tenantProfession: contract.tenantProfession,
+    tenantIdDocumentNumber: contract.tenantIdDocumentNumber,
+    tenantAddress: contract.tenantAddress,
     propertyTitle: contract.property.title,
     propertyAddress: contract.property.address,
     propertyCity: contract.property.city || '',
     propertyType: contract.property.propertyType,
     propertyDescription: contract.property.description,
+    propertyRoomCount: contract.propertyRoomCount ?? contract.property.roomCount,
+    propertySurfaceSqm: contract.propertySurfaceSqm ?? contract.property.surfaceSqm,
+    propertyFloor: contract.propertyFloor ?? contract.property.floor,
     startDate: contract.startDate,
     endDate: contract.endDate,
     rentAmount: contract.rentAmount,

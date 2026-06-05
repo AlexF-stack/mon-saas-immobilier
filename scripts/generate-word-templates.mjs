@@ -7,6 +7,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import PizZip from 'pizzip'
 import { beninBailHabitationLines } from './benin-bail-habitation-lines.mjs'
+import { beninQuittanceLines } from './benin-quittance-lines.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const templatesDir = path.join(__dirname, '..', 'templates')
@@ -88,28 +89,7 @@ const contractSale = [
   'Signatures : proprietaire {ownerSignatureDate} / acheteur {tenantSignatureDate}',
 ]
 
-const receipt = [
-  'QUITTANCE DE LOYER',
-  '',
-  'Reference : {receiptNumber}',
-  'Contrat : {contractNumber}',
-  'Date de paiement : {paymentDate}',
-  '',
-  'Locataire : {tenantName}',
-  'Proprietaire : {ownerName}',
-  '',
-  'Bien : {propertyTitle}',
-  'Adresse : {propertyAddress}',
-  '',
-  'Montant paye : {amount} FCFA',
-  'Mode de paiement : {method}',
-  'Reference transaction : {transactionId}',
-  '',
-  'Mentions :',
-  '{receiptMentions}',
-  '',
-  'Document emis le {documentDate}',
-]
+const receipt = beninQuittanceLines
 
 if (!fs.existsSync(templatesDir)) {
   fs.mkdirSync(templatesDir, { recursive: true })

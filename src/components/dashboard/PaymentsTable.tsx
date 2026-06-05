@@ -88,14 +88,24 @@ export function PaymentsTable({ payments }: PaymentsTableProps) {
           header: 'Quittance',
           render: (row) =>
                 row.status === 'COMPLETED' ? (
-              <a
-                href={`/api/payments/${row.id}/receipt`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-blue-600 underline underline-offset-2 opacity-100 transition-opacity duration-150 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 dark:text-blue-400"
-              >
-                PDF
-              </a>
+              <span className="flex flex-col gap-1">
+                <a
+                  href={`/api/payments/${row.id}/receipt`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 underline underline-offset-2 opacity-100 transition-opacity duration-150 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 dark:text-blue-400"
+                >
+                  PDF
+                </a>
+                <a
+                  href={`/api/payments/${row.id}/receipt?format=docx`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 underline underline-offset-2 opacity-100 transition-opacity duration-150 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 dark:text-blue-400"
+                >
+                  Word
+                </a>
+              </span>
             ) : (
               <span className="text-xs text-muted-foreground">-</span>
             ),

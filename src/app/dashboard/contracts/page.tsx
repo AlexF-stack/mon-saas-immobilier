@@ -16,6 +16,7 @@ import { ServerPager } from '@/components/dashboard/ServerPager'
 import { buildPageHref, normalizeEnum, normalizePage, normalizeText } from '@/lib/dashboard-list-query'
 import { ManualReminderButton } from '@/components/dashboard/contracts/ManualReminderButton'
 import { ContractLifecycleActions } from '@/components/dashboard/contracts/ContractLifecycleActions'
+import { ContractPartyProfileForm } from '@/components/dashboard/contracts/ContractPartyProfileForm'
 import { ContractWorkflowTimeline } from '@/components/dashboard/contracts/ContractWorkflowTimeline'
 import { ContractInstallmentsTable } from '@/components/dashboard/contracts/ContractInstallmentsTable'
 
@@ -245,7 +246,14 @@ export default async function ContractsPage(props: { searchParams: Promise<Contr
       ) : (
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-            {withState.map((contract) => (
+            {withState.map((contract) => {
+              const canManageContract =
+                user.role === 'ADMIN' ||
+                (user.role === 'MANAGER' && contract.property.managerId === user.id)
+              const isTenantOnContract =
+                user.role === 'TENANT' && contract.tenantId === user.id
+
+              return (
               <Card key={contract.id} className="overflow-hidden">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-3">
@@ -283,10 +291,42 @@ export default async function ContractsPage(props: { searchParams: Promise<Contr
                       {contract.rentAmount.toLocaleString('fr-FR')} FCFA
                     </p>
                   </div>
+                  {contract.contractType === 'RENTAL' &&
+                  canManageContract &&
+                  contract.workflowState === 'DRAFT' ? (
+                    <ContractPartyProfileForm
+                      contractId={contract.id}
+                      role="owner"
+                      canEdit
+                      title="Article 1 — Bailleur & Article 2 — Bien loué"
+                      description="Identique au contrat de bail d'habitation (Bénin). À compléter avant soumission."
+                      submittedAt={contract.submittedAt ? contract.submittedAt.toISOString() : null}
+                    />
+                  ) : null}
+                  {contract.contractType === 'RENTAL' &&
+                  isTenantOnContract &&
+                  contract.submittedAt &&
+                  !contract.tenantSignedAt &&
+                  contract.workflowState !== 'DRAFT' ? (
+                    <ContractPartyProfileForm
+                      contractId={contract.id}
+                      role="tenant"
+                      canEdit
+                      title="Article 1 — Locataire"
+                      description="Mêmes champs que sur le contrat de bail. À compléter avant signature."
+                      submittedAt={contract.submittedAt.toISOString()}
+                    />
+                  ) : null}
                   <ContractLifecycleActions
                     contractId={contract.id}
                     contractType={contract.contractType}
                     workflowState={contract.workflowState}
+                    ownerPartyCompleted={
+                      contract.contractType !== 'RENTAL' || Boolean(contract.ownerPartyCompletedAt)
+                    }
+                    tenantPartyCompleted={
+                      contract.contractType !== 'RENTAL' || Boolean(contract.tenantPartyCompletedAt)
+                    }
                     documentSource={contract.documentSource}
                     fileUrl={contract.fileUrl}
                     contractText={contract.contractText}
@@ -296,7 +336,7 @@ export default async function ContractsPage(props: { searchParams: Promise<Contr
                     submittedAt={contract.submittedAt ? contract.submittedAt.toISOString() : null}
                     ownerSignedAt={contract.ownerSignedAt ? contract.ownerSignedAt.toISOString() : null}
                     tenantSignedAt={contract.tenantSignedAt ? contract.tenantSignedAt.toISOString() : null}
-                    canManage={user.role === 'ADMIN' || (user.role === 'MANAGER' && contract.property.managerId === user.id)}
+                    canManage={canManageContract}
                     canSign={
                       Boolean(contract.submittedAt) &&
                       ((user.role === 'ADMIN' ||
@@ -353,7 +393,7 @@ export default async function ContractsPage(props: { searchParams: Promise<Contr
                   ) : null}
                 </CardContent>
               </Card>
-            ))}
+            )})}
           </div>
           <ServerPager page={clampedPage} totalPages={totalPages} buildHref={buildHref} />
         </div>

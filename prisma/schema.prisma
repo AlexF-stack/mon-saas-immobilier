@@ -70,6 +70,12 @@ model User {
   paymentMomoProvider String?
   paymentCardLink String?
   paymentInstructions String?
+  birthDate DateTime?
+  birthPlace String?
+  nationality String?
+  profession String?
+  idDocumentNumber String?
+  currentAddress String?
   lastLoginAt DateTime?
   role      String   @default("TENANT") // ADMIN, MANAGER, TENANT
   isSuspended Boolean @default(false)
@@ -132,6 +138,9 @@ model Property {
   description String?
   city        String?
   address     String
+  roomCount   Int?
+  surfaceSqm  Float?
+  floor       String?
   price       Float
   offerType   String   @default("RENT") // RENT, SALE
   propertyType String  @default("APARTMENT") // APARTMENT, HOUSE, STUDIO, COMMERCIAL, LAND
@@ -207,6 +216,23 @@ model Contract {
   contractText  String?
   receiptFileUrl String?
   receiptText   String?
+  ownerBirthDate DateTime?
+  ownerBirthPlace String?
+  ownerNationality String?
+  ownerProfession String?
+  ownerIdDocumentNumber String?
+  ownerAddress String?
+  tenantBirthDate DateTime?
+  tenantBirthPlace String?
+  tenantNationality String?
+  tenantProfession String?
+  tenantIdDocumentNumber String?
+  tenantAddress String?
+  propertyRoomCount Int?
+  propertySurfaceSqm Float?
+  propertyFloor String?
+  ownerPartyCompletedAt DateTime?
+  tenantPartyCompletedAt DateTime?
   submittedAt   DateTime?
   ownerSignedAt DateTime?
   tenantSignedAt DateTime?

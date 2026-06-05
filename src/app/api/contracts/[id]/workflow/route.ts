@@ -6,6 +6,11 @@ import { canManageProperty } from '@/lib/rbac'
 import { enforceCsrf } from '@/lib/csrf'
 import { createSystemLog } from '@/lib/audit'
 import { createAppNotification } from '@/lib/app-notifications'
+import {
+  buildSnapshot as buildPartySnapshot,
+  validateOwnerPartyProfile,
+  validateTenantPartyProfile,
+} from '@/lib/party-profile'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -64,6 +69,9 @@ export async function POST(
             managerId: true,
             offerType: true,
             title: true,
+            manager: {
+              select: { name: true, email: true, phone: true },
+            },
           },
         },
         tenant: {
@@ -71,6 +79,7 @@ export async function POST(
             id: true,
             name: true,
             email: true,
+            phone: true,
           },
         },
       },
@@ -155,6 +164,23 @@ export async function POST(
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
 
+      if (contract.contractType === 'RENTAL') {
+        const ownerMissing = validateOwnerPartyProfile(buildPartySnapshot(contract), {
+          name: contract.property.manager?.name,
+          phone: contract.property.manager?.phone,
+          email: contract.property.manager?.email,
+        })
+        if (ownerMissing.length > 0) {
+          return NextResponse.json(
+            {
+              error: `Completez le profil bailleur (Article 1 et 2 du bail) avant soumission : ${ownerMissing.join(', ')}`,
+              missingFields: ownerMissing,
+            },
+            { status: 409 }
+          )
+        }
+      }
+
       const termsSnapshot = contract.rentalTermsSnapshot?.trim() ?? ''
       const hasDocument = Boolean(
         contract.fileUrl ||
@@ -217,6 +243,23 @@ export async function POST(
         },
         { status: 409 }
       )
+    }
+
+    if (isTenantCounterparty && contract.contractType === 'RENTAL') {
+      const tenantMissing = validateTenantPartyProfile(buildPartySnapshot(contract), {
+        name: contract.tenant.name,
+        phone: contract.tenant.phone,
+        email: contract.tenant.email,
+      })
+      if (tenantMissing.length > 0) {
+        return NextResponse.json(
+          {
+            error: `Completez votre profil locataire (Article 1 du bail) avant signature : ${tenantMissing.join(', ')}`,
+            missingFields: tenantMissing,
+          },
+          { status: 409 }
+        )
+      }
     }
 
     if (!canManage && !isTenantCounterparty) {
