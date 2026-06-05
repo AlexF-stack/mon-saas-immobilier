@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -64,10 +64,13 @@ export function PropertyForm({ locale, dashboardPathPrefix, initialData }: Prope
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [offerType, setOfferType] = useState<'RENT' | 'SALE'>((initialData?.offerType as 'RENT' | 'SALE') || 'RENT')
+  const [landDocumentType, setLandDocumentType] = useState('TITLE_DEED')
   const dashboardPath = dashboardPathPrefix ?? (locale ? `/${locale}/dashboard` : '/dashboard')
   const isEdit = Boolean(initialData)
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  const landDocOptions = Object.entries(LAND_DOCUMENT_TYPE_LABELS)
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setLoading(true)
     setError('')
@@ -86,7 +89,7 @@ export function PropertyForm({ locale, dashboardPathPrefix, initialData }: Prope
       return
     }
 
-    if (!isEdit && selectedLandDocs.length < MIN_LAND_DOCUMENTS) {
+    if (!isEdit && offerType === 'SALE' && selectedLandDocs.length < MIN_LAND_DOCUMENTS) {
       setError(`Ajoute au moins ${MIN_LAND_DOCUMENTS} document foncier (PDF ou image).`)
       setLoading(false)
       return
@@ -225,42 +228,42 @@ export function PropertyForm({ locale, dashboardPathPrefix, initialData }: Prope
               </div>
             )}
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="landDocuments">Documents fonciers</Label>
-            {!isEdit ? (
-              <>
-                <Select name="landDocumentType" defaultValue="TITLE_DEED">
-                  <SelectTrigger id="landDocumentType">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(LAND_DOCUMENT_TYPE_LABELS)
-                      .filter(([value]) => value !== 'TITLE_DEED' || offerType === 'SALE')
-                      .map(([value, label]) => (
+          {offerType === 'SALE' && (
+            <div className="space-y-2">
+              <Label htmlFor="landDocuments">Documents fonciers</Label>
+              {!isEdit ? (
+                <>
+                  <Select name="landDocumentType" key={offerType} value={landDocumentType} onValueChange={setLandDocumentType}>
+                    <SelectTrigger id="landDocumentType">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {landDocOptions.map(([value, label]) => (
                         <SelectItem key={value} value={value}>
                           {label}
                         </SelectItem>
                       ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  id="landDocuments"
-                  name="landDocuments"
-                  type="file"
-                  accept=".pdf,image/*"
-                  multiple
-                  required
-                />
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    id="landDocuments"
+                    name="landDocuments"
+                    type="file"
+                    accept=".pdf,image/*"
+                    multiple
+                    required
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    PDF ou image, max 5 Mo. Minimum {MIN_LAND_DOCUMENTS} document (titre, plan, etc.).
+                  </p>
+                </>
+              ) : (
                 <p className="text-[11px] text-muted-foreground">
-                  PDF ou image, max 5 Mo. Minimum {MIN_LAND_DOCUMENTS} document (titre, plan, etc.).
+                  Gerez les documents fonciers dans la section dediee ci-dessous.
                 </p>
-              </>
-            ) : (
-              <p className="text-[11px] text-muted-foreground">
-                Gerez les documents fonciers dans la section dediee ci-dessous.
-              </p>
-            )}
-          </div>
+              )}
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
             <Textarea
