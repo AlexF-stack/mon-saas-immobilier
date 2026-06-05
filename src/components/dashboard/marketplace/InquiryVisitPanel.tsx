@@ -23,27 +23,24 @@ export type InquiryDetail = {
 
 const STAGE_OPTIONS = [
   { value: 'LEAD', label: 'Prospect' },
-  { value: 'VISIT_SCHEDULED', label: 'Visite programmee' },
-  { value: 'QUALIFIED', label: 'Qualifie' },
-  { value: 'APPROVED', label: 'Approuve' },
-  { value: 'CONTRACT_DRAFT', label: 'Brouillon contrat' },
-  { value: 'CONTRACT_SENT', label: 'Contrat envoye' },
-  { value: 'CLOSED', label: 'Cloture' },
-]
+  { value: 'VISIT_SCHEDULED', label: 'Visite programmée' },
+  { value: 'QUALIFIED', label: 'Qualifié' },
+];
 
 const VISIT_STATUS_OPTIONS = [
-  { value: 'REQUESTED', label: 'Demandee' },
-  { value: 'SCHEDULED', label: 'Programmee' },
-  { value: 'CONFIRMED', label: 'Confirmee' },
-  { value: 'COMPLETED', label: 'Terminee' },
-  { value: 'CANCELLED', label: 'Annulee' },
-]
+  { value: 'REQUESTED', label: 'Demandée' },
+  { value: 'SCHEDULED', label: 'Planifiée' },
+  { value: 'COMPLETED', label: 'Complétée' },
+  { value: 'CANCELLED', label: 'Annulée' },
+  { value: 'RESCHEDULED', label: 'Replanifiée' },
+  { value: 'ABSENT', label: 'Absent' },
+];
+export type InquiryVisitPanelProps = {
+  inquiryId: string;
+  canManage: boolean;
+  onUpdated?: () => void;
+};
 
-type InquiryVisitPanelProps = {
-  inquiryId: string
-  canManage: boolean
-  onUpdated?: () => void
-}
 
 function toDateTimeLocalValue(iso: string | null): string {
   if (!iso) return ''
@@ -217,12 +214,95 @@ export function InquiryVisitPanel({ inquiryId, canManage, onUpdated }: InquiryVi
         />
       </div>
 
+
+  if (loading) {
+    return <p className="text-sm text-secondary p-4">Chargement du suivi visite...</p>
+  }
+
+  if (!detail) {
+    return null
+  }
+
+  return (
+    <section className="border-b border-border bg-surface/30 p-4 space-y-4">
+      <div>
+        <h4 className="text-sm font-semibold text-primary">Visite et pipeline</h4>
+        <p className="text-xs text-muted-foreground">
+          {detail.requesterName} · {detail.property.title}
+          {detail.preferredVisitDate
+            ? ` · Souhait : ${new Date(detail.preferredVisitDate).toLocaleDateString('fr-FR')}`
+            : ''}
+        </p>
+      </div>
+
+      {error ? <p className="text-xs text-rose-600">{error}</p> : null}
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label>Etape pipeline</Label>
+          <Select
+            value={lifecycleStage}
+            onValueChange={setLifecycleStage}
+            disabled={!canManage}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STAGE_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Statut visite</Label>
+          <Select value={visitStatus} onValueChange={setVisitStatus} disabled={!canManage}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {VISIT_STATUS_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="scheduledVisitAt">Date et heure de visite</Label>
+        <Input
+          id="scheduledVisitAt"
+          type="datetime-local"
+          value={scheduledVisitAt}
+          onChange={(e) => setScheduledVisitAt(e.target.value)}
+          disabled={!canManage}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="visitNotes">Notes visite</Label>
+        <Textarea
+          id="visitNotes"
+          value={visitNotes}
+          onChange={(e) => setVisitNotes(e.target.value)}
+          placeholder="Instructions d acces, contact sur place..."
+          disabled={!canManage}
+          className="min-h-[72px]"
+        />
+      </div>
+
       {canManage ? (
         <div className="flex flex-wrap gap-2">
           {visitStatus === 'COMPLETED' ? (
             <Button type="button" size="sm" variant="secondary" onClick={handleCreateContract}>
               <PlusIcon className="mr-1 size-4" />
-              Creer le bail / contrat
+              Créer le bail / contrat
             </Button>
           ) : null}
           <Button type="button" size="sm" disabled={saving} onClick={() => void save()}>
