@@ -37,6 +37,49 @@ function amountsMatch(expected: number, provided: number) {
     return Math.abs(expected - provided) < 0.01
 }
 
+function buildPaymentCollectionResponse(
+    contract: {
+        property: {
+            manager: {
+                paymentCollectionMode: string | null
+                paymentMomoNumber: string | null
+                paymentMomoProvider: string | null
+                paymentCardLink: string | null
+                paymentInstructions: string | null
+            } | null
+        }
+    },
+    directOwnerCollection: boolean
+) {
+    if (!directOwnerCollection) {
+        return { mode: 'PLATFORM' as const }
+    }
+    return {
+        mode: 'DIRECT' as const,
+        momoNumber: contract.property.manager?.paymentMomoNumber ?? null,
+        momoProvider: contract.property.manager?.paymentMomoProvider ?? null,
+        cardLink: contract.property.manager?.paymentCardLink ?? null,
+        instructions: contract.property.manager?.paymentInstructions ?? null,
+    }
+}
+
+function resumePendingMessage(
+    user: { id: string; role: string },
+    contract: { tenantId: string },
+    pending: { initiatedById: string | null; initiatedByRole: string | null }
+) {
+    if (user.id === pending.initiatedById) {
+        return 'Reprise de votre paiement en cours. Effectuez le transfert Mobile Money sur le compte du bailleur, puis attendez la confirmation.'
+    }
+    if (user.id === contract.tenantId) {
+        return 'Un paiement est deja en attente pour cette echeance. Effectuez le transfert Mobile Money sur le compte indique ci-dessous.'
+    }
+    if (user.role === 'MANAGER') {
+        return 'Paiement deja initie pour cette echeance. Le locataire peut finaliser le reglement sur son espace.'
+    }
+    return 'Paiement en attente recupere.'
+}
+
 export async function POST(request: Request) {
     try {
         const { correlationId, route } = getLogContextFromRequest(request)
@@ -241,31 +284,65 @@ export async function POST(request: Request) {
                 )
             }
 
-            const [completedInstallmentPayments, pendingInstallmentPayments] = await Promise.all([
-                prisma.payment.count({
+            const [completedInstallmentPayment, pendingInstallmentPayment] = await Promise.all([
+                prisma.payment.findFirst({
                     where: {
                         installmentId: installment.id,
                         status: 'COMPLETED',
                     },
+                    select: { id: true },
                 }),
-                prisma.payment.count({
+                prisma.payment.findFirst({
                     where: {
                         installmentId: installment.id,
                         status: 'PENDING',
                     },
+                    orderBy: { createdAt: 'desc' },
+                    select: {
+                        id: true,
+                        transactionId: true,
+                        status: true,
+                        amount: true,
+                        initiatedById: true,
+                        initiatedByRole: true,
+                    },
                 }),
             ])
 
-            if (completedInstallmentPayments > 0) {
+            if (completedInstallmentPayment) {
                 return NextResponse.json(
-                    { error: 'Installment already paid.' },
+                    { error: 'Cette echeance est deja payee.' },
                     { status: 409 }
                 )
             }
 
-            if (pendingInstallmentPayments > 0) {
+            const directOwnerCollection =
+                (contract.property.manager?.paymentCollectionMode ?? 'DIRECT') === 'DIRECT'
+
+            if (pendingInstallmentPayment) {
+                const canResume =
+                    user.id === contract.tenantId ||
+                    user.id === pendingInstallmentPayment.initiatedById ||
+                    user.role === 'ADMIN' ||
+                    (user.role === 'MANAGER' && contract.property.managerId === user.id)
+
+                if (canResume) {
+                    return NextResponse.json({
+                        paymentId: pendingInstallmentPayment.id,
+                        transactionId: pendingInstallmentPayment.transactionId,
+                        status: pendingInstallmentPayment.status,
+                        idempotent: true,
+                        resumed: true,
+                        message: resumePendingMessage(user, contract, pendingInstallmentPayment),
+                        paymentCollection: buildPaymentCollectionResponse(
+                            contract,
+                            directOwnerCollection
+                        ),
+                    })
+                }
+
                 return NextResponse.json(
-                    { error: 'A payment is already pending for this installment.' },
+                    { error: 'Un paiement est deja en cours pour cette echeance.' },
                     { status: 409 }
                 )
             }
@@ -304,6 +381,47 @@ export async function POST(request: Request) {
         const directOwnerCollection =
             (contract.property.manager?.paymentCollectionMode ?? 'DIRECT') === 'DIRECT'
 
+        if (contract.contractType !== 'RENTAL') {
+            const pendingSalePayment = await prisma.payment.findFirst({
+                where: {
+                    contractId: contract.id,
+                    status: 'PENDING',
+                    installmentId: null,
+                },
+                orderBy: { createdAt: 'desc' },
+                select: {
+                    id: true,
+                    transactionId: true,
+                    status: true,
+                    initiatedById: true,
+                    initiatedByRole: true,
+                },
+            })
+
+            if (pendingSalePayment) {
+                const canResume =
+                    user.id === contract.tenantId ||
+                    user.id === pendingSalePayment.initiatedById ||
+                    user.role === 'ADMIN' ||
+                    (user.role === 'MANAGER' && contract.property.managerId === user.id)
+
+                if (canResume) {
+                    return NextResponse.json({
+                        paymentId: pendingSalePayment.id,
+                        transactionId: pendingSalePayment.transactionId,
+                        status: pendingSalePayment.status,
+                        idempotent: true,
+                        resumed: true,
+                        message: resumePendingMessage(user, contract, pendingSalePayment),
+                        paymentCollection: buildPaymentCollectionResponse(
+                            contract,
+                            directOwnerCollection
+                        ),
+                    })
+                }
+            }
+        }
+
         if (
             directOwnerCollection &&
             payload.provider !== 'CARD' &&
@@ -333,8 +451,8 @@ export async function POST(request: Request) {
                     status: 'PENDING' as const,
                     message:
                         payload.provider === 'CARD'
-                            ? 'Open the owner card payment link and complete the transfer. Your payment intent has been recorded.'
-                            : 'Pay the owner directly on the configured Mobile Money account. Your payment intent has been recorded.',
+                            ? 'Ouvrez le lien de paiement par carte du proprietaire et finalisez le reglement. Votre intention de paiement a ete enregistree.'
+                            : 'Effectuez le transfert Mobile Money sur le compte du bailleur indique. Votre paiement est en attente de confirmation.',
                 }
                 : await requestPayment({
                     amount: payload.amount,
@@ -475,17 +593,7 @@ export async function POST(request: Request) {
             status: payment.status,
             idempotent: false,
             message: paymentResponse.message,
-            paymentCollection: directOwnerCollection
-                ? {
-                    mode: 'DIRECT',
-                    momoNumber: contract.property.manager?.paymentMomoNumber ?? null,
-                    momoProvider: contract.property.manager?.paymentMomoProvider ?? null,
-                    cardLink: contract.property.manager?.paymentCardLink ?? null,
-                    instructions: contract.property.manager?.paymentInstructions ?? null,
-                }
-                : {
-                    mode: 'PLATFORM',
-                },
+            paymentCollection: buildPaymentCollectionResponse(contract, directOwnerCollection),
         })
     } catch (error) {
         if (error instanceof z.ZodError) {

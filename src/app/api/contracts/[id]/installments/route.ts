@@ -175,6 +175,32 @@ export async function GET(
       },
     })
 
+    const installmentIds = installments.map((item) => item.id)
+    const pendingPayments =
+      installmentIds.length > 0
+        ? await prisma.payment.findMany({
+            where: {
+              contractId: contract.id,
+              status: 'PENDING',
+              installmentId: { in: installmentIds },
+            },
+            orderBy: { createdAt: 'desc' },
+            select: {
+              id: true,
+              installmentId: true,
+              amount: true,
+              transactionId: true,
+              status: true,
+            },
+          })
+        : []
+
+    const pendingByInstallmentId = new Map(
+      pendingPayments
+        .filter((item) => item.installmentId)
+        .map((item) => [item.installmentId as string, item])
+    )
+
     return NextResponse.json({
       contractId: contract.id,
       contractType: contract.contractType,
@@ -186,15 +212,26 @@ export async function GET(
         cardLink: contract.property.manager?.paymentCardLink ?? null,
         instructions: contract.property.manager?.paymentInstructions ?? null,
       },
-      installments: installments.map((item) => ({
-        id: item.id,
-        sequence: item.sequence,
-        dueDate: item.dueDate.toISOString(),
-        status: item.status,
-        baseAmount: Number(item.baseAmount),
-        penaltyAmount: Number(item.penaltyAmount),
-        totalDue: Number(item.totalDue),
-      })),
+      installments: installments.map((item) => {
+        const pending = pendingByInstallmentId.get(item.id)
+        return {
+          id: item.id,
+          sequence: item.sequence,
+          dueDate: item.dueDate.toISOString(),
+          status: item.status,
+          baseAmount: Number(item.baseAmount),
+          penaltyAmount: Number(item.penaltyAmount),
+          totalDue: Number(item.totalDue),
+          pendingPayment: pending
+            ? {
+                id: pending.id,
+                amount: Number(pending.amount),
+                transactionId: pending.transactionId,
+                status: pending.status,
+              }
+            : null,
+        }
+      }),
     })
   } catch (error) {
     console.error('Contract installments fetch error', error)

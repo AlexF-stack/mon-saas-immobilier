@@ -14,6 +14,23 @@ type InstallmentOption = {
   dueDate: string
   status: string
   totalDue: number
+  pendingPayment?: {
+    id: string
+    amount: number
+    transactionId: string | null
+    status: string
+  } | null
+}
+
+const PAYMENT_ERROR_FR: Record<string, string> = {
+  'A payment is already pending for this installment.':
+    'Un paiement est deja en attente pour cette echeance. Utilisez « Payer maintenant » pour afficher les instructions.',
+  'Installment already paid.': 'Cette echeance est deja payee.',
+  'Contract is not active for payment.': 'Ce contrat n est pas actif pour un paiement.',
+  'Contract must be submitted and signed by both parties before payment.':
+    'Le contrat doit etre soumis et signe par les deux parties avant le paiement.',
+  'Phone number is required for direct mobile money payments.':
+    'Le numero de telephone est obligatoire pour Mobile Money.',
 }
 
 type PaymentCollection = {
@@ -26,7 +43,7 @@ type PaymentCollection = {
 
 function toErrorMessage(status: number, errorPayload: unknown, fallback: string): string {
   if (typeof errorPayload === 'string' && errorPayload.trim()) {
-    return errorPayload
+    return PAYMENT_ERROR_FR[errorPayload] ?? errorPayload
   }
 
   if (Array.isArray(errorPayload) && typeof errorPayload[0]?.message === 'string') {
@@ -131,6 +148,14 @@ function PaymentForm() {
     const selected = installments.find((item) => item.id === installmentId)
     if (selected) {
       setAmount(String(Math.round(selected.totalDue)))
+      if (selected.pendingPayment) {
+        setSuccess(
+          `Paiement en attente (${selected.pendingPayment.id}). Effectuez le transfert Mobile Money sur le compte du bailleur, puis attendez la confirmation.`
+        )
+        setError('')
+      } else {
+        setSuccess('')
+      }
     }
   }, [contractType, installments, installmentId])
 
@@ -168,10 +193,20 @@ function PaymentForm() {
 
       if (res.ok) {
         const replayed = result.idempotent === true
+        const resumed = result.resumed === true
+        if (result.paymentCollection) {
+          setPaymentCollection(result.paymentCollection as PaymentCollection)
+        }
+        const baseMessage =
+          typeof result.message === 'string' && result.message
+            ? result.message
+            : replayed || resumed
+              ? 'Paiement en attente recupere. Suivez les instructions ci-dessous.'
+              : 'Paiement initie avec succes.'
         setSuccess(
-          replayed
-            ? 'Cette tentative de paiement a deja ete enregistree. Statut recupere avec succes.'
-            : result.message || 'Paiement initie avec succes.'
+          typeof result.paymentId === 'string'
+            ? `${baseMessage} Reference : ${result.paymentId}`
+            : baseMessage
         )
       } else {
         setError(toErrorMessage(res.status, result.error, 'Erreur lors de la creation du paiement.'))
