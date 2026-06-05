@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyAuth, getTokenFromRequest } from '@/lib/auth'
 import { generatePaymentReceiptPdf } from '@/lib/pdf'
+import { renderReceiptWordDocument, templateExists } from '@/lib/word-documents'
 import { canAccessContractScope } from '@/lib/rbac'
 import { createSystemLog } from '@/lib/audit'
 
@@ -60,6 +61,50 @@ export async function GET(
                 { error: 'Receipt is available only for completed payments' },
                 { status: 400 }
             )
+        }
+
+        const { searchParams } = new URL(request.url)
+        const format = searchParams.get('format')?.toLowerCase()
+
+        if (format === 'docx' && (await templateExists('quittance-loyer.docx'))) {
+            let receiptNumber = payment.receiptNumber
+            if (!receiptNumber) {
+                const now = new Date()
+                receiptNumber = buildReceiptNumber(payment.id, now)
+                await prisma.payment.update({
+                    where: { id: payment.id },
+                    data: { receiptNumber, receiptIssuedAt: now },
+                })
+            }
+
+            const ownerDisplayName =
+                payment.contract.property.manager?.name ||
+                payment.contract.property.manager?.email ||
+                'Proprietaire'
+            const tenantDisplayName = payment.contract.tenant.name || payment.contract.tenant.email
+
+            const docxBytes = await renderReceiptWordDocument({
+                receiptNumber,
+                contractNumber: payment.contract.contractNumber,
+                tenantName: tenantDisplayName,
+                ownerName: ownerDisplayName,
+                propertyTitle: payment.contract.property.title,
+                propertyAddress: payment.contract.property.address,
+                paymentDate: payment.updatedAt,
+                amount: payment.amount,
+                method: payment.method,
+                transactionId: payment.transactionId ?? payment.id,
+                receiptMentions: payment.contract.receiptText || '',
+            })
+
+            return new NextResponse(Buffer.from(docxBytes), {
+                status: 200,
+                headers: {
+                    'Content-Type':
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'Content-Disposition': `attachment; filename="quittance-${receiptNumber}.docx"`,
+                },
+            })
         }
 
         if (payment.contract.receiptFileUrl) {

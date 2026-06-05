@@ -6,6 +6,7 @@ import { createSystemLog } from '@/lib/audit'
 import { enforceCsrf } from '@/lib/csrf'
 import { getCorrelationIdFromRequest } from '@/lib/correlation-id'
 import { trackEvent } from '@/lib/analytics/track-event'
+import { buildContractPlainTextFromTemplate, templateExists } from '@/lib/word-documents'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -89,7 +90,16 @@ export async function POST(request: Request) {
         const [property, ownerProfile, tenant, existingActiveContract] = await Promise.all([
             prisma.property.findUnique({
                 where: { id: payload.propertyId },
-                select: { id: true, managerId: true, status: true, offerType: true },
+                select: {
+                    id: true,
+                    managerId: true,
+                    status: true,
+                    offerType: true,
+                    title: true,
+                    address: true,
+                    city: true,
+                    propertyType: true,
+                },
             }),
             prisma.user.findUnique({
                 where: { id: user.id },
@@ -97,7 +107,7 @@ export async function POST(request: Request) {
             }),
             prisma.user.findUnique({
                 where: { id: payload.tenantId },
-                select: { id: true, role: true, isSuspended: true },
+                select: { id: true, role: true, isSuspended: true, name: true, email: true, phone: true },
             }),
             prisma.contract.findFirst({
                 where: { propertyId: payload.propertyId, status: 'ACTIVE' },
@@ -132,6 +142,38 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Invalid tenant' }, { status: 400 })
         }
 
+        const managerProfile = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { name: true, email: true, phone: true },
+        })
+
+        const offerType = property.offerType === 'SALE' ? 'SALE' : 'RENTAL'
+        const hasWordTemplate = await templateExists(
+            offerType === 'SALE' ? 'contrat-vente.docx' : 'contrat-location.docx'
+        )
+
+        const initialContractText = hasWordTemplate
+            ? buildContractPlainTextFromTemplate({
+                  contractNumber: 'EN ATTENTE',
+                  contractType: offerType,
+                  ownerName: managerProfile?.name || managerProfile?.email || user.email,
+                  ownerEmail: managerProfile?.email || user.email,
+                  ownerPhone: managerProfile?.phone || '',
+                  tenantName: tenant.name || tenant.email,
+                  tenantEmail: tenant.email,
+                  tenantPhone: tenant.phone || '',
+                  propertyTitle: property.title,
+                  propertyAddress: property.address,
+                  propertyCity: property.city || '',
+                  propertyType: property.propertyType,
+                  startDate: payload.startDate,
+                  endDate: payload.endDate,
+                  rentAmount: payload.rentAmount,
+                  depositAmount: payload.depositAmount,
+                  clauses: ownerProfile.rentalTermsTemplate ?? '',
+              })
+            : ownerProfile.rentalTermsTemplate
+
         const contract = await prisma.$transaction(async (tx) => {
             let contractNumber = buildContractNumber()
             for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -153,9 +195,9 @@ export async function POST(request: Request) {
                     rentAmount: payload.rentAmount,
                     depositAmount: payload.depositAmount,
                     rentalTermsSnapshot: ownerProfile.rentalTermsTemplate,
-                    contractText: ownerProfile.rentalTermsTemplate,
+                    contractText: initialContractText,
                     documentSource: 'DRAFT',
-                    contractType: property.offerType === 'SALE' ? 'SALE' : 'RENTAL',
+                    contractType: offerType,
                     workflowState: 'DRAFT',
                     status: 'ACTIVE',
                 },
@@ -192,6 +234,33 @@ export async function POST(request: Request) {
 
             return createdContract
         })
+
+        if (hasWordTemplate) {
+            await prisma.contract.update({
+                where: { id: contract.id },
+                data: {
+                    contractText: buildContractPlainTextFromTemplate({
+                        contractNumber: contract.contractNumber,
+                        contractType: offerType,
+                        ownerName: managerProfile?.name || managerProfile?.email || user.email,
+                        ownerEmail: managerProfile?.email || user.email,
+                        ownerPhone: managerProfile?.phone || '',
+                        tenantName: tenant.name || tenant.email,
+                        tenantEmail: tenant.email,
+                        tenantPhone: tenant.phone || '',
+                        propertyTitle: property.title,
+                        propertyAddress: property.address,
+                        propertyCity: property.city || '',
+                        propertyType: property.propertyType,
+                        startDate: contract.startDate,
+                        endDate: contract.endDate,
+                        rentAmount: contract.rentAmount,
+                        depositAmount: contract.depositAmount,
+                        clauses: ownerProfile.rentalTermsTemplate ?? '',
+                    }),
+                },
+            })
+        }
 
         await createSystemLog({
             actor: user,

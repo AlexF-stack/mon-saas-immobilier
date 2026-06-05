@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { generateContractPdf } from '@/lib/pdf'
+import { renderContractWordDocument, templateExists, type ContractWordData } from '@/lib/word-documents'
 import { verifyAuth, getTokenFromRequest } from '@/lib/auth'
 import { canAccessContractScope } from '@/lib/rbac'
 
@@ -41,6 +42,52 @@ export async function GET(
 
         if (!canAccessContractScope(user, contract)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+        }
+
+        const { searchParams } = new URL(request.url)
+        const format = searchParams.get('format')?.toLowerCase()
+
+        if (format === 'docx') {
+            const templateName =
+                contract.contractType === 'SALE' ? 'contrat-vente.docx' : 'contrat-location.docx'
+            if (!(await templateExists(templateName))) {
+                return NextResponse.json({ error: 'Modele Word indisponible' }, { status: 503 })
+            }
+
+            const wordData: ContractWordData = {
+                contractNumber: contract.contractNumber,
+                contractType: contract.contractType === 'SALE' ? 'SALE' : 'RENTAL',
+                ownerName:
+                    contract.property.manager?.name ||
+                    contract.property.manager?.email ||
+                    'Proprietaire',
+                ownerEmail: contract.property.manager?.email || '',
+                ownerPhone: contract.property.manager?.phone || '',
+                tenantName: contract.tenant.name || contract.tenant.email,
+                tenantEmail: contract.tenant.email,
+                tenantPhone: contract.tenant.phone || '',
+                propertyTitle: contract.property.title,
+                propertyAddress: contract.property.address,
+                propertyCity: contract.property.city || '',
+                propertyType: contract.property.propertyType,
+                startDate: contract.startDate,
+                endDate: contract.endDate,
+                rentAmount: contract.rentAmount,
+                depositAmount: contract.depositAmount,
+                clauses: contract.contractText || contract.rentalTermsSnapshot || '',
+                ownerSignedAt: contract.ownerSignedAt,
+                tenantSignedAt: contract.tenantSignedAt,
+            }
+
+            const docxBytes = await renderContractWordDocument(wordData)
+            return new NextResponse(Buffer.from(docxBytes), {
+                headers: {
+                    'Content-Type':
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'Content-Disposition': `attachment; filename="contrat-${contract.contractNumber}.docx"`,
+                },
+                status: 200,
+            })
         }
 
         if (contract.fileUrl) {

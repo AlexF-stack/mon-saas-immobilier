@@ -167,6 +167,37 @@ export function ContractLifecycleActions(props: ContractLifecycleActionsProps) {
     await sendPayload({ action: 'SIGN' })
   }
 
+  async function handleGenerateFromWordTemplate() {
+    setLoading(true)
+    setError('')
+    setMessage('')
+    try {
+      const response = await fetch(`/api/contracts/${props.contractId}/generate-from-template`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        setError(
+          typeof result?.error === 'string' ? result.error : 'Generation depuis le modele impossible.'
+        )
+        return
+      }
+      setMessage(
+        typeof result?.message === 'string'
+          ? result.message
+          : 'Contrat pre-rempli depuis le modele Word.'
+      )
+      router.refresh()
+    } catch {
+      setError('Erreur reseau.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="space-y-3 rounded-xl border border-border bg-surface/70 p-3 dark:bg-slate-900/60">
       <div className="flex flex-wrap items-center gap-2">
@@ -194,6 +225,10 @@ export function ContractLifecycleActions(props: ContractLifecycleActionsProps) {
       {props.canManage ? (
         <div className="space-y-3 rounded-xl border border-border bg-card p-3">
           <p className="text-xs uppercase tracking-wide text-secondary">Preparation du contrat</p>
+          <p className="text-xs text-muted-foreground">
+            Utilisez le modele Word pour pre-remplir automatiquement les champs (proprietaire, locataire,
+            bien, montants).
+          </p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1">
               <Label htmlFor={`contract-type-${props.contractId}`}>Type</Label>
@@ -261,6 +296,28 @@ export function ContractLifecycleActions(props: ContractLifecycleActionsProps) {
           </div>
 
           <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              disabled={loading || isSubmitted}
+              onClick={() => void handleGenerateFromWordTemplate()}
+            >
+              Remplir depuis modele Word
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              asChild
+            >
+              <a
+                href={`/api/contracts/${props.contractId}/download?format=docx`}
+                download
+              >
+                Telecharger .docx
+              </a>
+            </Button>
             <Button
               type="button"
               size="sm"
