@@ -234,11 +234,13 @@ export function PropertyForm({ locale, dashboardPathPrefix, initialData }: Prope
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(LAND_DOCUMENT_TYPE_LABELS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
+                    {Object.entries(LAND_DOCUMENT_TYPE_LABELS)
+                      .filter(([value]) => value !== 'TITLE_DEED' || offerType === 'SALE')
+                      .map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
                 <Input
