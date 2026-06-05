@@ -20,6 +20,15 @@ type InstallmentOption = {
     transactionId: string | null
     status: string
   } | null
+  label?: string
+}
+
+type FirstPaymentRule = {
+  label: string
+  advanceMonths: number
+  depositAmount: number
+  advanceRent: number
+  totalDue: number
 }
 
 const PAYMENT_ERROR_FR: Record<string, string> = {
@@ -78,6 +87,7 @@ function PaymentForm() {
   const [installmentId, setInstallmentId] = useState('')
   const [amount, setAmount] = useState('')
   const [paymentCollection, setPaymentCollection] = useState<PaymentCollection | null>(null)
+  const [firstPaymentRule, setFirstPaymentRule] = useState<FirstPaymentRule | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -117,6 +127,7 @@ function PaymentForm() {
         setContractType(nextType)
         setInstallments(nextInstallments)
         setPaymentCollection(payload?.paymentCollection ?? null)
+        setFirstPaymentRule(payload?.firstPaymentRule ?? null)
         if (nextType === 'RENTAL' && nextInstallments.length > 0) {
           setInstallmentId(nextInstallments[0].id)
           setAmount(String(Math.round(nextInstallments[0].totalDue)))
@@ -248,6 +259,18 @@ function PaymentForm() {
             />
           </div>
 
+          {contractType === 'RENTAL' && firstPaymentRule ? (
+            <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900 dark:border-blue-900/50 dark:bg-blue-950/30 dark:text-blue-200">
+              <p className="font-medium">Premier paiement : {firstPaymentRule.label}</p>
+              <p className="mt-1 text-xs">
+                Caution {Math.round(firstPaymentRule.depositAmount).toLocaleString('fr-FR')} FCFA +{' '}
+                {firstPaymentRule.advanceMonths} mois d&apos;avance (
+                {Math.round(firstPaymentRule.advanceRent).toLocaleString('fr-FR')} FCFA) ={' '}
+                <strong>{Math.round(firstPaymentRule.totalDue).toLocaleString('fr-FR')} FCFA</strong>
+              </p>
+            </div>
+          ) : null}
+
           {contractType === 'RENTAL' ? (
             <div className="space-y-2">
               <Label htmlFor="installmentId">Echeance a payer</Label>
@@ -264,7 +287,7 @@ function PaymentForm() {
                   {installments.length > 0 ? (
                     installments.map((item) => (
                       <SelectItem key={item.id} value={item.id}>
-                        #{item.sequence} - {new Date(item.dueDate).toLocaleDateString('fr-FR')} -{' '}
+                        {item.label ?? `#${item.sequence}`} — {new Date(item.dueDate).toLocaleDateString('fr-FR')} —{' '}
                         {Math.round(item.totalDue).toLocaleString('fr-FR')} FCFA ({item.status})
                       </SelectItem>
                     ))

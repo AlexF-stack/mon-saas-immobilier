@@ -7,6 +7,7 @@ import { enforceCsrf } from '@/lib/csrf'
 import { getCorrelationIdFromRequest } from '@/lib/correlation-id'
 import { trackEvent } from '@/lib/analytics/track-event'
 import { buildContractPlainTextFromTemplate, templateExists } from '@/lib/word-documents'
+import { computeFirstInstallmentAmounts } from '@/lib/rental-first-payment'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -207,15 +208,19 @@ export async function POST(request: Request) {
             if (property.offerType === 'RENT') {
                 const firstDueDate = new Date(payload.startDate)
                 firstDueDate.setUTCHours(0, 0, 0, 0)
+                const { baseAmount, totalDue } = computeFirstInstallmentAmounts(
+                    payload.rentAmount,
+                    payload.depositAmount
+                )
 
                 await tx.contractInstallment.create({
                     data: {
                         contractId: createdContract.id,
                         sequence: 1,
                         dueDate: firstDueDate,
-                        baseAmount: payload.rentAmount,
+                        baseAmount,
                         penaltyAmount: 0,
-                        totalDue: payload.rentAmount,
+                        totalDue,
                         status: 'OPEN',
                     },
                 })

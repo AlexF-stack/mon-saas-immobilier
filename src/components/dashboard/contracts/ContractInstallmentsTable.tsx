@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/badge'
+import { firstInstallmentLabel } from '@/lib/rental-first-payment'
 
 type InstallmentRow = {
   id: string
@@ -9,6 +10,7 @@ type InstallmentRow = {
   totalDue: number
   status: 'OPEN' | 'OVERDUE' | 'PAID'
   paidAt: string | null
+  label?: string | null
 }
 
 type ContractInstallmentsTableProps = {
@@ -48,8 +50,8 @@ export function ContractInstallmentsTable({ installments }: ContractInstallments
       <table className="w-full min-w-[680px] text-left text-sm">
         <thead className="bg-slate-100/70 text-xs uppercase tracking-wide text-slate-600 dark:bg-slate-900/60 dark:text-slate-300">
           <tr>
-            <th className="px-3 py-2">#</th>
-            <th className="px-3 py-2">Echeance</th>
+            <th className="px-3 py-2">Libelle</th>
+            <th className="px-3 py-2">Date limite</th>
             <th className="px-3 py-2">Base</th>
             <th className="px-3 py-2">Penalite</th>
             <th className="px-3 py-2">Total</th>
@@ -60,7 +62,11 @@ export function ContractInstallmentsTable({ installments }: ContractInstallments
         <tbody>
           {installments.map((item) => (
             <tr key={item.id} className="border-t border-border">
-              <td className="px-3 py-2 font-medium text-primary">{item.sequence}</td>
+              <td className="px-3 py-2 font-medium text-primary">
+                {item.sequence === 1
+                  ? firstInstallmentLabel()
+                  : item.label ?? `Loyer #${item.sequence}`}
+              </td>
               <td className="px-3 py-2 text-secondary">{formatDate(item.dueDate)}</td>
               <td className="px-3 py-2 tabular-nums text-primary">{Math.round(item.baseAmount).toLocaleString('fr-FR')} FCFA</td>
               <td className="px-3 py-2 tabular-nums text-rose-600 dark:text-rose-300">

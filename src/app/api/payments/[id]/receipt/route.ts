@@ -90,6 +90,9 @@ export async function GET(
         contract: {
           select: contractForReceiptSelect,
         },
+        installment: {
+          select: { sequence: true },
+        },
       },
     })
 
@@ -125,7 +128,10 @@ export async function GET(
 
     if (format === 'docx' && (await templateExists('quittance-loyer.docx'))) {
       const receiptData = mapPaymentToReceiptWordData(
-        payment,
+        {
+          ...payment,
+          installmentSequence: payment.installment?.sequence ?? null,
+        },
         payment.contract,
         receiptNumber,
         emissionDate

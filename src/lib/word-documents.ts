@@ -1,4 +1,5 @@
 import fs from 'fs/promises'
+import { receiptBreakdownForFirstPayment } from '@/lib/rental-first-payment'
 import path from 'path'
 import PizZip from 'pizzip'
 import Docxtemplater from 'docxtemplater'
@@ -414,6 +415,7 @@ type PaymentForReceipt = {
   transactionId: string | null
   id: string
   type: string
+  installmentSequence?: number | null
 }
 
 export function mapPaymentToReceiptWordData(
@@ -425,11 +427,31 @@ export function mapPaymentToReceiptWordData(
   const wordContract = mapContractRecordToWordData(contract)
   const period = monthPeriodAround(payment.updatedAt)
   const rent = contract.rentAmount
+  const isFirstInstallment = payment.installmentSequence === 1
   const isDeposit = payment.type === 'DEPOSIT'
-  const montantLoyer = isDeposit ? 0 : Math.min(payment.amount, rent)
-  const montantCharges = isDeposit ? 0 : Math.max(0, payment.amount - rent)
-  const montantAutres = isDeposit ? payment.amount : 0
-  const autresLibelle = isDeposit ? 'Caution / depot de garantie' : ''
+
+  let montantLoyer: number
+  let montantCharges: number
+  let montantAutres: number
+  let autresLibelle: string
+
+  if (isFirstInstallment) {
+    const breakdown = receiptBreakdownForFirstPayment(rent, contract.depositAmount)
+    montantLoyer = breakdown.montantLoyer
+    montantCharges = breakdown.montantCharges
+    montantAutres = breakdown.montantAutres
+    autresLibelle = breakdown.autresLibelle
+  } else if (isDeposit) {
+    montantLoyer = 0
+    montantCharges = 0
+    montantAutres = payment.amount
+    autresLibelle = 'Caution / depot de garantie'
+  } else {
+    montantLoyer = Math.min(payment.amount, rent)
+    montantCharges = Math.max(0, payment.amount - rent)
+    montantAutres = 0
+    autresLibelle = ''
+  }
 
   const bienAdresse = [contract.property.address, contract.property.city].filter(Boolean).join(', ')
 

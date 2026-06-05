@@ -14,6 +14,7 @@ export interface PaymentRow {
   createdAt: string
   propertyTitle: string
   tenantName: string
+  paymentLabel?: string | null
 }
 
 interface PaymentsTableProps {
@@ -71,7 +72,12 @@ export function PaymentsTable({ payments }: PaymentsTableProps) {
           key: 'amount',
           header: 'Montant',
           render: (row) => (
-            <span className="font-medium tabular-nums">{row.amount.toLocaleString('fr-FR')} FCFA</span>
+            <div className="space-y-0.5">
+              <span className="font-medium tabular-nums">{row.amount.toLocaleString('fr-FR')} FCFA</span>
+              {row.paymentLabel ? (
+                <p className="text-xs text-muted-foreground">{row.paymentLabel}</p>
+              ) : null}
+            </div>
           ),
         },
         {

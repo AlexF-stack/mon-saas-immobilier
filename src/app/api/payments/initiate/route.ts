@@ -11,6 +11,7 @@ import { captureServerError } from '@/lib/monitoring'
 import { createFinancialAuditLog } from '@/lib/financial-audit'
 import { getLogContextFromRequest, logServerEvent } from '@/lib/logger'
 import { createAppNotification } from '@/lib/app-notifications'
+import { syncFirstRentalInstallment } from '@/lib/sync-first-installment'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -251,6 +252,8 @@ export async function POST(request: Request) {
         }
 
         if (contract.contractType === 'RENTAL') {
+            await syncFirstRentalInstallment(contract.id)
+
             if (!payload.installmentId) {
                 return NextResponse.json(
                     { error: 'installmentId is required for rental payments.' },

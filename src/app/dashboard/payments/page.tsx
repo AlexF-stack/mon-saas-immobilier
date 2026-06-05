@@ -21,6 +21,7 @@ import {
   WITHDRAWAL_ACTION,
   WITHDRAWAL_TARGET_TYPE,
 } from '@/lib/withdrawals'
+import { firstInstallmentLabel } from '@/lib/rental-first-payment'
 
 const PAGE_SIZE = 10
 
@@ -131,7 +132,10 @@ export default async function PaymentsPage(props: { searchParams: Promise<Paymen
   const payments = await prisma.payment.findMany({
     where: tableWhere,
     orderBy: { createdAt: 'desc' },
-    include: { contract: { include: { property: true, tenant: true } } },
+    include: {
+      contract: { include: { property: true, tenant: true } },
+      installment: { select: { sequence: true } },
+    },
     take: PAGE_SIZE,
     skip: (clampedPage - 1) * PAGE_SIZE,
   })
@@ -201,6 +205,12 @@ export default async function PaymentsPage(props: { searchParams: Promise<Paymen
     createdAt: payment.createdAt.toISOString(),
     propertyTitle: payment.contract.property.title,
     tenantName: payment.contract.tenant.name || payment.contract.tenant.email,
+    paymentLabel:
+      payment.installment?.sequence === 1
+        ? firstInstallmentLabel()
+        : payment.installment
+          ? `Echeance #${payment.installment.sequence}`
+          : null,
   }))
 
   const hasActiveFilters = Boolean(query || status || method || from || to)

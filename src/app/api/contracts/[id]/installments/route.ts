@@ -2,6 +2,12 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getTokenFromRequest, verifyAuth } from '@/lib/auth'
 import { canAccessContractScope } from '@/lib/rbac'
+import {
+  computeFirstInstallmentAmounts,
+  firstInstallmentLabel,
+  RENT_ADVANCE_MONTHS_ON_ENTRY,
+} from '@/lib/rental-first-payment'
+import { syncFirstRentalInstallment } from '@/lib/sync-first-installment'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -46,6 +52,7 @@ async function ensureAdvanceInstallments(input: {
   startDate: Date
   endDate: Date
   rentAmount: number
+  depositAmount: number
 }) {
   if (input.contractType !== 'RENTAL' || input.status !== 'ACTIVE') return
 
@@ -83,13 +90,21 @@ async function ensureAdvanceInstallments(input: {
     const dueDate = resolveDueDateForMonth(start, addUtcMonths(start, sequence - 1))
     if (dueDate < start || dueDate > end) continue
 
+    const amounts =
+      sequence === 1
+        ? computeFirstInstallmentAmounts(input.rentAmount, input.depositAmount)
+        : {
+            baseAmount: input.rentAmount,
+            totalDue: input.rentAmount,
+          }
+
     rows.push({
       contractId: input.contractId,
       sequence,
       dueDate,
-      baseAmount: input.rentAmount,
+      baseAmount: amounts.baseAmount,
       penaltyAmount: 0,
-      totalDue: input.rentAmount,
+      totalDue: amounts.totalDue,
       status: 'OPEN',
     })
   }
@@ -123,6 +138,7 @@ export async function GET(
         startDate: true,
         endDate: true,
         rentAmount: true,
+        depositAmount: true,
         property: {
           select: {
             managerId: true,
@@ -155,7 +171,10 @@ export async function GET(
       startDate: contract.startDate,
       endDate: contract.endDate,
       rentAmount: contract.rentAmount,
+      depositAmount: contract.depositAmount,
     })
+
+    await syncFirstRentalInstallment(contract.id)
 
     const installments = await prisma.contractInstallment.findMany({
       where: {
@@ -201,10 +220,20 @@ export async function GET(
         .map((item) => [item.installmentId as string, item])
     )
 
+    const firstPaymentRule = {
+      label: firstInstallmentLabel(),
+      advanceMonths: RENT_ADVANCE_MONTHS_ON_ENTRY,
+      depositAmount: contract.depositAmount,
+      advanceRent: contract.rentAmount * RENT_ADVANCE_MONTHS_ON_ENTRY,
+      totalDue: computeFirstInstallmentAmounts(contract.rentAmount, contract.depositAmount).totalDue,
+    }
+
     return NextResponse.json({
       contractId: contract.id,
       contractType: contract.contractType,
       rentAmount: contract.rentAmount,
+      depositAmount: contract.depositAmount,
+      firstPaymentRule,
       paymentCollection: {
         mode: contract.property.manager?.paymentCollectionMode ?? 'DIRECT',
         momoNumber: contract.property.manager?.paymentMomoNumber ?? null,
@@ -222,6 +251,7 @@ export async function GET(
           baseAmount: Number(item.baseAmount),
           penaltyAmount: Number(item.penaltyAmount),
           totalDue: Number(item.totalDue),
+          label: item.sequence === 1 ? firstInstallmentLabel() : `Loyer mensuel #${item.sequence}`,
           pendingPayment: pending
             ? {
                 id: pending.id,
