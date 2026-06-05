@@ -271,7 +271,7 @@ export async function POST(request: Request) {
                     inquiry,
                     requiresAuth: true,
                     message:
-                        'Demande enregistree. Connectez-vous pour acceder a votre espace et discuter avec le proprietaire.',
+                        'Demande enregistree. Creez votre compte pour acceder a votre espace et discuter avec le proprietaire.',
                 },
                 { status: 201 }
             )

@@ -1,7 +1,10 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { verifyAuth } from '@/lib/auth'
-import { getBuyerInquiriesDashboardPath } from '@/lib/marketplace-paths'
+import {
+  getBuyerInquiriesDashboardPath,
+  getBuyerRegisterPathAfterInquiry,
+} from '@/lib/marketplace-paths'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -15,7 +18,7 @@ export default async function MarketplaceInquiryConversationPage(props: {
   const user = token ? await verifyAuth(token) : null
 
   if (!user) {
-    redirect(`/${locale}/login?pendingInquiry=${encodeURIComponent(inquiryId)}&profile=tenant`)
+    redirect(getBuyerRegisterPathAfterInquiry(locale, inquiryId))
   }
 
   redirect(getBuyerInquiriesDashboardPath(locale, inquiryId))
