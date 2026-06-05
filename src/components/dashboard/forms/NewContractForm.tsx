@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,12 +14,20 @@ type PropertyOption = {
   title: string
   status?: string
   offerType?: string
+  price?: number
 }
 
 type TenantOption = {
   id: string
   name: string | null
   email: string
+}
+
+type InquiryPrefill = {
+  id: string
+  requesterName: string
+  requesterEmail: string
+  property: PropertyOption
 }
 
 type NewContractFormProps = {
@@ -46,12 +54,20 @@ function toErrorMessage(status: number, errorPayload: unknown, fallback: string)
 
 export function NewContractForm({ locale, dashboardPathPrefix }: NewContractFormProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const inquiryId = searchParams.get('inquiryId')?.trim() ?? ''
+  const requestedPropertyId = searchParams.get('propertyId')?.trim() ?? ''
   const [loading, setLoading] = useState(false)
   const [loadingOptions, setLoadingOptions] = useState(true)
   const [properties, setProperties] = useState<PropertyOption[]>([])
   const [tenants, setTenants] = useState<TenantOption[]>([])
+  const [inquiryPrefill, setInquiryPrefill] = useState<InquiryPrefill | null>(null)
   const [propertyId, setPropertyId] = useState<string>('')
   const [tenantId, setTenantId] = useState<string>('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [rentAmount, setRentAmount] = useState('')
+  const [depositAmount, setDepositAmount] = useState('')
   const [error, setError] = useState('')
   const dashboardPath = dashboardPathPrefix ?? (locale ? `/${locale}/dashboard` : '/dashboard')
 
@@ -63,9 +79,12 @@ export function NewContractForm({ locale, dashboardPathPrefix }: NewContractForm
       setError('')
 
       try {
-        const [propertiesRes, tenantsRes] = await Promise.all([
+        const [propertiesRes, tenantsRes, inquiryRes] = await Promise.all([
           fetch('/api/properties?status=AVAILABLE', { credentials: 'include' }),
           fetch('/api/tenants', { credentials: 'include' }),
+          inquiryId
+            ? fetch(`/api/marketplace/inquiries/${inquiryId}`, { credentials: 'include' })
+            : Promise.resolve(null),
         ])
 
         if (!propertiesRes.ok || !tenantsRes.ok) {
@@ -83,12 +102,42 @@ export function NewContractForm({ locale, dashboardPathPrefix }: NewContractForm
           propertiesRes.json().catch(() => []),
           tenantsRes.json().catch(() => []),
         ])
+        const inquiryPayload =
+          inquiryRes && inquiryRes.ok ? ((await inquiryRes.json().catch(() => null)) as InquiryPrefill | null) : null
 
         if (!isCancelled) {
           const rawProperties = Array.isArray(propertiesPayload) ? propertiesPayload as PropertyOption[] : []
-          const availableProperties = rawProperties.filter((property) => property.status === 'AVAILABLE')
+          let availableProperties = rawProperties.filter((property) => property.status === 'AVAILABLE')
+          if (
+            inquiryPayload?.property &&
+            inquiryPayload.property.status === 'AVAILABLE' &&
+            !availableProperties.some((property) => property.id === inquiryPayload.property.id)
+          ) {
+            availableProperties = [inquiryPayload.property, ...availableProperties]
+          }
+          const tenantOptions = Array.isArray(tenantsPayload) ? tenantsPayload as TenantOption[] : []
           setProperties(availableProperties)
-          setTenants(Array.isArray(tenantsPayload) ? tenantsPayload : [])
+          setTenants(tenantOptions)
+
+          if (inquiryPayload) {
+            setInquiryPrefill(inquiryPayload)
+            setPropertyId(inquiryPayload.property.id)
+            if (typeof inquiryPayload.property.price === 'number') {
+              setRentAmount(String(inquiryPayload.property.price))
+              if (inquiryPayload.property.offerType === 'SALE') {
+                setDepositAmount(String(Math.round(inquiryPayload.property.price * 0.1)))
+              }
+            }
+
+            const matchingTenant = tenantOptions.find(
+              (tenant) => tenant.email.toLowerCase() === inquiryPayload.requesterEmail.toLowerCase()
+            )
+            if (matchingTenant) {
+              setTenantId(matchingTenant.id)
+            }
+          } else if (requestedPropertyId) {
+            setPropertyId(requestedPropertyId)
+          }
         }
       } catch {
         if (!isCancelled) {
@@ -106,7 +155,7 @@ export function NewContractForm({ locale, dashboardPathPrefix }: NewContractForm
     return () => {
       isCancelled = true
     }
-  }, [])
+  }, [inquiryId, requestedPropertyId])
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -176,6 +225,23 @@ export function NewContractForm({ locale, dashboardPathPrefix }: NewContractForm
               <div className="h-10 animate-pulse rounded-xl bg-slate-200/70 dark:bg-slate-800" />
             </div>
           )}
+          {inquiryPrefill && (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300">
+              Demande liee : {inquiryPrefill.requesterName} ({inquiryPrefill.requesterEmail})
+              {!tenantId ? (
+                <span>
+                  {' '}
+                  Aucun locataire existant avec cet email.{' '}
+                  <Link
+                    className="font-medium text-primary underline-offset-4 hover:underline"
+                    href={`${dashboardPath}/tenants/new?name=${encodeURIComponent(inquiryPrefill.requesterName)}&email=${encodeURIComponent(inquiryPrefill.requesterEmail)}`}
+                  >
+                    Creer le locataire
+                  </Link>
+                </span>
+              ) : null}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
@@ -235,22 +301,52 @@ export function NewContractForm({ locale, dashboardPathPrefix }: NewContractForm
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="startDate">Date de debut</Label>
-              <Input id="startDate" name="startDate" type="date" required />
+              <Input
+                id="startDate"
+                name="startDate"
+                type="date"
+                value={startDate}
+                onChange={(event) => setStartDate(event.target.value)}
+                required
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="endDate">Date de fin</Label>
-              <Input id="endDate" name="endDate" type="date" required />
+              <Input
+                id="endDate"
+                name="endDate"
+                type="date"
+                value={endDate}
+                onChange={(event) => setEndDate(event.target.value)}
+                required
+              />
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="rentAmount">{amountLabel}</Label>
-              <Input id="rentAmount" name="rentAmount" type="number" min="1" required />
+              <Input
+                id="rentAmount"
+                name="rentAmount"
+                type="number"
+                min="1"
+                value={rentAmount}
+                onChange={(event) => setRentAmount(event.target.value)}
+                required
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="depositAmount">{depositLabel}</Label>
-              <Input id="depositAmount" name="depositAmount" type="number" min="0" required />
+              <Input
+                id="depositAmount"
+                name="depositAmount"
+                type="number"
+                min="0"
+                value={depositAmount}
+                onChange={(event) => setDepositAmount(event.target.value)}
+                required
+              />
             </div>
           </div>
         </CardContent>

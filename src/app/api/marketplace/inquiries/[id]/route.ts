@@ -60,7 +60,7 @@ async function resolveInquiryAccess(inquiryId: string, userId: string, role: str
       scheduledVisitAt: true,
       visitNotes: true,
       preferredVisitDate: true,
-      property: { select: { id: true, title: true, managerId: true } },
+      property: { select: { id: true, title: true, managerId: true, price: true, offerType: true, status: true } },
     },
   })
   if (!inquiry) return { inquiry: null, canManage: false }
@@ -160,7 +160,7 @@ export async function PATCH(
         requesterName: true,
         requesterEmail: true,
         requesterPhone: true,
-        property: { select: { id: true, title: true, managerId: true } },
+        property: { select: { id: true, title: true, managerId: true, price: true, offerType: true, status: true } },
       },
     })
 

@@ -233,7 +233,14 @@ export default async function PropertiesPage(props: {
                   </p>
                   <div className="flex items-center gap-2 pt-2">
                     <Button asChild variant="outline" size="sm" className="flex-1">
-                      <Link href={`/${locale}/marketplace/${property.id}`} target="_blank">
+                      <Link
+                        href={
+                          property.isPublished && property.status === 'AVAILABLE'
+                            ? `/${locale}/marketplace/${property.id}`
+                            : `/${locale}/dashboard/properties/${property.id}`
+                        }
+                        target={property.isPublished && property.status === 'AVAILABLE' ? '_blank' : undefined}
+                      >
                         Voir
                       </Link>
                     </Button>
