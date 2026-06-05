@@ -231,12 +231,12 @@ export function NewContractForm({ locale, dashboardPathPrefix }: NewContractForm
               {!tenantId ? (
                 <span>
                   {' '}
-                  Aucun locataire existant avec cet email.{' '}
+                  Aucun locataire visible avec cet email (inscrivez-le ou associez son compte).{' '}
                   <Link
                     className="font-medium text-primary underline-offset-4 hover:underline"
-                    href={`${dashboardPath}/tenants/new?name=${encodeURIComponent(inquiryPrefill.requesterName)}&email=${encodeURIComponent(inquiryPrefill.requesterEmail)}`}
+                    href={`${dashboardPath}/tenants/new?name=${encodeURIComponent(inquiryPrefill.requesterName)}&email=${encodeURIComponent(inquiryPrefill.requesterEmail)}&inquiryId=${encodeURIComponent(inquiryPrefill.id)}`}
                   >
-                    Creer le locataire
+                    Associer le locataire
                   </Link>
                 </span>
               ) : null}

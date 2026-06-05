@@ -29,6 +29,25 @@ export async function GET(request: Request) {
         if (user.role === 'ADMIN') {
             whereClause = { role: 'TENANT' }
         } else if (user.role === 'MANAGER') {
+            const inquiryTenantRows = await prisma.marketplaceInquiry.findMany({
+                where: {
+                    requesterUserId: { not: null },
+                    property: { managerId: user.id },
+                },
+                select: { requesterUserId: true },
+                distinct: ['requesterUserId'],
+            })
+            const inquiryTenantIds = inquiryTenantRows
+                .map((row) => row.requesterUserId)
+                .filter((id): id is string => Boolean(id))
+
+            const inquiryEmailRows = await prisma.marketplaceInquiry.findMany({
+                where: { property: { managerId: user.id } },
+                select: { requesterEmail: true },
+                distinct: ['requesterEmail'],
+            })
+            const inquiryEmails = inquiryEmailRows.map((row) => row.requesterEmail.toLowerCase())
+
             whereClause = {
                 role: 'TENANT',
                 OR: [
@@ -40,6 +59,10 @@ export async function GET(request: Request) {
                         },
                     },
                     { createdById: user.id },
+                    ...(inquiryTenantIds.length > 0 ? [{ id: { in: inquiryTenantIds } }] : []),
+                    ...(inquiryEmails.length > 0
+                        ? [{ email: { in: inquiryEmails, mode: 'insensitive' as const } }]
+                        : []),
                 ],
             }
         } else {
@@ -75,9 +98,50 @@ export async function POST(request: Request) {
         const parsed = createTenantSchema.parse(body)
         const email = parsed.email.toLowerCase()
 
-        const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } })
+        const existing = await prisma.user.findUnique({
+            where: { email },
+            select: { id: true, role: true, name: true, createdById: true, isSuspended: true },
+        })
+
         if (existing) {
-            return NextResponse.json({ error: 'Email already used' }, { status: 409 })
+            if (existing.role !== 'TENANT') {
+                return NextResponse.json(
+                    { error: 'Cet email est deja utilise par un compte qui n est pas locataire.' },
+                    { status: 409 }
+                )
+            }
+            if (existing.isSuspended) {
+                return NextResponse.json(
+                    { error: 'Ce compte locataire est suspendu. Contactez un administrateur.' },
+                    { status: 409 }
+                )
+            }
+
+            const tenant = await prisma.user.update({
+                where: { id: existing.id },
+                data: {
+                    createdById: existing.createdById ?? user.id,
+                    name: parsed.name || existing.name,
+                },
+            })
+
+            await createSystemLog({
+                actor: user,
+                action: 'TENANT_LINKED',
+                targetType: 'USER',
+                targetId: tenant.id,
+                details: `email=${tenant.email}`,
+            })
+
+            const { password: removedPassword, ...tenantWithoutPassword } = tenant
+            void removedPassword
+
+            return NextResponse.json({
+                tenant: tenantWithoutPassword,
+                linked: true,
+                message:
+                    'Ce visiteur possede deja un compte locataire (inscription marketplace). Il est associe a votre espace.',
+            })
         }
 
         const generatedPassword = randomBytes(9).toString('base64url')

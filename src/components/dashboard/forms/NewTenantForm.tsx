@@ -24,7 +24,12 @@ function toErrorMessage(status: number, errorPayload: unknown, fallback: string)
 
   if (status === 401) return 'Session expiree. Reconnectez-vous.'
   if (status === 403) return 'Acces refuse.'
-  if (status === 409) return 'Email deja utilise.'
+  if (status === 409) {
+    if (typeof errorPayload === 'string' && errorPayload.trim()) {
+      return errorPayload
+    }
+    return 'Impossible de creer ce locataire avec cet email.'
+  }
 
   return fallback
 }
@@ -34,6 +39,7 @@ export function NewTenantForm({ locale, dashboardPathPrefix }: NewTenantFormProp
   const searchParams = useSearchParams()
   const namePrefill = searchParams.get('name') ?? ''
   const emailPrefill = searchParams.get('email') ?? ''
+  const inquiryId = searchParams.get('inquiryId')?.trim() ?? ''
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -62,9 +68,23 @@ export function NewTenantForm({ locale, dashboardPathPrefix }: NewTenantFormProp
       const payload = await res.json().catch(() => ({}))
 
       if (res.ok) {
-        if (payload.generatedPassword) {
+        if (payload.linked === true) {
+          const message =
+            typeof payload.message === 'string'
+              ? payload.message
+              : 'Compte locataire existant associe a votre espace.'
+          setSuccess(message)
+          const contractParams = new URLSearchParams()
+          if (inquiryId) contractParams.set('inquiryId', inquiryId)
+          const contractHref = contractParams.toString()
+            ? `${dashboardPath}/contracts/new?${contractParams.toString()}`
+            : `${dashboardPath}/contracts/new`
+          setTimeout(() => {
+            router.push(inquiryId ? contractHref : `${dashboardPath}/tenants`)
+            router.refresh()
+          }, 2500)
+        } else if (payload.generatedPassword) {
           setSuccess(`Locataire cree. Mot de passe temporaire: ${payload.generatedPassword}`)
-          // We intentionally do NOT auto-redirect here so the manager can copy the password.
         } else {
           setSuccess('Locataire cree avec succes.')
           setTimeout(() => {
@@ -88,7 +108,9 @@ export function NewTenantForm({ locale, dashboardPathPrefix }: NewTenantFormProp
       <form onSubmit={handleSubmit}>
         <CardHeader>
           <CardTitle>Nouveau locataire</CardTitle>
-          <CardDescription>Creer un compte locataire et recuperer son acces initial.</CardDescription>
+          <CardDescription>
+            Creez un compte locataire ou associez un visiteur deja inscrit sur la marketplace (meme email).
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           {error && (
@@ -122,7 +144,13 @@ export function NewTenantForm({ locale, dashboardPathPrefix }: NewTenantFormProp
             <Link href={`${dashboardPath}/tenants`}>{success ? 'Retour' : 'Annuler'}</Link>
           </Button>
           <Button type="submit" disabled={loading || !!success}>
-            {loading ? 'Creation...' : success ? 'Cree' : 'Creer le locataire'}
+            {loading
+              ? 'Traitement...'
+              : success
+                ? 'Termine'
+                : emailPrefill
+                  ? 'Associer le locataire'
+                  : 'Creer le locataire'}
           </Button>
         </CardFooter>
       </form>
