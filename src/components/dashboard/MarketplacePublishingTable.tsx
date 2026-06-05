@@ -331,6 +331,23 @@ export function MarketplacePublishingTable({
                         header: 'Actions',
                         render: (row) => (
                             <div className="flex flex-wrap items-center gap-2 opacity-100 transition-opacity duration-150 sm:flex-nowrap sm:opacity-0 sm:group-hover:opacity-100">
+                                {row.isPublished && row.status === 'AVAILABLE' ? (
+                                    <Button asChild size="sm" variant="ghost">
+                                        <Link href={`${marketplacePrefix}/${row.id}`} target="_blank" title="Voir l'annonce publique">
+                                            <ExternalLink className="h-4 w-4" />
+                                        </Link>
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="ghost"
+                                        disabled
+                                        title="Publiez le bien disponible pour ouvrir l'annonce publique"
+                                    >
+                                        <ExternalLink className="h-4 w-4" />
+                                    </Button>
+                                )}
                                 <Button
                                     type="button"
                                     size="sm"
@@ -345,12 +362,7 @@ export function MarketplacePublishingTable({
                                             : 'Publier'}
                                 </Button>
                                 <Button asChild size="sm" variant="ghost">
-                                    <Link href={`${marketplacePrefix}/${row.id}`}>
-                                        <ExternalLink className="h-4 w-4" />
-                                    </Link>
-                                </Button>
-                                <Button asChild size="sm" variant="ghost">
-                                    <Link href={`${dashboardPathPrefix}/properties`}>Gerer</Link>
+                                    <Link href={`${dashboardPathPrefix}/properties/${row.id}`}>Gerer</Link>
                                 </Button>
                                 {canManagePremium ? (
                                     <Button
