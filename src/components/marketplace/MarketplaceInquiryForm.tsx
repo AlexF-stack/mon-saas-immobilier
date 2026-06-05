@@ -9,7 +9,10 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { getErrorMessageFromPayload } from '@/lib/utils'
 import { useToast } from '@/components/ui/toast'
-import { getBuyerInquiriesDashboardPath } from '@/lib/marketplace-paths'
+import {
+    getBuyerInquiriesDashboardPath,
+    getBuyerRegisterPathAfterInquiry,
+} from '@/lib/marketplace-paths'
 
 type MarketplaceInquiryFormProps = {
     propertyId: string
@@ -83,21 +86,18 @@ export function MarketplaceInquiryForm({
                 const requiresAuth = result?.requiresAuth === true
 
                 if (requiresAuth && inquiryId) {
-                    const emailForLogin = requesterEmail || defaultEmail || ''
-                    const loginParams = new URLSearchParams({
-                        pendingInquiry: inquiryId,
-                        profile: 'tenant',
-                    })
-                    if (emailForLogin) loginParams.set('email', emailForLogin)
-                    const loginHref = locale
-                        ? `/${locale}/login?${loginParams.toString()}`
-                        : `/login?${loginParams.toString()}`
+                    const emailForRegister = requesterEmail || defaultEmail || ''
+                    const registerHref = getBuyerRegisterPathAfterInquiry(
+                        locale,
+                        inquiryId,
+                        emailForRegister
+                    )
                     show({
                         variant: 'success',
                         title: 'Demande enregistree',
-                        description: 'Connectez-vous pour acceder a votre espace de discussion.',
+                        description: 'Creez votre compte pour acceder a votre espace de discussion.',
                     })
-                    router.push(loginHref)
+                    router.push(registerHref)
                     return
                 }
 
@@ -169,10 +169,10 @@ export function MarketplaceInquiryForm({
             ) : (
                 <>
                     <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-200">
-                        <p className="font-medium">Connexion requise apres la demande</p>
+                        <p className="font-medium">Inscription requise apres la demande</p>
                         <p className="mt-1 text-xs opacity-90">
-                            Envoyez votre demande, puis connectez-vous pour acceder a votre espace de messagerie
-                            avec le proprietaire.
+                            Envoyez votre demande, puis creez un compte locataire pour acceder a votre espace de
+                            messagerie avec le proprietaire. Si vous avez deja un compte, connectez-vous ensuite.
                         </p>
                     </div>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

@@ -135,7 +135,8 @@ export default function RegisterPage() {
                     <CardContent className="space-y-4">
                         {pendingInquiry ? (
                             <div className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-                                Creez votre compte pour acceder a votre espace et discuter avec le proprietaire.
+                                Votre demande est enregistree. Creez votre compte locataire, puis connectez-vous
+                                pour ouvrir la conversation avec le proprietaire.
                             </div>
                         ) : null}
                         {error && <div className="text-danger text-sm">{error}</div>}

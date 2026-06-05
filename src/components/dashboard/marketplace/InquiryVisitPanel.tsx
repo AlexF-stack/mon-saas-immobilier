@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import { PlusIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,7 +17,8 @@ export type InquiryDetail = {
   visitNotes: string | null
   preferredVisitDate: string | null
   requesterName: string
-  property: { title: string }
+  requesterEmail?: string
+  property: { id: string; title: string }
 }
 
 const STAGE_OPTIONS = [
@@ -30,13 +33,13 @@ const STAGE_OPTIONS = [
 
 const VISIT_STATUS_OPTIONS = [
   { value: 'REQUESTED', label: 'Demandee' },
-  { value: 'SCHEDULED', label: 'Programmee' },
+  { value: 'SCHEDULED', label: 'Planifiee' },
   { value: 'CONFIRMED', label: 'Confirmee' },
-  { value: 'COMPLETED', label: 'Terminee' },
+  { value: 'COMPLETED', label: 'Completee' },
   { value: 'CANCELLED', label: 'Annulee' },
 ]
 
-type InquiryVisitPanelProps = {
+export type InquiryVisitPanelProps = {
   inquiryId: string
   canManage: boolean
   onUpdated?: () => void
@@ -50,6 +53,8 @@ function toDateTimeLocalValue(iso: string | null): string {
 }
 
 export function InquiryVisitPanel({ inquiryId, canManage, onUpdated }: InquiryVisitPanelProps) {
+  const router = useRouter()
+  const pathname = usePathname()
   const [detail, setDetail] = useState<InquiryDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -116,6 +121,20 @@ export function InquiryVisitPanel({ inquiryId, canManage, onUpdated }: InquiryVi
     }
   }
 
+  function handleCreateContract() {
+    if (!detail?.property.id) return
+
+    const dashboardIndex = pathname?.indexOf('/dashboard') ?? -1
+    const dashboardPath =
+      pathname && dashboardIndex >= 0 ? pathname.slice(0, dashboardIndex + '/dashboard'.length) : '/dashboard'
+    const params = new URLSearchParams({
+      inquiryId,
+      propertyId: detail.property.id,
+    })
+
+    router.push(`${dashboardPath}/contracts/new?${params.toString()}`)
+  }
+
   if (loading) {
     return <p className="text-sm text-secondary p-4">Chargement du suivi visite...</p>
   }
@@ -127,8 +146,11 @@ export function InquiryVisitPanel({ inquiryId, canManage, onUpdated }: InquiryVi
   return (
     <section className="border-b border-border bg-surface/30 p-4 space-y-4">
       <div>
-        <h4 className="text-sm font-semibold text-primary">Visite et pipeline</h4>
+        <h4 className="text-sm font-semibold text-primary">Suivi visite et pipeline</h4>
         <p className="text-xs text-muted-foreground">
+          Gerez l&apos;avancement commercial de cette demande (distinct de la messagerie ci-dessous).
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
           {detail.requesterName} · {detail.property.title}
           {detail.preferredVisitDate
             ? ` · Souhait : ${new Date(detail.preferredVisitDate).toLocaleDateString('fr-FR')}`
@@ -141,11 +163,7 @@ export function InquiryVisitPanel({ inquiryId, canManage, onUpdated }: InquiryVi
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2">
           <Label>Etape pipeline</Label>
-          <Select
-            value={lifecycleStage}
-            onValueChange={setLifecycleStage}
-            disabled={!canManage}
-          >
+          <Select value={lifecycleStage} onValueChange={setLifecycleStage} disabled={!canManage}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -199,9 +217,17 @@ export function InquiryVisitPanel({ inquiryId, canManage, onUpdated }: InquiryVi
       </div>
 
       {canManage ? (
-        <Button type="button" size="sm" disabled={saving} onClick={() => void save()}>
-          {saving ? 'Enregistrement...' : 'Enregistrer visite et pipeline'}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {visitStatus === 'COMPLETED' ? (
+            <Button type="button" size="sm" variant="secondary" onClick={handleCreateContract}>
+              <PlusIcon className="mr-1 size-4" />
+              Creer le bail / contrat
+            </Button>
+          ) : null}
+          <Button type="button" size="sm" disabled={saving} onClick={() => void save()}>
+            {saving ? 'Enregistrement...' : 'Enregistrer visite et pipeline'}
+          </Button>
+        </div>
       ) : null}
     </section>
   )

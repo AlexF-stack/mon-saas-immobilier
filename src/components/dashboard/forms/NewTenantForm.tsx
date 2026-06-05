@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -31,6 +31,9 @@ function toErrorMessage(status: number, errorPayload: unknown, fallback: string)
 
 export function NewTenantForm({ locale, dashboardPathPrefix }: NewTenantFormProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const namePrefill = searchParams.get('name') ?? ''
+  const emailPrefill = searchParams.get('email') ?? ''
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -100,11 +103,18 @@ export function NewTenantForm({ locale, dashboardPathPrefix }: NewTenantFormProp
           )}
           <div className="space-y-2">
             <Label htmlFor="name">Nom complet</Label>
-            <Input id="name" name="name" placeholder="Ex: Kossi Toko" required />
+            <Input id="name" name="name" placeholder="Ex: Kossi Toko" defaultValue={namePrefill} required />
           </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" placeholder="tenant@email.com" required />
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              placeholder="tenant@email.com"
+              defaultValue={emailPrefill}
+              required
+            />
           </div>
         </CardContent>
         <CardFooter className="justify-end gap-2 border-t border-slate-200/70 dark:border-slate-800">

@@ -110,8 +110,8 @@ export default function LoginPage() {
     const profileDescription =
         pendingInquiry
             ? locale === 'fr'
-                ? 'Connectez-vous pour acceder a votre espace et discuter avec le proprietaire.'
-                : 'Sign in to access your space and chat with the owner.'
+                ? 'Vous avez deja un compte ? Connectez-vous pour acceder a votre espace de discussion.'
+                : 'Already have an account? Sign in to access your conversation space.'
             : selectedProfile === 'tenant'
               ? locale === 'fr'
                   ? 'Connectez-vous pour suivre vos demandes, vos contrats et vos paiements.'
@@ -218,9 +218,23 @@ export default function LoginPage() {
                     <CardContent className="space-y-6 pt-4">
                         {pendingInquiry ? (
                             <div className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-emerald-200">
-                                {locale === 'fr'
-                                    ? 'Votre demande est enregistree. Connectez-vous pour ouvrir la conversation avec le proprietaire.'
-                                    : 'Your request is saved. Sign in to open the conversation with the owner.'}
+                                {locale === 'fr' ? (
+                                    <>
+                                        Votre demande est enregistree. Si vous n&apos;avez pas encore de compte,{' '}
+                                        <Link href={registerHref} className="font-medium underline">
+                                            inscrivez-vous d&apos;abord
+                                        </Link>
+                                        .
+                                    </>
+                                ) : (
+                                    <>
+                                        Your request is saved. If you do not have an account yet,{' '}
+                                        <Link href={registerHref} className="font-medium underline">
+                                            register first
+                                        </Link>
+                                        .
+                                    </>
+                                )}
                             </div>
                         ) : null}
                         {oauthErrorMessage ? (
