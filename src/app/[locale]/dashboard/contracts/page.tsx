@@ -244,6 +244,7 @@ export default async function ContractsPage(props: {
                     documentSource={contract.documentSource}
                     fileUrl={contract.fileUrl}
                     contractText={contract.contractText}
+                    rentalTermsSnapshot={contract.rentalTermsSnapshot}
                     receiptFileUrl={contract.receiptFileUrl}
                     receiptText={contract.receiptText}
                     submittedAt={contract.submittedAt ? contract.submittedAt.toISOString() : null}
@@ -251,9 +252,13 @@ export default async function ContractsPage(props: {
                     tenantSignedAt={contract.tenantSignedAt ? contract.tenantSignedAt.toISOString() : null}
                     canManage={user.role === 'ADMIN' || (user.role === 'MANAGER' && contract.property.managerId === user.id)}
                     canSign={
-                      (user.role === 'ADMIN' || (user.role === 'MANAGER' && contract.property.managerId === user.id))
+                      Boolean(contract.submittedAt) &&
+                      ((user.role === 'ADMIN' ||
+                        (user.role === 'MANAGER' && contract.property.managerId === user.id))
                         ? !contract.ownerSignedAt
-                        : user.role === 'TENANT' && contract.tenantId === user.id && !contract.tenantSignedAt
+                        : user.role === 'TENANT' &&
+                          contract.tenantId === user.id &&
+                          !contract.tenantSignedAt)
                     }
                   />
                   <ContractWorkflowTimeline

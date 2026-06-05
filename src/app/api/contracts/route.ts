@@ -153,6 +153,8 @@ export async function POST(request: Request) {
                     rentAmount: payload.rentAmount,
                     depositAmount: payload.depositAmount,
                     rentalTermsSnapshot: ownerProfile.rentalTermsTemplate,
+                    contractText: ownerProfile.rentalTermsTemplate,
+                    documentSource: 'DRAFT',
                     contractType: property.offerType === 'SALE' ? 'SALE' : 'RENTAL',
                     workflowState: 'DRAFT',
                     status: 'ACTIVE',

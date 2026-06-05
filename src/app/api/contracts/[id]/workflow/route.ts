@@ -147,7 +147,7 @@ export async function POST(
         message: `Le contrat pour ${contract.property.title} est en cours de preparation.`,
       })
 
-      return NextResponse.json({ contract: updated, message: 'Contract document saved.' })
+      return NextResponse.json({ contract: updated, message: 'Document de contrat enregistre.' })
     }
 
     if (payload.action === 'SUBMIT') {
@@ -155,10 +155,18 @@ export async function POST(
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
 
-      const hasDocument = Boolean(contract.fileUrl || contract.contractText)
+      const termsSnapshot = contract.rentalTermsSnapshot?.trim() ?? ''
+      const hasDocument = Boolean(
+        contract.fileUrl ||
+          contract.contractText?.trim() ||
+          (termsSnapshot.length >= 20)
+      )
       if (!hasDocument) {
         return NextResponse.json(
-          { error: 'Save a contract document first (upload or draft).' },
+          {
+            error:
+              'Enregistrez d abord le document du contrat (texte ou URL PDF), puis soumettez au locataire.',
+          },
           { status: 409 }
         )
       }
@@ -174,6 +182,12 @@ export async function POST(
           workflowState: 'SUBMITTED',
           ownerSignedAt: null,
           tenantSignedAt: null,
+          ...(!contract.contractText?.trim() && !contract.fileUrl && termsSnapshot.length >= 20
+            ? {
+                contractText: termsSnapshot,
+                documentSource: contract.documentSource ?? 'DRAFT',
+              }
+            : {}),
         },
       })
 
@@ -192,11 +206,17 @@ export async function POST(
         details: `tenantId=${contract.tenantId};workflowState=${submitted.workflowState}`,
       })
 
-      return NextResponse.json({ contract: submitted, message: 'Contract submitted to tenant/buyer.' })
+      return NextResponse.json({ contract: submitted, message: 'Contrat soumis au locataire. Vous pouvez maintenant signer.' })
     }
 
     if (!contract.submittedAt) {
-      return NextResponse.json({ error: 'Contract must be submitted before signature' }, { status: 409 })
+      return NextResponse.json(
+        {
+          error:
+            'Soumettez le contrat au locataire avant de signer (bouton « Soumettre au locataire/acheteur »).',
+        },
+        { status: 409 }
+      )
     }
 
     if (!canManage && !isTenantCounterparty) {
@@ -262,7 +282,10 @@ export async function POST(
 
     return NextResponse.json({
       contract: finalized,
-      message: readyState === 'SIGNED_BOTH' ? 'Contract signed by both parties.' : 'Signature recorded.',
+      message:
+        readyState === 'SIGNED_BOTH'
+          ? 'Contrat signe par les deux parties. Paiement possible.'
+          : 'Signature enregistree.',
     })
   } catch (error) {
     if (error instanceof z.ZodError) {
