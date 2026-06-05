@@ -228,6 +228,7 @@ export async function POST(request: Request) {
             )
         }
 
+        const requiresLandDocuments = normalizedOfferType === 'SALE'
         const uploadedImages = images.length > 0 ? images : legacyImage && legacyImage.size > 0 ? [legacyImage] : []
         const uploadedImageUrls: string[] = []
         for (const image of uploadedImages) {
@@ -245,7 +246,7 @@ export async function POST(request: Request) {
             mimeType: string
             fileSize: number
         }> = []
-        for (const doc of landDocuments) {
+        for (const doc of requiresLandDocuments ? landDocuments : []) {
             const stored = await persistUploadedFile(doc, { kind: 'document' })
             if ('error' in stored) {
                 return NextResponse.json({ error: stored.error }, { status: stored.status })
@@ -280,7 +281,7 @@ export async function POST(request: Request) {
             )
         }
 
-        if (uploadedLandDocuments.length < MIN_LAND_DOCUMENTS) {
+        if (requiresLandDocuments && uploadedLandDocuments.length < MIN_LAND_DOCUMENTS) {
             return NextResponse.json(
                 { error: `Au moins ${MIN_LAND_DOCUMENTS} document foncier est requis.` },
                 { status: 400 }

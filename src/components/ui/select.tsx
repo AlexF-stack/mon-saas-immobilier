@@ -7,9 +7,32 @@ import { Select as SelectPrimitive } from "radix-ui"
 import { cn } from "@/lib/utils"
 
 function Select({
+  onOpenChange,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Root>) {
-  return <SelectPrimitive.Root data-slot="select" {...props} />
+  const scrollPositionRef = React.useRef<{ x: number; y: number } | null>(null)
+
+  const restoreScrollPosition = React.useCallback(() => {
+    if (typeof window === "undefined" || !scrollPositionRef.current) return
+    window.scrollTo(scrollPositionRef.current.x, scrollPositionRef.current.y)
+  }, [])
+
+  return (
+    <SelectPrimitive.Root
+      data-slot="select"
+      onOpenChange={(open) => {
+        if (typeof window === "undefined") return onOpenChange?.(open)
+
+        scrollPositionRef.current = { x: window.scrollX, y: window.scrollY }
+        onOpenChange?.(open)
+        window.requestAnimationFrame(() => {
+          restoreScrollPosition()
+          window.requestAnimationFrame(restoreScrollPosition)
+        })
+      }}
+      {...props}
+    />
+  )
 }
 
 function SelectGroup({
@@ -67,12 +90,18 @@ function SelectContent({
   position = "popper",
   align = "center",
   sideOffset = 6,
+  onCloseAutoFocus,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
         data-slot="select-content"
+        onCloseAutoFocus={(event) => {
+          onCloseAutoFocus?.(event)
+          if (event.defaultPrevented) return
+          event.preventDefault()
+        }}
         className={cn(
           "relative z-50 max-h-(--radix-select-content-available-height) min-w-[8rem] origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-xl border border-border bg-card text-primary shadow-lg backdrop-blur-sm",
           "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
