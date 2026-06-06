@@ -209,6 +209,10 @@ export default async function PaymentsPage(props: {
         : payment.installment
           ? `Echeance #${payment.installment.sequence}`
           : null,
+    canConfirm:
+      (role === 'ADMIN' || role === 'MANAGER') &&
+      payment.status === 'PENDING' &&
+      payment.method.startsWith('DIRECT_'),
   }))
 
   const hasActiveFilters = Boolean(query || status || method || from || to)
@@ -313,7 +317,7 @@ export default async function PaymentsPage(props: {
         </CardContent>
       </Card>
 
-      <PaymentsTable payments={rows} />
+      <PaymentsTable payments={rows} showConfirmActions={role === 'ADMIN' || role === 'MANAGER'} />
       <ServerPager page={clampedPage} totalPages={totalPages} buildHref={buildHref} />
 
       {canWithdraw ? (

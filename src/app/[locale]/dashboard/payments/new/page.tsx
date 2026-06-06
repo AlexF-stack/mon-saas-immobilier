@@ -88,6 +88,8 @@ function PaymentForm() {
   const [amount, setAmount] = useState('')
   const [paymentCollection, setPaymentCollection] = useState<PaymentCollection | null>(null)
   const [firstPaymentRule, setFirstPaymentRule] = useState<FirstPaymentRule | null>(null)
+  const [contractNumber, setContractNumber] = useState('')
+  const [activePendingPaymentId, setActivePendingPaymentId] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -128,9 +130,12 @@ function PaymentForm() {
         setInstallments(nextInstallments)
         setPaymentCollection(payload?.paymentCollection ?? null)
         setFirstPaymentRule(payload?.firstPaymentRule ?? null)
+        setContractNumber(typeof payload?.contractNumber === 'string' ? payload.contractNumber : '')
         if (nextType === 'RENTAL' && nextInstallments.length > 0) {
-          setInstallmentId(nextInstallments[0].id)
-          setAmount(String(Math.round(nextInstallments[0].totalDue)))
+          const first = nextInstallments[0]
+          setInstallmentId(first.id)
+          setAmount(String(Math.round(first.totalDue)))
+          setActivePendingPaymentId(first.pendingPayment?.id ?? null)
         } else if (nextType === 'RENTAL') {
           setInstallmentId('')
           setAmount('')
@@ -159,28 +164,33 @@ function PaymentForm() {
     const selected = installments.find((item) => item.id === installmentId)
     if (selected) {
       setAmount(String(Math.round(selected.totalDue)))
+      setActivePendingPaymentId(selected.pendingPayment?.id ?? null)
       if (selected.pendingPayment) {
-        setSuccess(
-          `Paiement en attente (${selected.pendingPayment.id}). Effectuez le transfert Mobile Money sur le compte du bailleur, puis attendez la confirmation.`
-        )
-        setError('')
-      } else {
         setSuccess('')
+        setError('')
       }
     }
   }, [contractType, installments, installmentId])
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (activePendingPaymentId) {
+      setError('')
+      setSuccess(
+        'Transfert deja enregistre. Le bailleur doit confirmer la reception dans Paiements pour debloquer la quittance.'
+      )
+      return
+    }
+
     setLoading(true)
     setError('')
     setSuccess('')
 
     const formData = new FormData(event.currentTarget)
     const data = {
-      contractId: formData.get('contractId'),
-      installmentId: contractType === 'RENTAL' ? formData.get('installmentId') : undefined,
-      amount: formData.get('amount'),
+      contractId: contractId.trim(),
+      installmentId: contractType === 'RENTAL' ? installmentId : undefined,
+      amount: amount || formData.get('amount'),
       phoneNumber:
         paymentCollection?.mode === 'DIRECT' && provider === 'CARD'
           ? undefined
@@ -214,9 +224,12 @@ function PaymentForm() {
             : replayed || resumed
               ? 'Paiement en attente recupere. Suivez les instructions ci-dessous.'
               : 'Paiement initie avec succes.'
+        if (typeof result.paymentId === 'string') {
+          setActivePendingPaymentId(result.paymentId)
+        }
         setSuccess(
           typeof result.paymentId === 'string'
-            ? `${baseMessage} Reference : ${result.paymentId}`
+            ? `${baseMessage} Reference paiement : ${result.paymentId}`
             : baseMessage
         )
       } else {
@@ -248,13 +261,35 @@ function PaymentForm() {
             </div>
           )}
 
+          {activePendingPaymentId ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
+              <p className="font-medium">Paiement en attente de confirmation</p>
+              <p className="mt-1 text-xs">
+                Reference paiement : <strong className="font-mono">{activePendingPaymentId}</strong>
+              </p>
+              <p className="mt-2 text-xs">
+                1. Effectuez le transfert Mobile Money sur le compte du bailleur ci-dessous.
+                <br />
+                2. Le bailleur confirme la reception dans <strong>Paiements</strong>.
+                <br />
+                3. La quittance PDF/Word sera alors disponible.
+              </p>
+            </div>
+          ) : null}
+
           <div className="space-y-2">
-            <Label htmlFor="contractId">ID contrat</Label>
+            <Label htmlFor="contractId">Contrat</Label>
+            {contractNumber ? (
+              <p className="text-xs text-muted-foreground">
+                Bail n° <strong>{contractNumber}</strong>
+              </p>
+            ) : null}
             <Input
               id="contractId"
               name="contractId"
               value={contractId}
               onChange={(event) => setContractId(event.target.value)}
+              placeholder="Identifiant technique du contrat"
               required
             />
           </div>
@@ -274,11 +309,11 @@ function PaymentForm() {
           {contractType === 'RENTAL' ? (
             <div className="space-y-2">
               <Label htmlFor="installmentId">Echeance a payer</Label>
+              <input type="hidden" name="installmentId" value={installmentId} />
               <Select
-                name="installmentId"
                 value={installmentId}
                 onValueChange={setInstallmentId}
-                disabled={loadingInstallments}
+                disabled={loadingInstallments || Boolean(activePendingPaymentId)}
               >
                 <SelectTrigger id="installmentId">
                   <SelectValue placeholder={loadingInstallments ? 'Chargement...' : 'Choisir une echeance'} />
@@ -360,8 +395,12 @@ function PaymentForm() {
           ) : null}
         </CardContent>
         <CardFooter className="justify-end border-t border-slate-200/70 dark:border-slate-800">
-          <Button type="submit" disabled={loading}>
-            {loading ? 'Traitement...' : 'Payer maintenant'}
+          <Button type="submit" disabled={loading || Boolean(activePendingPaymentId)}>
+            {loading
+              ? 'Traitement...'
+              : activePendingPaymentId
+                ? 'En attente de confirmation bailleur'
+                : 'Payer maintenant'}
           </Button>
         </CardFooter>
       </form>

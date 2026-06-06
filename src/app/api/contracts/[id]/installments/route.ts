@@ -135,6 +135,7 @@ export async function GET(
         tenantId: true,
         status: true,
         contractType: true,
+        contractNumber: true,
         startDate: true,
         endDate: true,
         rentAmount: true,
@@ -228,8 +229,13 @@ export async function GET(
       totalDue: computeFirstInstallmentAmounts(contract.rentAmount, contract.depositAmount).totalDue,
     }
 
+    const uniqueInstallments = Array.from(
+      new Map(installments.map((item) => [item.id, item])).values()
+    )
+
     return NextResponse.json({
       contractId: contract.id,
+      contractNumber: contract.contractNumber,
       contractType: contract.contractType,
       rentAmount: contract.rentAmount,
       depositAmount: contract.depositAmount,
@@ -241,7 +247,7 @@ export async function GET(
         cardLink: contract.property.manager?.paymentCardLink ?? null,
         instructions: contract.property.manager?.paymentInstructions ?? null,
       },
-      installments: installments.map((item) => {
+      installments: uniqueInstallments.map((item) => {
         const pending = pendingByInstallmentId.get(item.id)
         return {
           id: item.id,

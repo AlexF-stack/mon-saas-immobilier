@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { CreditCard } from 'lucide-react'
 import { CustomTable } from '@/components/ui/custom-table'
 import { EmptyState } from '@/components/ui/empty-state'
+import { PaymentConfirmButton } from '@/components/dashboard/PaymentConfirmButton'
 
 export interface PaymentRow {
   id: string
@@ -15,15 +16,17 @@ export interface PaymentRow {
   propertyTitle: string
   tenantName: string
   paymentLabel?: string | null
+  canConfirm?: boolean
 }
 
 interface PaymentsTableProps {
   payments: PaymentRow[]
+  showConfirmActions?: boolean
 }
 
 const PAGE_SIZE = 10
 
-export function PaymentsTable({ payments }: PaymentsTableProps) {
+export function PaymentsTable({ payments, showConfirmActions = false }: PaymentsTableProps) {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
 
@@ -83,11 +86,24 @@ export function PaymentsTable({ payments }: PaymentsTableProps) {
         {
           key: 'status',
           header: 'Statut',
-          statusMap: {
-            COMPLETED: { label: 'Paye', variant: 'success' },
-            PENDING: { label: 'En attente', variant: 'warning' },
-            FAILED: { label: 'Echoue', variant: 'destructive' },
-          },
+          render: (row) => (
+            <div className="space-y-2">
+              <span
+                className={
+                  row.status === 'COMPLETED'
+                    ? 'inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800'
+                    : row.status === 'FAILED'
+                      ? 'inline-flex rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-800'
+                      : 'inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800'
+                }
+              >
+                {row.status === 'COMPLETED' ? 'Paye' : row.status === 'FAILED' ? 'Echoue' : 'En attente'}
+              </span>
+              {showConfirmActions && row.status === 'PENDING' && row.canConfirm ? (
+                <PaymentConfirmButton paymentId={row.id} canConfirm />
+              ) : null}
+            </div>
+          ),
         },
         {
           key: 'id',
